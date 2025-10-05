@@ -418,3 +418,30 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+#findMeBtn {
+  /* Positioning */
+  position: absolute;
+  bottom: 90px; /* Adjust if needed to clear other buttons */
+  left: 10px;
+  z-index: 1; /* Ensures it's on top of the map */
+
+  /* Appearance */
+  width: 50px;
+  height: 50px;
+  border-radius: 50%; /* Makes it a circle */
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  
+  /* Icon Styling */
+  font-size: 24px;
+  padding: 0;
+  
+  /* Removes default button focus outline */
+  outline: none; 
+}
+
+#findMeBtn:hover {
+  background-color: #f4f4f4;
+}
