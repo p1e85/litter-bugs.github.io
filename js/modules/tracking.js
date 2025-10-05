@@ -3,7 +3,7 @@ import { state } from './config.js';
 import { createAndAddMarker, updateUserPinsSource } from './map.js';
 import { calculateRouteDistance } from './utils.js';
 import { clearCurrentSession } from './data.js';
-import { default as imageCompression } from '../framework/browser-image-compression.js';
+
 
 // NOTE: This imports the image-compression library from a CDN.
 // For a production app, you might want to host this file yourself.
