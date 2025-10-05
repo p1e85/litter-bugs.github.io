@@ -413,3 +413,8 @@ body {
 .modal-button.disabled:hover {
     opacity: 0.7; /* Prevents hover effect */
 }
+
+#pictureBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
