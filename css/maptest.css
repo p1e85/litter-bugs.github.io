@@ -383,9 +383,9 @@ body {
     background-color: rgba(255, 255, 255, 0.8);
     padding: 6px 10px;
     border-radius: 8px;
-    font-size: 12px;
+    font-size: 10px;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 #logoutBtn, #loginSignupBtn {
