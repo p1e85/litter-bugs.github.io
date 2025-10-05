@@ -105,7 +105,7 @@ export async function handlePhoto(event) {
     console.log('2. The imported imageCompression library is:', imageCompression);
     // -------------------------
     
-    pictureBtn.innerHTML = 'Processing...';
+    pictureBtn.innerHTML = '...';
     pictureBtn.disabled = true;
 
     // Compress the image before uploading
