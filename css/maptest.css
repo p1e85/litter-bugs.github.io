@@ -422,7 +422,7 @@ body {
 #findMeBtn {
   /* Positioning */
   position: absolute;
-  bottom: 30px; /* Adjust if needed to clear other buttons */
+  bottom: 40px; /* Adjust if needed to clear other buttons */
   left: 20px;
   z-index: 1; /* Ensures it's on top of the map */
 
@@ -450,7 +450,7 @@ body {
 #pictureBtn {
   /* Positioning */
   position: absolute;
-  bottom: 30px; /* Aligns vertically with the findMeBtn */
+  bottom: 40px; /* Aligns vertically with the findMeBtn */
   right: 20px;
   z-index: 1; /* Keeps it on top of the map */
 
