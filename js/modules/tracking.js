@@ -82,6 +82,8 @@ export function startTracking() {
 
     trackBtn.textContent = '🛑 Stop Tracking';
     trackBtn.classList.add('tracking');
+
+    document.getElementById('pictureBtn').disabled = false;
 }
 
 /**
