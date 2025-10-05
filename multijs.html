@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Litter Bugs - Map Tracker</title>
 
     <script type="text/javascript">
         (function(c,l,a,r,i,t,y){
@@ -11,8 +12,11 @@
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
         })(window, document, "clarity", "script", "tilw8qneix");
     </script>
-    
-    <title>Litter Bugs - Map Tracker</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js'></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪲</text></svg>">
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css' rel='stylesheet' />
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
@@ -20,10 +24,8 @@
 </head>
 <body>
 
-    <!-- Top UI Container -->
     <div class="top-ui-container">
         <div class="top-row">
-            <div id="geocoder-container"></div>
             <div class="top-bar-right">
                 <button id="menuBtn" class="top-bar-button">☰ Menu</button>
             </div>
@@ -35,7 +37,25 @@
         </div>
     </div>
 
-    <!-- Menu Modal -->
+    <div id="map">
+      <div id="geocoder-container"></div>
+      <button id="findMeBtn" class="control-btn">📍</button>
+      <button id="pictureBtn" class="control-btn" disabled>📸</button>
+    </div>
+
+    <div class="bottom-container">
+        <div id="userStatus" class="user-status-display">
+            <div id="loggedInContent">
+                <span id="userEmail"></span>
+                <button id="logoutBtn">Log Out</button>
+            </div>
+            <div id="guestContent">
+                <span>Guest Mode</span>
+                <button id="loginSignupBtn">Log In / Sign Up</button>
+            </div>
+        </div>
+    </div>
+
     <div id="menuModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -54,7 +74,6 @@
         </div>
     </div>
 
-    <!-- Info Modal -->
     <div id="infoModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -76,7 +95,6 @@
         </div>
     </div>
     
-    <!-- Terms of Use Modal -->
     <div id="termsModal" class="modal-overlay">
          <div class="modal-content">
             <h2>Terms of Use</h2>
@@ -95,7 +113,6 @@
         </div>
     </div>
     
-    <!-- Authentication Modal -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-content auth-modal">
             <h2 id="authTitle">Create a Litter Bugs Account</h2>
@@ -116,7 +133,6 @@
         </div>
     </div>
     
-    <!-- Profile Modals -->
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -150,7 +166,6 @@
         </div>
     </div>
 
-    <!-- Safety Reminder Modal -->
     <div id="safetyModal" class="modal-overlay">
         <div class="modal-content safety-modal">
             <span class="close-btn">&times;</span>
@@ -165,7 +180,6 @@
         </div>
     </div>
     
-    <!-- Post-Cleanup Summary Modal -->
     <div id="summaryModal" class="modal-overlay">
         <div class="modal-content summary-modal">
             <span class="close-btn">&times;</span>
@@ -190,7 +204,6 @@
         </div>
     </div>
     
-    <!-- Leaderboard Modal -->
     <div id="leaderboardModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -205,7 +218,6 @@
         </div>
     </div>
 
-    <!-- Achievement Unlocked Modal -->
     <div id="achievementModal" class="modal-overlay">
         <div class="modal-content achievement-modal">
             <span class="achievement-icon"></span>
@@ -216,7 +228,6 @@
         </div>
     </div>
     
-    <!-- Meetup Modals -->
     <div id="meetupModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -230,7 +241,7 @@
                 <textarea id="meetupDescriptionInput" placeholder="e.g., Let's meet by the main entrance at 9 AM!" maxlength="200"></textarea>
                 
                 <div class="safety-disclaimer">
-                     <strong>Safety First:</strong> You are organizing a public event. For your safety and the safety of others, always meet in well-lit, public places and be aware of your surroundings. Litter Bugs is a platform for connecting people; we are not responsible for any incidents that occur at user-organized meetups.
+                    <strong>Safety First:</strong> You are organizing a public event. For your safety and the safety of others, always meet in well-lit, public places and be aware of your surroundings. Litter Bugs is a platform for connecting people; we are not responsible for any incidents that occur at user-organized meetups.
                 </div>
                 <div class="agreement-section">
                     <input type="checkbox" id="safetyCheckbox">
@@ -249,29 +260,6 @@
         </div>
     </div>
 
-    <!-- Map Container -->
-    <div id='map'></div>
-     <div id="geocoder-container"></div>
-
-    <button id="findMeBtn" class="control-btn">📍</button>
-    <button id="pictureBtn" class="control-btn" disabled>📸</button>
-
-    <!-- Bottom Container -->
-    <div class="bottom-container">
-        <div id="userStatus" class="user-status-display">
-            <div id="loggedInContent">
-                <span id="userEmail"></span>
-                <button id="logoutBtn">Log Out</button>
-            </div>
-            <div id="guestContent">
-                <span>Guest Mode</span>
-                <button id="loginSignupBtn">Log In / Sign Up</button>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Data Management & Session Modals -->
     <div id="dataModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -286,7 +274,6 @@
         </div>
     </div>
 
-    <!-- Saved Cloud Sessions Modal -->
     <div id="sessionsModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -296,7 +283,6 @@
         </div>
     </div>
 
-    <!-- Saved Local Sessions Modal -->
     <div id="localSessionsModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -309,7 +295,6 @@
         </div>
     </div>
 
-    <!-- Published Routes Modal -->
     <div id="publishedRoutesModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -318,13 +303,8 @@
             <ul id="publishedRoutesList" class="session-list"></ul>
         </div>
     </div>
-
-    <!-- JavaScript Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
-    <script src='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js'></script>
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+    
     <script src="js/main.js" type="module"></script>
 
 </body>
 </html>
-
