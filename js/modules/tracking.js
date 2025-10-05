@@ -39,6 +39,8 @@ export function toggleTracking() {
         trackBtn.textContent = '🛰️ Start Tracking';
         trackBtn.classList.remove('tracking');
 
+        document.getElementById('pictureBtn').disabled = true;
+
         // Clear the pulsing user location dot
         if (state.map.getSource('user-location-point')) {
             state.map.getSource('user-location-point').setData({ type: 'Feature', geometry: { type: 'Point', coordinates: [] } });
