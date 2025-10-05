@@ -471,3 +471,16 @@ body {
 #pictureBtn:hover {
   background-color: #f4f4f4;
 }
+
+/* Style for when the Find Me button is active */
+#findMeBtn.active {
+  background-color: #1a73e8; /* Google Maps blue */
+  color: white;
+  border-color: #1a73e8;
+}
+
+/* Optional: Smooth transition for color changes */
+#findMeBtn {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
