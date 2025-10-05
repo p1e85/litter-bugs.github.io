@@ -381,11 +381,11 @@ body {
 .user-status-display {
     display: flex;
     background-color: rgba(255, 255, 255, 0.8);
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 8px;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 #logoutBtn, #loginSignupBtn {
