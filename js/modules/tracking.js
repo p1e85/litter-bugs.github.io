@@ -95,6 +95,12 @@ export async function handlePhoto(event) {
         return;
     }
     const file = event.target.files[0];
+
+    // --- ADD THESE TWO LINES ---
+    console.log('1. File object being sent to compressor:', file);
+    console.log('2. The imported imageCompression library is:', imageCompression);
+    // -------------------------
+    
     pictureBtn.innerHTML = 'Processing...';
     pictureBtn.disabled = true;
 
