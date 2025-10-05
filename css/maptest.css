@@ -381,9 +381,9 @@ body {
 .user-status-display {
     display: flex;
     background-color: rgba(255, 255, 255, 0.8);
-    padding: 6px 12px;
+    padding: 6px 10px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 12px;
     align-items: center;
     gap: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
