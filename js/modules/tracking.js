@@ -105,7 +105,7 @@ export async function handlePhoto(event) {
     pictureBtn.disabled = true;
 
     // Compress the image before uploading
-    const options = { maxSizeMB: 2, maxWidthOrHeight: 1920, useWebWorker: true, alwaysKeepResolution: true };
+    const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
     let processedFile;
     try {
         processedFile = await imageCompression(file, options);
