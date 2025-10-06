@@ -23,7 +23,7 @@ export function initializeMap() {
         types: 'country,region,place,postcode,locality,neighborhood,address,poi' // Expand search to include POIs
 
         // for chicago search only if want to implement
-        //bbox: [-87.9401, 41.6445, -87.5241, 42.0231], // Chicago Bounding Box
+        bbox: [-87.9401, 41.6445, -87.5241, 42.0231], // Chicago Bounding Box
         //proximity: { // Proximity is now set to a point inside Chicago
         //    longitude: -87.6298,
         //    latitude: 41.8781
