@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Litter Bugs - Printable Flyer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-print-color-adjust: exact; /* Ensures colors print correctly in Chrome/Safari */
+            color-adjust: exact; /* Standard property for printing colors */
+        }
+        /* A4/Letter paper size simulation */
+        @media screen {
+            body {
+                background-color: #e5e7eb;
+            }
+            .flyer {
+                width: 8.5in;
+                height: 11in;
+                margin: 2rem auto;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            }
+        }
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .flyer {
+                width: 100%;
+                height: 100vh;
+                box-shadow: none;
+            }
+        }
+        .tear-off-tab {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="bg-gray-200">
+
+    <div class="flyer bg-white mx-auto flex flex-col">
+        <!-- Main Content Area -->
+        <main class="flex-grow p-12 text-center text-gray-800">
+            <!-- Header -->
+            <header class="mb-8">
+                <div class="inline-block bg-yellow-300 text-yellow-800 text-2xl p-4 rounded-full mb-4">
+                    <span class="text-4xl">🪲</span>
+                </div>
+                <h1 class="text-5xl md:text-6xl font-black text-gray-900 leading-tight">TIRED OF TRASH?</h1>
+                <p class="text-2xl text-green-700 font-bold mt-2">Clean Up Our Parks. Get Rewarded.</p>
+            </header>
+
+            <!-- Core Concept -->
+            <p class="text-lg max-w-2xl mx-auto mb-10">
+                Litter Bugs is a new, free app that turns your cleanup walk into a game. Track your impact, earn achievements, and join a community dedicated to making our world cleaner.
+            </p>
+
+            <!-- How It Works Section -->
+            <div class="grid grid-cols-3 gap-8 text-left border-t border-b border-gray-200 py-8 mb-10">
+                <div class="step">
+                    <h3 class="text-xl font-bold text-green-700 mb-2">1. TRACK YOUR ROUTE</h3>
+                    <p>Use your phone's GPS to map your cleanup path. See the ground you've covered and the difference you've made.</p>
+                </div>
+                <div class="step">
+                    <h3 class="text-xl font-bold text-green-700 mb-2">2. PIN THE LITTER</h3>
+                    <p>Find some trash? Snap a photo to geotag its location on the map. Every pin is a victory for our community.</p>
+                </div>
+                <div class="step">
+                    <h3 class="text-xl font-bold text-green-700 mb-2">3. EARN REWARDS</h3>
+                    <p>Unlock achievement badges, climb the community leaderboard, and organize cleanup meetups with your neighbors.</p>
+                </div>
+            </div>
+
+            <!-- Call to Action -->
+            <div class="flex items-center justify-center space-x-8">
+                <div class="text-right">
+                    <h2 class="text-4xl font-black text-gray-900">JOIN THE<br>MOVEMENT</h2>
+                    <p class="text-xl mt-2">Scan the code to get started!</p>
+                </div>
+                <div>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://www.litter-bugs.com" alt="QR code linking to litter-bugs.com">
+                </div>
+            </div>
+        </main>
+        
+        <!-- Tear-off Section -->
+        <footer class="border-t-2 border-dashed border-gray-400 flex">
+            <div class="tear-off-tab border-r-2 border-dashed border-gray-400 p-4 text-center font-bold text-sm">www.litter-bugs.com</div>
+            <div class="tear-off-tab border-r-2 border-dashed border-gray-400 p-4 text-center font-bold text-sm">www.litter-bugs.com</div>
+            <div class="tear-off-tab border-r-2 border-dashed border-gray-400 p-4 text-center font-bold text-sm">www.litter-bugs.com</div>
+            <div class="tear-off-tab border-r-2 border-dashed border-gray-400 p-4 text-center font-bold text-sm">www.litter-bugs.com</div>
+            <div class="tear-off-tab border-r-2 border-dashed border-gray-400 p-4 text-center font-bold text-sm">www.litter-bugs.com</div>
+            <div class="tear-off-tab border-r-2 border-dashed border-gray-400 p-4 text-center font-bold text-sm">www.litter-bugs.com</div>
+            <div class="tear-off-tab border-r-2 border-dashed border-gray-400 p-4 text-center font-bold text-sm">www.litter-bugs.com</div>
+            <div class="tear-off-tab p-4 text-center font-bold text-sm">www.litter-bugs.com</div>
+        </footer>
+    </div>
+
+</body>
+</html>
+
