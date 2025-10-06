@@ -19,15 +19,15 @@ export function initializeMap() {
         marker: false,
         placeholder: 'Search for a place',
         autocomplete: false,
-        proximity: 'ip', // Prioritize results near the user's IP address
+        //proximity: 'ip', // Prioritize results near the user's IP address
         types: 'country,region,place,postcode,locality,neighborhood,address,poi' // Expand search to include POIs
 
         // for chicago search only if want to implement
         bbox: [-87.9401, 41.6445, -87.5241, 42.0231], // Chicago Bounding Box
-        //proximity: { // Proximity is now set to a point inside Chicago
-        //    longitude: -87.6298,
-        //    latitude: 41.8781
-        //},
+        proximity: { // Proximity is now set to a point inside Chicago
+            longitude: -87.6298,
+            latitude: 41.8781
+        }
     });
     document.getElementById('geocoder-container').appendChild(geocoder.onAdd(state.map));
 
