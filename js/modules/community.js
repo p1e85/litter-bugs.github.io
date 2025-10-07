@@ -27,36 +27,67 @@ export async function toggleCommunityView() {
  * Fetches all published routes from Firestore and displays them on the map.
  */
 export async function fetchAndDisplayCommunityRoutes() {
-    try {
-        const q = query(collection(db, "publishedRoutes"), orderBy("timestamp", "desc"));
-        const querySnapshot = await getDocs(q);
-        clearCommunityRoutes();
-        let allCommunityPinFeatures = [];
+  try {
+    // This function still clears the old route lines and markers
+    clearCommunityRoutes();
 
-        querySnapshot.forEach(doc => {
-            const routeData = doc.data();
-            const routeId = doc.id;
-            const mapboxCoords = convertRouteFromFirestore(routeData.route);
-            const mapboxPins = convertPinsFromFirestore(routeData.pins);
+    const q = query(collection(db, "publishedRoutes"), orderBy("timestamp", "desc"));
+    const querySnapshot = await getDocs(q);
 
-            state.map.addSource(`community-route-${routeId}`, { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: mapboxCoords } } });
-            state.map.addLayer({ id: `community-route-${routeId}`, type: 'line', source: `community-route-${routeId}`, paint: { 'line-color': '#28a745', 'line-width': 4, 'line-opacity': 0.7 } });
-            state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
+    // 1. Initialize an empty array to hold all pin data
+    const allPinFeatures = [];
 
-            if (mapboxPins) {
-                mapboxPins.forEach(pin => {
-                    createAndAddMarker(pin, 'community', { userId: routeData.userId, username: routeData.username });
-                    allCommunityPinFeatures.push({ type: 'Feature', geometry: { type: 'Point', coordinates: pin.coords }, properties: {} });
-                });
-            }
+    querySnapshot.forEach(doc => {
+      const routeData = doc.data();
+      const routeId = doc.id;
+      const mapboxCoords = convertRouteFromFirestore(routeData.route);
+      const mapboxPins = convertPinsFromFirestore(routeData.pins);
+
+      // This part stays the same - we still draw the green route lines
+      if (mapboxCoords && mapboxCoords.length > 0) {
+        state.map.addSource(`community-route-${routeId}`, {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: mapboxCoords } }
         });
-        if (state.map.getSource('community-pins-source')) {
-            state.map.getSource('community-pins-source').setData({ type: 'FeatureCollection', features: allCommunityPinFeatures });
-        }
-    } catch (error) {
-        console.error("Error fetching community routes:", error);
-        alert("Could not load community data.");
-    }
+        state.map.addLayer({
+          id: `community-route-${routeId}`,
+          type: 'line',
+          source: `community-route-${routeId}`,
+          paint: { 'line-color': '#28a745', 'line-width': 4, 'line-opacity': 0.7 }
+        });
+        state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
+      }
+
+      // 2. NEW: Instead of creating markers, we collect pin data
+      if (mapboxPins) {
+        mapboxPins.forEach(pin => {
+          allPinFeatures.push({
+            'type': 'Feature',
+            'properties': {
+              // Add any data we want to access later when a pin is clicked
+              title: pin.title,
+              category: pin.category,
+              imageURL: pin.imageURL,
+              thumbnailURL: pin.thumbnailURL,
+              username: routeData.username,
+              userId: routeData.userId
+            },
+            'geometry': {
+              'type': 'Point',
+              'coordinates': pin.coords
+            }
+          });
+        });
+      }
+    });
+
+    // 3. We'll add the new clustered source using this data in the next step.
+    // For now, this is where we stop.
+
+  } catch (error) {
+    console.error("Error fetching community routes:", error);
+    alert("Could not load community data.");
+  }
 }
 
 /**
