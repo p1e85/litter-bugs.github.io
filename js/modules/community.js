@@ -81,13 +81,24 @@ export async function fetchAndDisplayCommunityRoutes() {
       }
     });
 
-    // 3. We'll add the new clustered source using this data in the next step.
-    // For now, this is where we stop.
+      if (!state.map.getSource('community-pins')) {
+      state.map.addSource('community-pins', {
+        type: 'geojson',
+        data: {
+          'type': 'FeatureCollection',
+          'features': allPinFeatures
+        },
+        cluster: true,        // The magic switch that turns on clustering
+        clusterMaxZoom: 14,   // The zoom level where clustering stops
+        clusterRadius: 50     // How close points can be before they're grouped (in pixels)
+      });
+    }
 
   } catch (error) {
     console.error("Error fetching community routes:", error);
     alert("Could not load community data.");
   }
+    
 }
 
 /**
