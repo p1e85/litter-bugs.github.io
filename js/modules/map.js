@@ -91,7 +91,8 @@ function toggleMarkerVisibility() {
 export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
     const el = document.createElement('div');
     el.className = 'photo-marker';
-    el.style.backgroundImage = `url(${pinInfo.imageURL || pinInfo.image})`;
+    //el.style.backgroundImage = `url(${pinInfo.imageURL || pinInfo.image})`;
+    el.style.backgroundImage = `url(${pinInfo.thumbnailURL || pinInfo.imageURL || pinInfo.image})`;
     el.style.display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
 
     const popup = createPinPopup(pinInfo, type, routeInfo);
