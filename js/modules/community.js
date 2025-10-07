@@ -43,11 +43,29 @@ export async function fetchAndDisplayCommunityRoutes() {
       const mapboxPins = convertPinsFromFirestore(routeData.pins);
 
       // Keep drawing the route lines
-      if (mapboxCoords && mapboxCoords.length > 0) {
-        state.map.addSource(`community-route-${routeId}`, { /* ... source data ... */ });
-        state.map.addLayer({ /* ... route layer ... */ });
-        state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
+if (mapboxCoords && mapboxCoords.length > 0) {
+  state.map.addSource(`community-route-${routeId}`, {
+    'type': 'geojson',
+    'data': {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'LineString',
+        'coordinates': mapboxCoords
       }
+    }
+  });
+  state.map.addLayer({
+    'id': `community-route-${routeId}`,
+    'type': 'line',
+    'source': `community-route-${routeId}`,
+    'paint': {
+      'line-color': '#28a745',
+      'line-width': 4,
+      'line-opacity': 0.7
+    }
+  });
+  state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
+}
 
       if (mapboxPins) {
         mapboxPins.forEach(pin => {
