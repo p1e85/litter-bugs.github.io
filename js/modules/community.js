@@ -94,6 +94,56 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     }
 
+      state.map.addLayer({
+      id: 'clusters',
+      type: 'circle',
+      source: 'community-pins',
+      filter: ['has', 'point_count'], // Only apply to points that are clusters
+      paint: {
+        // Use a step expression to make circles bigger for larger clusters
+        'circle-color': '#28a745', // Green
+        'circle-radius': [
+          'step',
+          ['get', 'point_count'],
+          20, // 20px radius for clusters with < 100 points
+          100,
+          30, // 30px radius for clusters with 100-750 points
+          750,
+          40  // 40px radius for clusters with >= 750 points
+        ]
+      }
+    });
+
+    // Layer 2: The Cluster Count (the numbers)
+    state.map.addLayer({
+      id: 'cluster-count',
+      type: 'symbol',
+      source: 'community-pins',
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+        'text-size': 12
+      },
+      paint: {
+        'text-color': '#ffffff' // White
+      }
+    });
+
+    // Layer 3: The Unclustered Points (individual pins)
+    state.map.addLayer({
+      id: 'unclustered-point',
+      type: 'circle',
+      source: 'community-pins',
+      filter: ['!', ['has', 'point_count']], // Only apply to single points
+      paint: {
+        'circle-color': '#28a745',
+        'circle-radius': 6,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff'
+      }
+    });
+
   } catch (error) {
     console.error("Error fetching community routes:", error);
     alert("Could not load community data.");
@@ -105,16 +155,24 @@ export async function fetchAndDisplayCommunityRoutes() {
  * Removes all community-related routes and markers from the map.
  */
 function clearCommunityRoutes() {
-    state.communityMarkers.forEach(marker => marker.remove());
-    state.communityMarkers = [];
-    state.communityLayers.forEach(layer => {
-        if (state.map.getLayer(layer.id)) state.map.removeLayer(layer.id);
-        if (state.map.getSource(layer.id)) state.map.removeSource(layer.id);
-    });
-    if (state.map.getSource('community-pins-source')) {
-        state.map.getSource('community-pins-source').setData({ type: 'FeatureCollection', features: [] });
-    }
-    state.communityLayers = [];
+  // Remove old HTML markers (if any are left from old code)
+  state.communityMarkers.forEach(marker => marker.remove());
+  state.communityMarkers = [];
+
+  // Remove the new layers we just added
+  if (state.map.getLayer('clusters')) state.map.removeLayer('clusters');
+  if (state.map.getLayer('cluster-count')) state.map.removeLayer('cluster-count');
+  if (state.map.getLayer('unclustered-point')) state.map.removeLayer('unclustered-point');
+  
+  // Remove the new data source
+  if (state.map.getSource('community-pins')) state.map.removeSource('community-pins');
+
+  // Remove the old route line layers and sources
+  state.communityLayers.forEach(layer => {
+    if (state.map.getLayer(layer.id)) state.map.removeLayer(layer.id);
+    if (state.map.getSource(layer.id)) state.map.removeSource(layer.id);
+  });
+  state.communityLayers = [];
 }
 
 // --- Publishing & Profile Management ---
