@@ -357,6 +357,7 @@ export function attachEventListeners() {
             alert("Please load a route first to use this feature.");
         } else {
             centerOnRoute();
+ elements.dataModal.style.display = 'none';
         }
     });
 
