@@ -1,6 +1,5 @@
 import { db, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, deleteDoc, updateDoc, onSnapshot, limit } from './firebase.js';
 import { state, allBadges, profanityList } from './config.js';
-import { createAndAddMarker } from './map.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
 import { clearCurrentSession } from './data.js';
 
@@ -204,23 +203,11 @@ if (mapboxCoords && mapboxCoords.length > 0) {
   }
 }
 
-export function toggleCommunityView() {
-    state.isCommunityViewOn = !state.isCommunityViewOn;
-    const communityBtn = document.getElementById('communityBtn');
-    if (state.isCommunityViewOn) {
-        communityBtn.textContent = '🌎 Community View: ON';
-        communityBtn.classList.remove('off');
-        fetchAndDisplayCommunityRoutes();
-    } else {
-        communityBtn.textContent = '🌎 Community View: OFF';
-        communityBtn.classList.add('off');
-        clearCommunityRoutes();
-    }
-}
 /**
  * Removes all community-related routes and markers from the map.
  */
 function clearCommunityRoutes() {
+    if (!state.map || !state.map.isStyleLoaded()) return;
   // Remove old HTML markers (if any are left from old code)
   state.communityMarkers.forEach(marker => marker.remove());
   state.communityMarkers = [];
