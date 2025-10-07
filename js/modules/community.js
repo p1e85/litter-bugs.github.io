@@ -121,48 +121,61 @@ if (mapboxCoords && mapboxCoords.length > 0) {
 
     // --- LAYER DEFINITIONS (with changes) ---
 
-    // Cluster Circles Layer (no changes)
+       // Layer 1: The Cluster Circles
     state.map.addLayer({
       id: 'clusters',
       type: 'circle',
       source: 'community-pins',
       filter: ['has', 'point_count'],
-      paint: { /* ... same as before ... */ }
+      paint: {
+        'circle-color': '#28a745',
+        'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
+      }
     });
 
-    // Cluster Count Layer (no changes)
+    // Layer 2: The Cluster Count (the numbers)
     state.map.addLayer({
       id: 'cluster-count',
       type: 'symbol',
       source: 'community-pins',
       filter: ['has', 'point_count'],
-      layout: { /* ... same as before ... */ }
+      layout: {
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+        'text-size': 12
+      },
+      paint: { 'text-color': '#ffffff' }
     });
 
-    // Unclustered Pin Layer (CHANGED from 'circle' to 'symbol')
+    // Layer 3: The Unclustered Points (individual photo thumbnails)
     state.map.addLayer({
       id: 'unclustered-point',
-      type: 'symbol', // <-- CHANGED
+      type: 'symbol',
       source: 'community-pins',
       filter: ['!', ['has', 'point_count']],
       layout: {
-        'icon-image': ['get', 'id'], // Use the unique ID of each pin to get its image
-        'icon-size': 0.5, // Adjust size as needed
+        'icon-image': ['get', 'id'],
+        'icon-size': 0.5,
         'icon-allow-overlap': true
       }
     });
 
     // --- INTERACTIVITY (with changes) ---
 
-    // Click listener for clusters (no changes)
-    state.map.on('click', 'clusters', (e) => { /* ... same as before ... */ });
+     // When a user clicks on a cluster, zoom in to it.
+    state.map.on('click', 'clusters', (e) => {
+      const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+      const clusterId = features[0].properties.cluster_id;
+      state.map.getSource('community-pins').getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        state.map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+      });
+    });
 
-    // Click listener for unclustered points (UPDATED to load original image)
+    // When a user clicks on an unclustered point, show a popup with the full image.
     state.map.on('click', 'unclustered-point', (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
-
-      // UPDATED: The popup now uses the full imageURL
       const popupHTML = `
         <div>
             <img src="${properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px;"/>
@@ -171,23 +184,19 @@ if (mapboxCoords && mapboxCoords.length > 0) {
             <small>By: <a href="#" class="profile-link" data-userid="${properties.userId}">${properties.username || 'A user'}</a></small>
         </div>
       `;
-
-      const popup = new mapboxgl.Popup()
-        .setLngLat(coordinates)
-        .setHTML(popupHTML)
-        .addTo(state.map);
-
+      const popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupHTML).addTo(state.map);
       popup.getElement().querySelector('.profile-link').addEventListener('click', (ev) => {
         ev.preventDefault();
         showPublicProfile(properties.userId);
       });
     });
 
-    // Cursor style listeners (no changes)
-    state.map.on('mouseenter', 'clusters', () => { /* ... */ });
-    state.map.on('mouseleave', 'clusters', () => { /* ... */ });
-    state.map.on('mouseenter', 'unclustered-point', () => { /* ... */ });
-    state.map.on('mouseleave', 'unclustered-point', () => { /* ... */ });
+    // Change the cursor to a pointer when hovering over clickable items.
+    const clickableLayers = ['clusters', 'unclustered-point'];
+    clickableLayers.forEach(layer => {
+      state.map.on('mouseenter', layer, () => { state.map.getCanvas().style.cursor = 'pointer'; });
+      state.map.on('mouseleave', layer, () => { state.map.getCanvas().style.cursor = ''; });
+    });
 
   } catch (error) {
     console.error("Error fetching community routes:", error);
@@ -195,6 +204,19 @@ if (mapboxCoords && mapboxCoords.length > 0) {
   }
 }
 
+export function toggleCommunityView() {
+    state.isCommunityViewOn = !state.isCommunityViewOn;
+    const communityBtn = document.getElementById('communityBtn');
+    if (state.isCommunityViewOn) {
+        communityBtn.textContent = '🌎 Community View: ON';
+        communityBtn.classList.remove('off');
+        fetchAndDisplayCommunityRoutes();
+    } else {
+        communityBtn.textContent = '🌎 Community View: OFF';
+        communityBtn.classList.add('off');
+        clearCommunityRoutes();
+    }
+}
 /**
  * Removes all community-related routes and markers from the map.
  */
