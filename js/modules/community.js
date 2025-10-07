@@ -144,6 +144,62 @@ export async function fetchAndDisplayCommunityRoutes() {
       }
     });
 
+      // 5. Add interactivity - click listeners for clusters and points.
+
+    // When a user clicks on a cluster, zoom in to it.
+    state.map.on('click', 'clusters', (e) => {
+      const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+      const clusterId = features[0].properties.cluster_id;
+      state.map.getSource('community-pins').getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        state.map.easeTo({
+          center: features[0].geometry.coordinates,
+          zoom: zoom
+        });
+      });
+    });
+
+    // When a user clicks on an unclustered point, show a popup with its details.
+    state.map.on('click', 'unclustered-point', (e) => {
+      const coordinates = e.features[0].geometry.coordinates.slice();
+      const properties = e.features[0].properties;
+
+      // Construct the HTML for the popup using the properties we stored earlier
+      const popupHTML = `
+        <div>
+            <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px;"/>
+            <p style="margin: 5px 0 0;"><strong>${properties.title}</strong></p>
+            <p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${properties.category || 'Other'}</p>
+            <small>By: <a href="#" class="profile-link" data-userid="${properties.userId}">${properties.username || 'A user'}</a></small>
+        </div>
+      `;
+
+      const popup = new mapboxgl.Popup()
+        .setLngLat(coordinates)
+        .setHTML(popupHTML)
+        .addTo(state.map);
+
+      // Add a listener to the new popup's profile link
+      popup.getElement().querySelector('.profile-link').addEventListener('click', (ev) => {
+        ev.preventDefault();
+        showPublicProfile(properties.userId);
+      });
+    });
+
+    // Change the cursor to a pointer when hovering over clickable items.
+    state.map.on('mouseenter', 'clusters', () => {
+      state.map.getCanvas().style.cursor = 'pointer';
+    });
+    state.map.on('mouseleave', 'clusters', () => {
+      state.map.getCanvas().style.cursor = '';
+    });
+    state.map.on('mouseenter', 'unclustered-point', () => {
+      state.map.getCanvas().style.cursor = 'pointer';
+    });
+    state.map.on('mouseleave', 'unclustered-point', () => {
+      state.map.getCanvas().style.cursor = '';
+    });
+
   } catch (error) {
     console.error("Error fetching community routes:", error);
     alert("Could not load community data.");
