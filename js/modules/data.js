@@ -110,7 +110,7 @@ function loadSpecificLocalSession(sessionIndex) {
         displaySessionData(convertedData);
         alert(`Session "${sessionData.sessionName}" loaded!`);
         document.getElementById('localSessionsModal').style.display = 'none';
-  document.geyElementById('dataModal').style.display = 'flex';  document.getElementById('centerOnRouteBtn').classList.remove('disabled');
+  document.getElementById('dataModal').style.display = 'flex';  document.getElementById('centerOnRouteBtn').classList.remove('disabled');
     }
 }
 
@@ -177,7 +177,7 @@ async function loadSpecificSession(sessionId) {
             });
             alert(`Session "${sessionData.sessionName}" loaded!`);
             document.getElementById('sessionsModal').style.display = 'none';
-         document.geyElementById('dataModal').style.display = 'flex';   document.getElementById('centerOnRouteBtn').classList.remove('disabled');
+         document.getElementById('dataModal').style.display = 'flex';   document.getElementById('centerOnRouteBtn').classList.remove('disabled');
         }
     } catch (error) {
         console.error("Error loading specific session:", error);
