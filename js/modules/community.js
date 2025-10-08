@@ -86,27 +86,6 @@ if (mapboxCoords && mapboxCoords.length > 0) {
       }
     });
 
-    // NEW LOGIC: Asynchronously load all thumbnail images and add them to the map's style
-    const imageLoadPromises = allPinFeatures.map(feature => {
-      return new Promise((resolve, reject) => {
-        if (!feature.properties.thumbnailURL) return resolve(); // Skip if no thumbnail
-        
-        state.map.loadImage(feature.properties.thumbnailURL, (error, image) => {
-          if (error) {
-            console.error(`Failed to load image: ${feature.properties.thumbnailURL}`, error);
-            return resolve(); // Resolve even on error to not block other images
-          }
-          if (!state.map.hasImage(feature.properties.id)) {
-            state.map.addImage(feature.properties.id, image);
-          }
-          resolve();
-        });
-      });
-    });
-
-    // Wait for all images to be loaded before adding the layers
-    await Promise.all(imageLoadPromises);
-
     // Add the clustered source
     if (!state.map.getSource('community-pins')) {
       state.map.addSource('community-pins', {
@@ -149,7 +128,7 @@ if (mapboxCoords && mapboxCoords.length > 0) {
     // Layer 3: The Unclustered Points (individual photo thumbnails)
     state.map.addLayer({
       id: 'unclustered-point',
-      type: 'symbol',
+      type: 'circle',
       source: 'community-pins',
       filter: ['!', ['has', 'point_count']],
       layout: {
