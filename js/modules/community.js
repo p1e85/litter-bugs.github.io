@@ -131,10 +131,11 @@ if (mapboxCoords && mapboxCoords.length > 0) {
       type: 'circle',
       source: 'community-pins',
       filter: ['!', ['has', 'point_count']],
-      layout: {
-        'icon-image': ['get', 'id'],
-        'icon-size': 0.5,
-        'icon-allow-overlap': true
+      paint: { // <-- A circle layer uses 'paint' to define its look
+        'circle-color': '#28a745',
+        'circle-radius': 6,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff'
       }
     });
 
@@ -518,9 +519,7 @@ export function setupPoiClickListeners() {
                 if (e.features.length > 0) {
                     const feature = e.features[0];
                     const popupHTML =   <div>
-      <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" ... />
-      ...
-  </div>... />//`<div><strong>${feature.properties.name}</strong><div class="poi-popup-buttons"><button class="schedule-btn">Schedule Meetup</button><button class="view-btn">View Meetups</button></div></div>`;
+const popupHTML = `<div><strong>${feature.properties.name}</strong><div class="poi-popup-buttons"><button class="schedule-btn">Schedule Meetup</button><button class="view-btn">View Meetups</button></div></div>`;
 
                     const popup = new mapboxgl.Popup().setLngLat(e.lngLat).setHTML(popupHTML).addTo(state.map);
 
