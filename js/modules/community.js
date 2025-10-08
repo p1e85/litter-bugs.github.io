@@ -517,7 +517,10 @@ export function setupPoiClickListeners() {
             state.map.on('click', layerId, (e) => {
                 if (e.features.length > 0) {
                     const feature = e.features[0];
-                    const popupHTML = `<div><strong>${feature.properties.name}</strong><div class="poi-popup-buttons"><button class="schedule-btn">Schedule Meetup</button><button class="view-btn">View Meetups</button></div></div>`;
+                    const popupHTML =   <div>
+      <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" ... />
+      ...
+  </div>... />//`<div><strong>${feature.properties.name}</strong><div class="poi-popup-buttons"><button class="schedule-btn">Schedule Meetup</button><button class="view-btn">View Meetups</button></div></div>`;
 
                     const popup = new mapboxgl.Popup().setLngLat(e.lngLat).setHTML(popupHTML).addTo(state.map);
 
