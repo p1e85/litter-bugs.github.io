@@ -133,7 +133,7 @@ if (mapboxCoords && mapboxCoords.length > 0) {
       filter: ['!', ['has', 'point_count']],
       paint: { // <-- A circle layer uses 'paint' to define its look
         'circle-color': '#28a745',
-        'circle-radius': 8,
+        'circle-radius': 7,
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
       }
