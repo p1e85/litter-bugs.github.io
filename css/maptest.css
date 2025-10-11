@@ -177,16 +177,19 @@ body {
     cursor: pointer;
 }
 .modal-button {
-    width: 100%;
-    padding: 12px;
-    margin: 5px 0;
-    font-size: 16px;
-    border-radius: 5px;
-    border: none;
-    color: white;
-    background-color: #007bff;
-    cursor: pointer;
+  /* Add these properties to make links look like buttons */
+  display: block;
+  text-decoration: none;
+  text-align: center;
+  color: #333; /* Or whatever your button text color is */
+
+  /* These properties should already exist, but ensure they are there */
+  box-sizing: border-box; /* Ensures padding is included in the width */
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
 }
+
 .modal-button:hover {
     opacity: 0.9;
 }
