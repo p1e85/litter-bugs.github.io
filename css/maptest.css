@@ -124,3 +124,9 @@ body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "S
 #logoutBtn, #loginSignupBtn { border: none; background-color: #6c757d; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
 .photo-marker { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); background-size: cover; background-position: center; cursor: pointer; }
 
+/* Style for when the Find Me button is active */
+#findMeBtn.active {
+  background-color: #1a73e8; /* Google Maps blue */
+  color: white;
+  border-color: #1a73e8;
+}
