@@ -4,6 +4,7 @@ import { createAndAddMarker, updateUserPinsSource } from './map.js';
 import { calculateRouteDistance } from './utils.js';
 import { clearCurrentSession } from './data.js';
 
+let locationWatcher = null;
 
 // NOTE: This imports the image-compression library from a CDN.
 // For a production app, you might want to host this file yourself.
@@ -15,16 +16,44 @@ import { clearCurrentSession } from './data.js';
  * Finds the user's current location and places a one-time marker on the map.
  */
 export function findMe() {
-    if (state.findMeMarker) {
-        state.findMeMarker.remove();
+    const findMeBtn = document.getElementById('findMeBtn');
+
+    // State 0: First click -> Center the user
+    if (state.findMeState === 0) {
+        navigator.geolocation.getCurrentPosition(position => {
+            const coords = [position.coords.longitude, position.coords.latitude];
+            state.map.flyTo({ center: coords, zoom: 16, bearing: 0, pitch: 0 });
+
+            if (state.findMeMarker) state.findMeMarker.remove();
+            state.findMeMarker = new mapboxgl.Marker().setLngLat(coords).addTo(state.map);
+
+            findMeBtn.classList.add('active');
+            state.findMeState = 1;
+
+            if (locationWatcher) navigator.geolocation.clearWatch(locationWatcher);
+            locationWatcher = navigator.geolocation.watchPosition(pos => {
+                const newCoords = [pos.coords.longitude, pos.coords.latitude];
+                state.findMeMarker.setLngLat(newCoords);
+
+                if (state.findMeState === 2 && typeof pos.coords.heading === 'number' && pos.coords.heading !== null) {
+                    state.map.easeTo({ bearing: pos.coords.heading });
+                }
+            }, null, { enableHighAccuracy: true });
+
+        }, () => alert("Could not get your location."), { enableHighAccuracy: true });
     }
-    navigator.geolocation.getCurrentPosition(position => {
-        const { latitude, longitude } = position.coords;
-        state.findMeMarker = new mapboxgl.Marker().setLngLat([longitude, latitude]).addTo(state.map);
-        state.map.flyTo({ center: [longitude, latitude], zoom: 15 });
-    }, () => {
-        alert("Could not get your location.");
-    }, { enableHighAccuracy: true });
+    // State 1: Second click -> Tilt and orient to heading
+    else if (state.findMeState === 1) {
+        state.map.easeTo({ pitch: 60, zoom: 17 });
+        findMeBtn.innerHTML = '🧭'; // Change to a compass icon
+        state.findMeState = 2;
+    }
+    // State 2: Third click -> Revert to North-up view
+    else if (state.findMeState === 2) {
+        state.map.easeTo({ pitch: 0, bearing: 0 });
+        findMeBtn.innerHTML = '📍'; // Change back to pin icon
+        state.findMeState = 1;
+    }
 }
 
 /**
@@ -220,4 +249,18 @@ export async function shareCleanupResults() {
             alert('Sharing is not supported on this browser.');
         }
     }
+}
+
+export function resetFindMeState() {
+    if (locationWatcher) {
+        navigator.geolocation.clearWatch(locationWatcher);
+        locationWatcher = null;
+    }
+    if (state.findMeMarker) {
+        state.findMeMarker.remove();
+        state.findMeMarker = null;
+    }
+    document.getElementById('findMeBtn').classList.remove('active');
+    document.getElementById('findMeBtn').innerHTML = '📍';
+    state.findMeState = 0;
 }
