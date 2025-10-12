@@ -29,6 +29,7 @@ body {
     flex-direction: column;
     gap: 10px;
 }
+
 /* A container for the first row of UI elements (search bar and menu button). */
 .top-row {
     display: flex;
@@ -36,11 +37,13 @@ body {
     align-items: center;
     gap: 10px;
 }
+
 /* A container for the second row of UI elements (leaderboard and community view). */
 .bottom-row {
     display: flex;
     gap: 10px;
 }
+
 .top-bar-left, .top-bar-right {
     display: flex;
     gap: 10px;
@@ -71,7 +74,7 @@ body {
     position: absolute;
     bottom: 30px;
     left: 50%;
-    transform: translateX(-50%); /* Horizontally centers the container. */
+    transform: translateX(-50%);
     z-index: 10;
     display: flex;
     flex-direction: column;
@@ -84,41 +87,44 @@ body {
 .controls {
     display: flex;
     gap: 10px;
-    background-color: rgba(255, 255, 255, 0.85); /* Semi-transparent white. */
+    background-color: rgba(255, 255, 255, 0.85);
     padding: 10px;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* A subtle drop shadow. */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+
 .controls button {
     padding: 10px 15px;
     font-size: 16px;
     border: none;
     border-radius: 5px;
-    background-color: #007bff; /* A standard blue color. */
+    background-color: #007bff;
     color: white;
     cursor: pointer;
     transition: background-color: 0.3s ease;
 }
+
 .controls button:hover {
-    background-color: #0056b3; /* A darker blue on hover. */
+    background-color: #0056b3;
 }
+
 .controls button.tracking {
-    background-color: #dc3545; /* Red for the "Stop Tracking" state. */
+    background-color: #dc3545;
 }
 
 /* Shared styles for all the small, rounded buttons in the top bar. */
 .top-bar-button, .community-button, .donate-button {
-    padding: 6px 10px; /* Reduced padding for a more compact button */
-    font-size: 13px;   /* Reduced font size */
+    padding: 6px 10px;
+    font-size: 13px;
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 20px;
-    background-color: rgba(255, 255, 255, 0.2); /* Very transparent white. */
+    background-color: rgba(255, 255, 255, 0.2);
     color: #333;
     cursor: pointer;
-    backdrop-filter: blur(5px); /* Creates a frosted glass effect. */
-    -webkit-backdrop-filter: blur(5px); /* For Safari compatibility. */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     transition: background-color: 0.3s;
-    white-space: nowrap; /* Prevents text from wrapping. */
+    white-space: nowrap;
     text-decoration: none;
 }
 .top-bar-button:disabled:hover {
@@ -131,7 +137,7 @@ body {
 
 /* Styles for the "Community View" button. */
 .community-button {
-    background-color: #28a745; /* Green when "ON". */
+    background-color: #28a745;
     color: white;
     border-color: transparent;
 }
@@ -139,7 +145,7 @@ body {
     opacity: 0.9;
 }
 .community-button.off {
-    background-color: rgba(255, 255, 255, 0.2); /* Transparent white when "OFF". */
+    background-color: rgba(255, 255, 255, 0.2);
     color: #333;
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
@@ -158,6 +164,7 @@ body {
     justify-content: center;
     align-items: center;
 }
+
 .modal-content {
     background-color: #fff;
     padding: 25px;
@@ -167,6 +174,7 @@ body {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     position: relative;
 }
+
 .close-btn {
     position: absolute;
     top: 10px;
@@ -176,26 +184,28 @@ body {
     font-weight: bold;
     cursor: pointer;
 }
+
 .modal-button {
-  /* Add these properties to make links look like buttons */
-  display: block;
-  text-decoration: none;
-  text-align: center;
-  color: #333; /* Or whatever your button text color is */
-
-  /* These properties should already exist, but ensure they are there */
-  box-sizing: border-box; /* Ensures padding is included in the width */
-  width: 100%;
-  padding: 12px;
-  margin: 8px 0;
+    width: 100%;
+    padding: 12px;
+    margin: 5px 0;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    color: white;
+    background-color: #007bff;
+    cursor: pointer;
 }
-
 .modal-button:hover {
     opacity: 0.9;
 }
-.modal-button:disabled {
+.modal-button.disabled {
     background-color: #cccccc;
     cursor: not-allowed;
+    opacity: 0.7;
+}
+.modal-button.disabled:hover {
+    opacity: 0.7;
 }
 .modal-button.edit-profile {
     background-color: #5a6268;
@@ -225,6 +235,7 @@ body {
     display: block;
     box-sizing: border-box;
 }
+
 
 /* --- Specific Modals & Lists --- */
 #termsModal .modal-content, #infoModal .modal-content {
@@ -329,6 +340,14 @@ body {
 .poi-popup-buttons .schedule-btn { background-color: #007bff; }
 .poi-popup-buttons .view-btn { background-color: #28a745; }
 
+.pin-edit-modal { max-width: 450px; }
+.pin-edit-image {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
 
 .profile-form { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
 .profile-form label { text-align: left; font-weight: bold; margin-bottom: -10px; }
@@ -384,11 +403,11 @@ body {
 .user-status-display {
     display: flex;
     background-color: rgba(255, 255, 255, 0.8);
-    padding: 6px 8px;
-    border-radius: 10px;
-    font-size: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 #logoutBtn, #loginSignupBtn {
@@ -404,86 +423,5 @@ body {
     background-size: cover; 
     background-position: center; 
     cursor: pointer;
-}
-
-
-/* NEW: Style for a button that looks disabled but is still clickable */
-.modal-button.disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-.modal-button.disabled:hover {
-    opacity: 0.7; /* Prevents hover effect */
-}
-
-#pictureBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-#findMeBtn {
-  /* Positioning */
-  position: absolute;
-  bottom: 40px; /* Adjust if needed to clear other buttons */
-  left: 20px;
-  z-index: 1; /* Ensures it's on top of the map */
-
-  /* Appearance */
-  width: 50px;
-  height: 50px;
-  border-radius: 50%; /* Makes it a circle */
-  background-color: white;
-  border: 1px solid #ccc;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  
-  /* Icon Styling */
-  font-size: 24px;
-  padding: 0;
-  
-  /* Removes default button focus outline */
-  outline: none; 
-}
-
-#findMeBtn:hover {
-  background-color: #f4f4f4;
-}
-
-/* Style for the new floating Pin Picture button */
-#pictureBtn {
-  /* Positioning */
-  position: absolute;
-  bottom: 40px; /* Aligns vertically with the findMeBtn */
-  right: 20px;
-  z-index: 1; /* Keeps it on top of the map */
-
-  /* Appearance (same as findMeBtn) */
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background-color: white;
-  border: 1px solid #ccc;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  
-  /* Icon Styling */
-  font-size: 24px;
-  padding: 0;
-  outline: none; 
-}
-
-#pictureBtn:hover {
-  background-color: #f4f4f4;
-}
-
-/* Style for when the Find Me button is active */
-#findMeBtn.active {
-  background-color: #1a73e8; /* Google Maps blue */
-  color: white;
-  border-color: #1a73e8;
-}
-
-/* Optional: Smooth transition for color changes */
-#findMeBtn {
-  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
