@@ -13,6 +13,7 @@ import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults } from './tracking.js';
 import { toggleCommunityView, publishRoute, populatePublishedRoutesList, loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, fetchAndDisplayMyStats, showPublicProfile, handleMeetupSubmit, validateMeetupForm } from './community.js';
+import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
 
 // --- DOM Element Selection ---
 const elements = {
@@ -296,6 +297,10 @@ export async function populateSessionList() {
 export function initializeUI() {
     // 1. Create the map
     initializeMap();
+
+    state.map.on('dragstart', (e) => { if (e.originalEvent) resetFindMeState(); });
+    state.map.on('zoomstart', (e) => { if (e.originalEvent) resetFindMeState(); });
+
 
     // 2. Start listening for user login/logout changes
     initializeAuthListener();
