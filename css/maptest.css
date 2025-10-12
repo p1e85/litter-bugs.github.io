@@ -1,185 +1,271 @@
-body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; overflow: hidden; }
-#map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
-.top-ui-container { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 10; display: flex; flex-direction: column; gap: 10px; }
-.top-row { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
-.bottom-row { display: flex; gap: 10px; }
-.top-bar-left, .top-bar-right { display: flex; gap: 10px; }
-#geocoder-container { flex-grow: 1; }
-.mapboxgl-ctrl-geocoder { width: 100%; max-width: 500px; border-radius: 20px !important; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important; border: 1px solid rgba(255, 255, 255, 0.3) !important; background-color: rgba(255, 255, 255, 0.8) !important; backdrop-filter: blur(5px); }
-.mapboxgl-ctrl-geocoder .suggestions { background-color: rgba(255, 255, 255, 0.9) !important; z-index: 20 !important; }
-.bottom-container { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.controls { display: flex; gap: 10px; background-color: rgba(255, 255, 255, 0.85); padding: 10px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
-.controls button { padding: 10px 15px; font-size: 16px; border: none; border-radius: 5px; background-color: #007bff; color: white; cursor: pointer; transition: background-color: 0.3s ease; }
-.controls button:hover { background-color: #0056b3; }
-.controls button.tracking { background-color: #dc3545; }
-.top-bar-button, .community-button, .donate-button { padding: 6px 10px; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 20px; background-color: rgba(255, 255, 255, 0.2); color: #333; cursor: pointer; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: background-color: 0.3s; white-space: nowrap; text-decoration: none; }
-.top-bar-button:disabled:hover { background-color: rgba(230, 230, 230, 0.5); }
-.top-bar-button:hover, .community-button.off:hover, .donate-button:hover { background-color: rgba(255, 255, 255, 0.4); }
-.community-button { background-color: #28a745; color: white; border-color: transparent; }
-.community-button:hover { opacity: 0.9; }
-.community-button.off { background-color: rgba(255, 255, 255, 0.2); color: #333; border: 1px solid rgba(255, 255, 255, 0.3); }
-.modal-overlay, .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 1000; justify-content: center; align-items: center; }
-.modal-content { background-color: #fff; padding: 25px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); position: relative; }
-.close-btn { position: absolute; top: 10px; right: 20px; color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
-.modal-button { display: block; box-sizing: border-box; width: 100%; padding: 12px; margin: 5px 0; font-size: 16px; border-radius: 5px; border: none; color: white; background-color: #007bff; cursor: pointer; text-align: center; text-decoration: none; line-height: 1.5;}
-.modal-button:hover { opacity: 0.9; }
-.modal-button.disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.7; }
-.modal-button.disabled:hover { opacity: 0.7; }
-.modal-button.edit-profile { background-color: #5a6268; }
-.modal-button.manage { background-color: #17a2b8; }
-.modal-button.publish { background-color: #ffc107; color: #000; }
-.modal-button.export { background-color: #28a745; }
-.delete-account-button { background-color: #dc3545; }
-.delete-account-button:hover { background-color: #c82333; }
-.modal-button.donate-button { background-color: #ffc107; color: #000; text-align: center; text-decoration: none; line-height: 1.5; display: block; box-sizing: border-box; }
-#termsModal .modal-content, #infoModal .modal-content { max-height: 80vh; display: flex; flex-direction: column; }
-.info-modal-body, .terms-box { overflow-y: auto; flex-grow: 1; padding: 10px 0; }
-.terms-box { border: 1px solid #ccc; padding: 10px 15px; margin-bottom: 15px; background-color: #f9f9f9; }
-.agreement-section { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-#agreeBtn { padding: 12px; font-size: 18px; border: none; border-radius: 5px; color: white; background-color: #007bff; cursor: pointer; transition: background-color: 0.2s; }
-#agreeBtn:disabled { background-color: #cccccc; cursor: not-allowed; }
-.info-list { padding-left: 20px; }
-.info-list li { margin-bottom: 10px; }
-.tos-link-container { margin-top: 20px; font-size: 0.9em; color: #666; text-align: center; }
-.tos-link-container a { color: #007bff; text-decoration: none; }
-.tos-link-container a:hover { text-decoration: underline; }
-.auth-modal { max-width: 400px; text-align: center; }
-#authSubtitle a { color: #007bff; text-decoration: none; cursor: pointer; }
-#authSubtitle a:hover { text-decoration: underline; }
-.auth-form { display: flex; flex-direction: column; gap: 10px; margin: 20px 0; }
-.auth-form.login-mode #usernameInput, .auth-form.login-mode #ageGateContainer { display: none; }
-.auth-form.signup-mode #usernameInput, .auth-form.signup-mode #ageGateContainer { display: flex; }
-.auth-form input { padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; }
-#authActionBtn { padding: 12px; font-size: 16px; border: none; border-radius: 5px; color: white; background-color: #007bff; cursor: pointer; transition: background-color: 0.2s; }
-#authActionBtn:disabled { background-color: #cccccc; cursor: not-allowed; }
-.age-gate-container { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 5px 0; font-size: 0.9em; color: #333; }
-.skip-button { background-color: #6c757d; color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-size: 16px; cursor: pointer; }
-.error-message { color: #dc3545; margin-top: 15px; min-height: 20px; font-size: 14px; }
-#sessionList, #localSessionList, #publishedRoutesList, #meetupsList { list-style: none; padding: 0; margin-top: 20px; max-height: 40vh; overflow-y: auto; border: 1px solid #eee; }
-#sessionList li, #localSessionList li, #publishedRoutesList li, #meetupsList li { padding: 15px; border-bottom: 1px solid #eee; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-#publishedRoutesList li, #meetupsList li { cursor: default; }
-#sessionList li:hover, #localSessionList li:hover { background-color: #f5f5f5; cursor: pointer; }
-.session-date { font-size: 0.8em; color: #666; white-space: nowrap; }
-.delete-session-btn { padding: 5px 10px; font-size: 12px; border: none; background-color: #dc3545; color: white; border-radius: 5px; cursor: pointer; transition: background-color: 0.2s; }
-.delete-session-btn:hover { background-color: #c82333; }
-.disclaimer-text { font-size: 0.9em; font-style: italic; color: #6c757d; background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #17a2b8; }
-.safety-disclaimer { font-size: 0.85em; color: #6c757d; background-color: #fffbe6; padding: 10px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 10px 0; }
-.pin-popup-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-.pin-popup-form input, .pin-popup-form select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
-.pin-popup-form button { padding: 8px 12px; border: none; border-radius: 5px; background-color: #007bff; color: white; cursor: pointer; }
-.poi-popup-buttons { display: flex; gap: 10px; margin-top: 10px; }
-.poi-popup-buttons button { flex-grow: 1; padding: 8px 10px; font-size: 14px; border: none; border-radius: 5px; color: white; cursor: pointer; }
-.poi-popup-buttons .schedule-btn { background-color: #007bff; }
-.poi-popup-buttons .view-btn { background-color: #28a745; }
-.pin-edit-modal { max-width: 450px; }
-.pin-edit-image { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; }
-.profile-form { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
-.profile-form label { text-align: left; font-weight: bold; margin-bottom: -10px; }
-.profile-form input, .profile-form textarea { width: 95%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; }
-.profile-form textarea { min-height: 80px; resize: vertical; }
-.profile-modal { max-width: 450px; text-align: center; }
-.profile-location { font-style: italic; color: #6c757d; margin-top: -10px; }
-.profile-bio { margin-top: 20px; white-space: pre-wrap; }
-.profile-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 15px 0; text-align: center; }
-.profile-stat-card { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
-.profile-stat-value { font-size: 1.5em; font-weight: bold; color: #007bff; }
-.profile-stat-label { font-size: 0.8em; color: #6c757d; margin-top: 5px; }
-.badge-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 15px; padding: 10px 0; }
-.badge-item { width: 60px; height: 60px; background-color: #f0f0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; border: 2px solid #e0e0e0; cursor: help; transition: transform 0.2s; }
-.badge-item:hover { transform: scale(1.1); }
-.no-badges-message { font-style: italic; color: #888; }
-.support-button { background-color: #ffc107; color: #000; margin-top: 20px; display: none; }
-.safety-modal, .summary-modal, .achievement-modal { max-width: 480px; text-align: center; }
-.summary-stats { display: flex; justify-content: space-around; margin: 25px 0; padding: 20px 0; background-color: #f8f9fa; border-radius: 8px; }
-.summary-stats > div { display: flex; flex-direction: column; }
-.stat-value { font-size: 2em; font-weight: bold; color: #007bff; }
-.stat-label { font-size: 0.9em; color: #6c757d; margin-top: 5px; }
-.modal-button.share-button { background-color: #28a745; margin-bottom: 10px; }
-.modal-button.share-button:hover { background-color: #218838; }
-.achievement-modal { border: 2px solid #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
-.achievement-icon { font-size: 4em; display: block; margin-bottom: 15px; }
-.achievement-modal h2 { color: #007bff; }
-.achievement-modal h3 { margin: 10px 0; font-size: 1.5em; }
-.leaderboard-tabs { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
-.leaderboard-tab { padding: 10px 15px; border: 1px solid #ccc; border-radius: 20px; background-color: #f0f0f0; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
-.leaderboard-tab.active { background-color: #007bff; color: white; border-color: #007bff; }
-.leaderboard-list { list-style: none; padding: 0; margin-top: 20px; max-height: 50vh; overflow-y: auto; }
-.leaderboard-list li { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
-.leaderboard-list li:first-child { background-color: #ffd700; font-weight: bold; }
-.leaderboard-list li:nth-child(2) { background-color: #c0c0c0; }
-.leaderboard-list li:nth-child(3) { background-color: #cd7f32; }
-.leaderboard-rank { font-size: 1.2em; font-weight: bold; width: 40px; text-align: center; }
-.leaderboard-name { flex-grow: 1; margin-left: 15px; }
-.leaderboard-name a { color: #0056b3; text-decoration: underline; cursor: pointer; }
-.leaderboard-name a:hover { color: #003d82; }
-.leaderboard-score { font-weight: bold; color: #007bff; }
-.my-stats-container { text-align: center; padding-top: 20px; }
-.my-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px; }
-.stat-card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
-.my-stats-value { font-size: 1.75em; font-weight: bold; color: #007bff; }
-.my-stats-label { font-size: 0.9em; color: #6c757d; margin-top: 5px; }
-.my-stats-badges .badge-container { margin-top: 10px; }
-.login-prompt { font-style: italic; color: #6c757d; }
-.user-status-display { display: flex; background-color: rgba(255, 255, 255, 0.8); padding: 8px 12px; border-radius: 8px; font-size: 14px; align-items: center; gap: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
-#logoutBtn, #loginSignupBtn { border: none; background-color: #6c757d; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
-.photo-marker { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); background-size: cover; background-position: center; cursor: pointer; }
+/* --- 1. Color Palette & Global Styles --- */
 
-/* Shared styles for both floating buttons */
+:root {
+  --color-primary-green: #4A7C59;
+  --color-secondary-brown: #A0522D;
+  --color-background-light: #F9F9F7;
+  --color-background-modal: #ffffff;
+  --color-text-dark: #333333;
+  --color-text-light: #ffffff;
+  --color-accent-danger: #dc3545; /* The red for "tracking" */
+  --color-border: #ccc;
+  --color-button-bg: #f0f0f0;
+  --color-button-hover: #e9e9e9;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--color-background-light);
+  color: var(--color-text-dark);
+  overflow: hidden; /* Prevent scrolling */
+}
+
+/* --- 2. Main Layout & Map --- */
+
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+/* Container for all top buttons */
+.top-ui-container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.top-row {
+  display: flex;
+  justify-content: flex-end; /* Pushes the menu button to the far right */
+}
+
+.bottom-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  background-color: rgba(255, 255, 255, 0.85);
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  pointer-events: auto;
+}
+
+.bottom-container {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* --- 3. Buttons --- */
+
+/* General button styles */
+.top-bar-button,
+.modal-button,
+.control-btn,
+.community-button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-button-bg);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  pointer-events: auto;
+}
+
+.top-bar-button:hover,
+.modal-button:hover,
+.control-btn:hover {
+  background-color: var(--color-button-hover);
+}
+
+/* Floating map buttons */
 #findMeBtn,
+#pictureBtn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: var(--color-background-modal);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  font-size: 24px;
+  padding: 0;
+  outline: none;
+}
+
+#findMeBtn {
+  position: absolute;
+  bottom: 30px;
+  left: 20px;
+  z-index: 1;
+}
+
 #pictureBtn {
   position: absolute;
   bottom: 30px;
-  z-index: 10; /* Ensures they are on top of the map */
-  
-  width: 50px;
-  height: 50px;
-  border-radius: 50%; /* Makes them circular */
-  
-  background-color: white;
-  border: 1px solid #ccc;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  
-  font-size: 24px;
-  padding: 0;
-  cursor: pointer;
-  outline: none;
-  
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-/* --- Positioning --- */
-
-/* Position the "Find Me" button on the left */
-#findMeBtn {
-  left: 20px;
-}
-
-/* Position the "Pin Picture" button on the right */
-#pictureBtn {
   right: 20px;
+  z-index: 1;
 }
 
-/* --- States --- */
-
-/* Style for when a button is hovered over */
-#findMeBtn:hover,
-#pictureBtn:hover {
-  background-color: #f4f4f4;
-}
-
-/* Style for when the "Find Me" button is active */
+/* Special button states */
 #findMeBtn.active {
-  background-color: #1a73e8; /* Google Maps blue */
-  color: white;
+  background-color: var(--color-primary-green);
+  color: var(--color-text-light);
+  border-color: var(--color-primary-green);
 }
 
-/* Style for when the "Pin Picture" button is disabled */
+.menu-btn.tracking {
+  background-color: var(--color-accent-danger);
+  color: var(--color-text-light);
+}
+
 #pictureBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background-color: #f8f8f8; /* A slightly off-white when disabled */
+}
+
+.modal-button.publish {
+    background-color: var(--color-primary-green);
+    color: var(--color-text-light);
+}
+
+.modal-button.publish:hover {
+    background-color: #3e684b;
+}
+
+/* --- 4. Modals --- */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 10;
+  display: none; /* Hidden by default */
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: var(--color-background-modal);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: var(--color-text-dark);
+}
+
+.ok-btn {
+    margin-top: 15px;
+}
+
+/* --- 5. Specific Components --- */
+
+/* Geocoder Search Bar */
+#geocoder-container .mapboxgl-ctrl-geocoder {
+  width: 100%;
+  max-width: none;
+  font-size: 15px;
+  box-shadow: none;
+  background-color: var(--color-background-modal);
+}
+
+/* User Status Bar */
+.user-status-display {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  pointer-events: auto;
+  font-size: 14px;
+  padding: 6px 12px;
+}
+.user-status-display span {
+  margin-right: 10px;
+}
+#guestContent, #loggedInContent {
+  display: flex;
+  align-items: center;
+}
+
+/* Pin Popups */
+.mapboxgl-popup-content {
+  padding: 15px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  border-radius: 8px !important;
+}
+.pin-popup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.pin-popup-form input,
+.pin-popup-form select,
+.pin-popup-form button {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Session Lists */
+.session-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.session-list li {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+.session-list li:hover {
+  background-color: #f9f9f9;
+}
+.session-list li:last-child {
+  border-bottom: none;
+}
+.session-date {
+  font-size: 0.8em;
+  color: #777;
 }
