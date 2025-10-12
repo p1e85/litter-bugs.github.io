@@ -58,7 +58,7 @@ if (mapboxCoords && mapboxCoords.length > 0) {
     'type': 'line',
     'source': `community-route-${routeId}`,
     'paint': {
-      'line-color': '#28a745',
+      'line-color': '#A0522D',
       'line-width': 4,
       'line-opacity': 0.7
     }
@@ -106,7 +106,7 @@ if (mapboxCoords && mapboxCoords.length > 0) {
       source: 'community-pins',
       filter: ['has', 'point_count'],
       paint: {
-        'circle-color': '#28a745',
+        'circle-color': '#A0522D',
         'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
       }
     });
@@ -132,7 +132,7 @@ if (mapboxCoords && mapboxCoords.length > 0) {
       source: 'community-pins',
       filter: ['!', ['has', 'point_count']],
       paint: { // <-- A circle layer uses 'paint' to define its look
-        'circle-color': '#28a745',
+        'circle-color': '#A0522D',
         'circle-radius': 7,
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
