@@ -120,6 +120,44 @@
             <p id="authError" class="error-message"></p>
         </div>
     </div>
+
+        <!-- Instant Pin Edit Modal (MODIFIED) -->
+    <div id="pinEditModal" class="modal">
+        <div class="modal-content pin-edit-modal">
+            <span class="close-btn">&times;</span>
+            <h2>Add Pin Details</h2>
+            <img id="pinEditImage" src="" alt="Photo of litter" class="pin-edit-image">
+            <div class="profile-form">
+                <input type="hidden" id="pinEditId">
+                <label for="pinEditTitle">Title</label>
+                <input type="text" id="pinEditTitle" placeholder="e.g., Plastic Bottle">
+
+                <label for="pinEditCategory">Category</label>
+                <!-- NEW categories added to this dropdown -->
+                <select id="pinEditCategory">
+                    <option value="Plastic">Plastic</option>
+                    <option value="Glass">Glass</option>
+                    <option value="Metal">Metal</option>
+                    <option value="Paper">Paper</option>
+                    <option value="Cardboard">Cardboard</option>
+                    <option value="Styrofoam">Styrofoam</option>
+                    <option value="Cigarette Butts">Cigarette Butts</option>
+                    <option value="Food Waste">Food Waste</option>
+                    <option value="Fabric/Clothing">Fabric/Clothing</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Other">Other</option>
+                </select>
+
+                <label for="pinEditBrand">Brand (Optional)</label>
+                <input type="text" id="pinEditBrand" placeholder="e.g., Coca-Cola, McDonald's">
+
+                <label for="pinEditQuantity">Quantity (Optional)</label>
+                <input type="number" id="pinEditQuantity" value="1" min="1">
+
+                <button id="savePinDetailsBtn" class="modal-button">Save Pin</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Profile Modals -->
     <div id="profileModal" class="modal-overlay">
