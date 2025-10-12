@@ -230,6 +230,21 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleMarkerVisibility();
     });
 
+        initializeMap('map');
+
+    // CRITICAL FIX: Event Delegation for dynamic content
+    // This listens for clicks on the whole map area and then checks if the click
+    // was on a profile link inside a popup. This breaks the circular dependency.
+    document.getElementById('map').addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('profile-link')) {
+            e.preventDefault();
+            const userId = e.target.dataset.userid;
+            if (userId) {
+                showPublicProfile(userId);
+            }
+        }
+    });
+
     const validateSignUpForm = () => {
         const isEmailValid = emailInput.value.includes('@');
         const isPasswordValid = passwordInput.value.length >= 6;
