@@ -583,11 +583,12 @@ function createAndAddMarker(pinInfo, type, routeInfo = {}) {
     }
     return marker;
 }
-
+// MODIFIED: createPinPopup now includes the expanded list of categories.
 function createPinPopup(pinInfo, type, routeInfo = {}) {
     let popupHTML;
     if (type === 'user') {
-        const categories = ['Plastic', 'Glass', 'Metal', 'Paper', 'Other'];
+        // NEW expanded category list
+        const categories = ['Plastic', 'Glass', 'Metal', 'Paper', 'Cardboard', 'Styrofoam', 'Cigarette Butts', 'Food Waste', 'Fabric/Clothing', 'Electronics', 'Other'];
         const optionsHTML = categories.map(cat => `<option value="${cat}" ${pinInfo.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
         popupHTML = `<div><img src="${pinInfo.imageURL || pinInfo.image}" alt="User photo" style="width:100%; height:auto; border-radius: 4px;"/><div class="pin-popup-form"><input type="text" id="title-${pinInfo.id}" value="${pinInfo.title}" placeholder="Enter a title"><select id="category-${pinInfo.id}">${optionsHTML}</select><div style="display: flex; justify-content: space-between; gap: 10px;"><button id="update-${pinInfo.id}" style="flex-grow: 1;">Update</button><button id="delete-${pinInfo.id}" style="background-color: #dc3545;">Delete</button></div></div></div>`;
     } else {
