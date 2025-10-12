@@ -16,6 +16,7 @@ export const state = {
     communityMarkers: [],
     trackingStartTime: null,
     currentStyleIndex: 0,
+    findMeState: 0, // 0: off, 1: centered, 2: centered and heading-oriented
 };
 
 // --- CONSTANTS ---
