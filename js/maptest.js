@@ -230,8 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleMarkerVisibility();
     });
 
-        initializeMap('map');
-
     // CRITICAL FIX: Event Delegation for dynamic content
     // This listens for clicks on the whole map area and then checks if the click
     // was on a profile link inside a popup. This breaks the circular dependency.
@@ -536,68 +534,6 @@ function startTracking() {
     trackBtn.classList.add('tracking');
 }
 
-async function handlePhoto(event) {
-    const pictureBtn = document.getElementById('pictureBtn');
-    const originalButtonText = pictureBtn.innerHTML;
-    if (!event.target.files || event.target.files.length === 0) { event.target.value = ''; return; }
-    const file = event.target.files[0];
-    pictureBtn.innerHTML = 'Processing...'; pictureBtn.disabled = true;
-    const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
-    let processedFile;
-    try {
-        processedFile = await imageCompression(file, options);
-    } catch (error) {
-        console.error("Image compression error:", error); alert("Error processing image.");
-        pictureBtn.innerHTML = originalButtonText; pictureBtn.disabled = false; event.target.value = ''; return;
-    }
-    navigator.geolocation.getCurrentPosition(async (position) => {
-        const coords = [position.coords.longitude, position.coords.latitude];
-        const defaultTitle = `Pin ${photoPins.length + 1}`;
-        if (!currentUser) {
-            const reader = new FileReader();
-            reader.readAsDataURL(processedFile);
-            reader.onload = e => {
-                const pinInfo = { id: `pin-${Date.now()}`, coords, image: e.target.result, title: defaultTitle, category: 'Other' };
-                photoPins.push(pinInfo);
-                const newMarker = createAndAddMarker(pinInfo, 'user');
-                newMarker.togglePopup();
-                updateUserPinsSource();
-            };
-        } else {
-            try {
-                const timestamp = Date.now();
-                const storageRef = ref(storage, `photos/${currentUser.uid}/${timestamp}-${processedFile.name}`);
-                const snapshot = await uploadBytes(storageRef, processedFile);
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                const pinInfo = { id: `pin-${timestamp}`, coords, imageURL: downloadURL, title: defaultTitle, category: 'Other' };
-                photoPins.push(pinInfo);
-                const newMarker = createAndAddMarker(pinInfo, 'user');
-                newMarker.togglePopup();
-                updateUserPinsSource();
-            } catch (error) { console.error("Error uploading photo:", error); alert("Photo upload failed."); }
-        }
-        pictureBtn.innerHTML = originalButtonText; pictureBtn.disabled = false; event.target.value = '';
-    }, () => {
-        alert("Could not get location. Photo was not pinned.");
-        pictureBtn.innerHTML = originalButtonText; pictureBtn.disabled = false; event.target.value = '';
-    }, { enableHighAccuracy: true });
-}
-
-function createAndAddMarker(pinInfo, type, routeInfo = {}) {
-    const el = document.createElement('div');
-    el.className = 'photo-marker';
-    el.style.backgroundImage = `url(${pinInfo.imageURL || pinInfo.image})`;
-    el.style.display = map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
-    const popup = createPinPopup(pinInfo, type, routeInfo);
-    const marker = new mapboxgl.Marker(el).setLngLat(pinInfo.coords).setPopup(popup).addTo(map);
-    if (type === 'user') {
-        userMarkers.push(marker);
-    } else {
-        el.style.borderColor = '#28a745';
-        communityMarkers.push(marker);
-    }
-    return marker;
-}
 async function handlePhoto(event) {
     const pictureBtn = document.getElementById('pictureBtn');
     const originalButtonText = pictureBtn.innerHTML;
