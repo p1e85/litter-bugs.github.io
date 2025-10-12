@@ -692,11 +692,13 @@ async function handlePinDetailsSave() {
     document.getElementById('pinEditModal').style.display = 'none';
 }
 
-// MODIFIED: createPinPopup now includes logic to display brand and quantity if available
 function createPinPopup(pinInfo, type, routeInfo = {}) {
     let popupHTML;
     if (type === 'user') {
-        // ... (logic is unchanged) ...
+        // CRITICAL FIX: The logic for the user's own pins is now correctly restored.
+        const categories = ['Plastic', 'Glass', 'Metal', 'Paper', 'Cardboard', 'Styrofoam', 'Cigarette Butts', 'Food Waste', 'Fabric/Clothing', 'Electronics', 'Other'];
+        const optionsHTML = categories.map(cat => `<option value="${cat}" ${pinInfo.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
+        popupHTML = `<div><img src="${pinInfo.imageURL || pinInfo.image}" alt="User photo" style="width:100%; height:auto; border-radius: 4px;"/><div class="pin-popup-form"><input type="text" id="title-${pinInfo.id}" value="${pinInfo.title}" placeholder="Enter a title"><select id="category-${pinInfo.id}">${optionsHTML}</select><div style="display: flex; justify-content: space-between; gap: 10px;"><button id="update-${pinInfo.id}" style="flex-grow: 1;">Update</button><button id="delete-${pinInfo.id}" style="background-color: #dc3545;">Delete</button></div></div></div>`;
     } else {
         let detailsHTML = `<p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${pinInfo.category || 'Other'}</p>`;
         if (pinInfo.brand) {
@@ -708,8 +710,40 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
         popupHTML = `<div><img src="${pinInfo.imageURL}" alt="Community photo" style="width:100%; border-radius: 4px;"/><p style="margin: 5px 0 0;"><strong>${pinInfo.title}</strong></p>${detailsHTML}<small>By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small></div>`;
     }
     const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(popupHTML);
-    // ... (rest of the function is unchanged) ...
+    popup.on('open', () => {
+        if (type === 'user') {
+            document.getElementById(`update-${pinInfo.id}`)?.addEventListener('click', () => {
+                const pin = photoPins.find(p => p.id === pinInfo.id);
+                if (pin) {
+                    pin.title = document.getElementById(`title-${pinInfo.id}`).value;
+                    pin.category = document.getElementById(`category-${pinInfo.id}`).value;
+                }
+                popup.remove(); alert("Pin updated! Remember to save your session.");
+            });
+            document.getElementById(`delete-${pinInfo.id}`)?.addEventListener('click', () => {
+                if (confirm("Are you sure?")) {
+                    photoPins = photoPins.filter(p => p.id !== pinInfo.id);
+                    const markerToRemove = userMarkers.find(m => {
+                        const lngLat = m.getLngLat();
+                        return lngLat.lng === pinInfo.coords[0] && lngLat.lat === pinInfo.coords[1];
+                    });
+                    if (markerToRemove) {
+                        markerToRemove.remove();
+                        userMarkers = userMarkers.filter(m => m !== markerToRemove);
+                    }
+                    updateUserPinsSource();
+                    popup.remove();
+                }
+            });
+        } else {
+            document.querySelector(`.profile-link[data-userid="${routeInfo.userId}"]`)?.addEventListener('click', (e) => {
+                e.preventDefault();
+                showPublicProfile(routeInfo.userId);
+            });
+        }
+    });
     return popup;
+}
 
 function updateUserPinsSource() {
     const features = photoPins.map(pin => ({
