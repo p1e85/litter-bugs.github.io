@@ -44,12 +44,12 @@ export function initializeMap() {
  */
 function initializeMapLayers() {
     if (!state.map.getSource('user-route')) state.map.addSource('user-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
-    if (!state.map.getLayer('user-route')) state.map.addLayer({ id: 'user-route', type: 'line', source: 'user-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#007bff', 'line-width': 5 } });
+    if (!state.map.getLayer('user-route')) state.map.addLayer({ id: 'user-route', type: 'line', source: 'user-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#4A7C59', 'line-width': 5 } });
     if (!state.map.getSource('user-location-point')) state.map.addSource('user-location-point', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', 'coordinates': [] } } });
-    if (!state.map.getLayer('user-location-pulse')) state.map.addLayer({ id: 'user-location-pulse', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 15, 'circle-color': '#007bff', 'circle-opacity': 0.2 } });
-    if (!state.map.getLayer('user-location-dot')) state.map.addLayer({ id: 'user-location-dot', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 2, 'circle-stroke-color': '#007bff' } });
+    if (!state.map.getLayer('user-location-pulse')) state.map.addLayer({ id: 'user-location-pulse', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 15, 'circle-color': '#4A7C59', 'circle-opacity': 0.2 } });
+    if (!state.map.getLayer('user-location-dot')) state.map.addLayer({ id: 'user-location-dot', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 2, 'circle-stroke-color': '#4A7C59' } });
     if (!state.map.getSource('user-pins-source')) state.map.addSource('user-pins-source', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    if (!state.map.getLayer('user-pins-dots')) state.map.addLayer({ id: 'user-pins-dots', type: 'circle', source: 'user-pins-source', maxzoom: ZOOM_THRESHOLD, paint: { 'circle-radius': 6, 'circle-color': '#007bff', 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } });
+    if (!state.map.getLayer('user-pins-dots')) state.map.addLayer({ id: 'user-pins-dots', type: 'circle', source: 'user-pins-source', maxzoom: ZOOM_THRESHOLD, paint: { 'circle-radius': 6, 'circle-color': '#4A7C59', 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } });
     if (!state.map.getSource('community-pins-source')) state.map.addSource('community-pins-source', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     if (!state.map.getLayer('community-pins-dots')) state.map.addLayer({ id: 'community-pins-dots', type: 'circle', source: 'community-pins-source', maxzoom: ZOOM_THRESHOLD, paint: { 'circle-radius': 6, 'circle-color': '#28a745', 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } });
 }
