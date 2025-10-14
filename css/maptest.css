@@ -7,7 +7,7 @@
   --color-background-modal: #ffffff;
   --color-text-dark: #333333;
   --color-text-light: #ffffff;
-  --color-accent-danger: #dc3545; /* The red for "tracking" */
+  --color-accent-danger: #dc3545;
   --color-border: #ccc;
   --color-button-bg: #f0f0f0;
   --color-button-hover: #e9e9e9;
@@ -21,7 +21,13 @@ body, html {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--color-background-light);
   color: var(--color-text-dark);
-  overflow: hidden; /* Prevent scrolling */
+  overflow: hidden;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 15px 0;
 }
 
 /* --- 2. Main Layout & Map --- */
@@ -33,7 +39,6 @@ body, html {
   width: 100%;
 }
 
-/* Container for all top buttons */
 .top-ui-container {
   position: absolute;
   top: 10px;
@@ -48,7 +53,7 @@ body, html {
 
 .top-row {
   display: flex;
-  justify-content: flex-end; /* Pushes the menu button to the far right */
+  justify-content: flex-end;
 }
 
 .bottom-row {
@@ -74,29 +79,48 @@ body, html {
 
 /* --- 3. Buttons --- */
 
-/* General button styles */
 .top-bar-button,
 .modal-button,
 .control-btn,
-.community-button {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background-color: var(--color-button-bg);
-  cursor: pointer;
+.community-button,
+.skip-button,
+.delete-account-button,
+.leaderboard-tab {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  text-decoration: none;
+  text-align: center;
+  padding: 12px;
+  margin: 8px 0;
   font-size: 14px;
   font-weight: 500;
-  transition: background-color 0.2s ease;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
   pointer-events: auto;
+  background-color: var(--color-button-bg);
+  color: var(--color-text-dark);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
 }
 
 .top-bar-button:hover,
 .modal-button:hover,
-.control-btn:hover {
+.control-btn:hover,
+.community-button:hover,
+.skip-button:hover,
+.leaderboard-tab:hover {
   background-color: var(--color-button-hover);
 }
 
-/* Floating map buttons */
+.top-row .top-bar-button,
+.bottom-row .top-bar-button,
+.bottom-row .community-button {
+    width: auto;
+    margin: 0;
+    padding: 8px 12px;
+}
+
 #findMeBtn,
 #pictureBtn {
   width: 50px;
@@ -106,6 +130,7 @@ body, html {
   box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   font-size: 24px;
   padding: 0;
+  margin: 0;
   outline: none;
 }
 
@@ -123,16 +148,17 @@ body, html {
   z-index: 1;
 }
 
-/* Special button states */
 #findMeBtn.active {
   background-color: var(--color-primary-green);
   color: var(--color-text-light);
   border-color: var(--color-primary-green);
 }
 
+.modal-button.tracking,
 .menu-btn.tracking {
   background-color: var(--color-accent-danger);
   color: var(--color-text-light);
+  border-color: var(--color-accent-danger);
 }
 
 #pictureBtn:disabled {
@@ -144,9 +170,14 @@ body, html {
     background-color: var(--color-primary-green);
     color: var(--color-text-light);
 }
-
 .modal-button.publish:hover {
     background-color: #3e684b;
+}
+
+.delete-account-button {
+    background-color: var(--color-accent-danger);
+    color: var(--color-text-light);
+    border-color: var(--color-accent-danger);
 }
 
 /* --- 4. Modals --- */
@@ -159,9 +190,11 @@ body, html {
   height: 100%;
   background: rgba(0, 0, 0, 0.6);
   z-index: 10;
-  display: none; /* Hidden by default */
+  display: none;
   justify-content: center;
   align-items: center;
+  padding: 10px;
+  box-sizing: border-box;
 }
 
 .modal-content {
@@ -169,10 +202,10 @@ body, html {
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  width: 90%;
+  width: 100%;
   max-width: 500px;
   position: relative;
-  max-height: 80vh;
+  max-height: 90vh;
   overflow-y: auto;
 }
 
@@ -184,28 +217,30 @@ body, html {
   font-weight: bold;
   color: #aaa;
   cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
 }
-
 .close-btn:hover {
   color: var(--color-text-dark);
 }
 
-.ok-btn {
-    margin-top: 15px;
-}
-
 /* --- 5. Specific Components --- */
 
-/* Geocoder Search Bar */
+#geocoder-container {
+  pointer-events: auto;
+}
+
 #geocoder-container .mapboxgl-ctrl-geocoder {
   width: 100%;
   max-width: none;
   font-size: 15px;
-  box-shadow: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border-radius: 8px;
   background-color: var(--color-background-modal);
 }
 
-/* User Status Bar */
 .user-status-display {
   display: flex;
   align-items: center;
@@ -224,7 +259,6 @@ body, html {
   align-items: center;
 }
 
-/* Pin Popups */
 .mapboxgl-popup-content {
   padding: 15px !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -243,7 +277,6 @@ body, html {
   box-sizing: border-box;
 }
 
-/* Session Lists */
 .session-list {
   list-style: none;
   padding: 0;
@@ -269,3 +302,10 @@ body, html {
   font-size: 0.8em;
   color: #777;
 }
+
+/* Authentication form styles */
+.auth-form { display: flex; flex-direction: column; gap: 10px; }
+.auth-form.login-mode #usernameInput,
+.auth-form.login-mode #ageGateContainer { display: none; }
+.auth-form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+.age-gate-container { display: flex; align-items: center; gap: 5px; }
