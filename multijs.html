@@ -41,12 +41,12 @@
       <div id="geocoder-container"></div>
       <button id="findMeBtn" class="control-btn">📍</button>
       <button id="pictureBtn" class="control-btn" disabled>📸</button>
-      <input type="file" id="cameraInput" accept="image/*" capture style="display: none;">
+      <input type="file" id="cameraInput" accept="image/*" capture >
     </div>
 
     <div class="bottom-container">
-        <div id="userStatus" class="user-status-display" style="display: none;">
-            <div id="loggedInContent" style="display: none;">
+        <div id="userStatus" class="user-status-display">
+            <div id="loggedInContent">
                 <span id="userEmail"></span>
                 <button id="logoutBtn">Log Out</button>
             </div>
@@ -65,7 +65,7 @@
             <button id="dataBtn" class="modal-button">💾 Data Management</button>
             <hr>
             <button id="infoBtn" class="modal-button">ℹ️ Info & Terms</button>
-            <button id="editProfileBtn" class="modal-button edit-profile" style="display: none;">👤 Edit My Profile</button>
+            <button id="editProfileBtn" class="modal-button edit-profile">👤 Edit My Profile</button>
             <a href="https://www.litter-bugs.com" target="_blank" class="modal-button">
                 🌐 Visit Website
             </a>
@@ -74,7 +74,7 @@
             </a>
             <hr>
             <p>Publish your completed route for the community to see.</p>
-            <button id="publishBtn" class="modal-button publish" style="display: none;">🚀 Publish to Community</button>
+            <button id="publishBtn" class="modal-button publish">🚀 Publish to Community</button>
         </div>
     </div>
 
@@ -143,7 +143,7 @@
             <button id="saveBtn" class="modal-button">Save Private Session</button>
             <button id="loadBtn" class="modal-button">Load Private Session</button>
             <button id="centerOnRouteBtn" class="modal-button disabled">🎯 Find Route</button>
-            <button id="managePublicationsBtn" class="modal-button manage" style="display: none;">Manage My Publications</button>
+            <button id="managePublicationsBtn" class="modal-button manage">Manage My Publications</button>
             <hr>
             <p>Export your current session as a GeoJSON file.</p>
             <button id="exportBtn" class="modal-button export">Export as GeoJSON</button>
@@ -206,7 +206,7 @@
             <hr>
             <h4>Achievements</h4>
             <div id="profileAchievements" class="badge-container"></div>
-            <button id="profileSupportBtn" class="modal-button support-button" style="display: none;">☕ Support Them</button>
+            <button id="profileSupportBtn" class="modal-button support-button">☕ Support Them</button>
         </div>
     </div>
 
@@ -249,7 +249,7 @@
                 <button class="leaderboard-tab" data-metric="totalDistance">Most Distance</button>
             </div>
             <ol id="leaderboardList" class="leaderboard-list"></ol>
-            <div id="myStatsContainer" class="my-stats-container" style="display: none;"></div>
+            <div id="myStatsContainer" class="my-stats-container" ></div>
         </div>
     </div>
 
@@ -281,7 +281,7 @@
                     <input type="checkbox" id="safetyCheckbox">
                     <label for="safetyCheckbox">I understand and agree to the safety guidelines.</label>
                 </div>
-                <p id="profanityWarning" class="error-message" style="display: none;">Please use appropriate language.</p>
+                <p id="profanityWarning" class="error-message" >Please use appropriate language.</p>
                 <button id="createMeetupBtn" class="modal-button" disabled>Create Meetup</button>
             </div>
         </div>
