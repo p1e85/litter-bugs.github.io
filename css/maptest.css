@@ -309,3 +309,57 @@ hr {
 .auth-form.login-mode #ageGateContainer { display: none; }
 .auth-form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
 .age-gate-container { display: flex; align-items: center; gap: 5px; }
+
+/* --- 6. Layout Fixes & Overrides --- */
+
+/* Fix for Top Bar Buttons */
+.top-row, .bottom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Adds space between buttons in the same row */
+}
+
+.top-row {
+  justify-content: flex-end; /* Pushes menu button to the right */
+}
+
+.bottom-row {
+  justify-content: center; /* Centers the main action buttons */
+}
+
+/* Override generic button styles for top bar */
+.top-row .top-bar-button,
+.bottom-row .top-bar-button,
+.bottom-row .community-button {
+  width: auto; /* Allow buttons to size to their content */
+  margin: 0;
+}
+
+/* Fix for Leaderboard Tabs */
+.leaderboard-tabs {
+  display: flex;
+  justify-content: stretch; /* Makes tabs fill the width */
+  margin-bottom: 15px;
+  border-radius: 8px;
+  overflow: hidden; /* Clips the corners of the buttons inside */
+  border: 1px solid var(--color-border);
+}
+
+.leaderboard-tab {
+  width: 100%; /* Each tab takes up equal space */
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  border-right: 1px solid var(--color-border);
+  background-color: var(--color-button-bg);
+}
+
+.leaderboard-tab:last-child {
+  border-right: none;
+}
+
+.leaderboard-tab.active {
+  background-color: var(--color-primary-green);
+  color: var(--color-text-light);
+  font-weight: bold;
+}
