@@ -5,26 +5,6 @@ import { clearCurrentSession } from './data.js';
 
 // --- Community View ---
 
-/**
- * Toggles the visibility of community-generated routes on the map.
- */
-export async function toggleCommunityView() {
-    state.isCommunityViewOn = !state.isCommunityViewOn;
-    const communityBtn = document.getElementById('communityBtn');
-    if (state.isCommunityViewOn) {
-        communityBtn.textContent = '🌎 Community View: ON';
-        communityBtn.classList.remove('off');
-        await fetchAndDisplayCommunityRoutes();
-    } else {
-        communityBtn.textContent = '🌎 Community View: OFF';
-        communityBtn.classList.add('off');
-        clearCommunityRoutes();
-    }
-}
-
-/**
- * Fetches all published routes from Firestore and displays them on the map.
- */
 export async function fetchAndDisplayCommunityRoutes() {
   try {
     clearCommunityRoutes();
@@ -33,7 +13,6 @@ export async function fetchAndDisplayCommunityRoutes() {
     const querySnapshot = await getDocs(q);
 
     const allPinFeatures = [];
-    let uniqueIdCounter = 0; // To ensure every pin has a unique ID for its icon
 
     querySnapshot.forEach(doc => {
       const routeData = doc.data();
@@ -41,38 +20,27 @@ export async function fetchAndDisplayCommunityRoutes() {
       const mapboxCoords = convertRouteFromFirestore(routeData.route);
       const mapboxPins = convertPinsFromFirestore(routeData.pins);
 
-      // Keep drawing the route lines
-if (mapboxCoords && mapboxCoords.length > 0) {
-  state.map.addSource(`community-route-${routeId}`, {
-    'type': 'geojson',
-    'data': {
-      'type': 'Feature',
-      'geometry': {
-        'type': 'LineString',
-        'coordinates': mapboxCoords
+      // Draw the route lines
+      if (mapboxCoords && mapboxCoords.length > 0) {
+        state.map.addSource(`community-route-${routeId}`, {
+          'type': 'geojson',
+          'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': mapboxCoords } }
+        });
+        state.map.addLayer({
+          'id': `community-route-${routeId}`,
+          'type': 'line',
+          'source': `community-route-${routeId}`,
+          'paint': { 'line-color': '#A0522D', 'line-width': 4, 'line-opacity': 0.7 }
+        });
+        state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
       }
-    }
-  });
-  state.map.addLayer({
-    'id': `community-route-${routeId}`,
-    'type': 'line',
-    'source': `community-route-${routeId}`,
-    'paint': {
-      'line-color': '#A0522D',
-      'line-width': 4,
-      'line-opacity': 0.7
-    }
-  });
-  state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
-}
 
+      // Collect all pin data into a single array
       if (mapboxPins) {
         mapboxPins.forEach(pin => {
-          const pinId = `pin-icon-${uniqueIdCounter++}`; // Create a unique ID for the map icon
           allPinFeatures.push({
             'type': 'Feature',
             'properties': {
-              id: pinId, // Store the unique ID here
               title: pin.title,
               category: pin.category,
               imageURL: pin.imageURL,
@@ -86,7 +54,7 @@ if (mapboxCoords && mapboxCoords.length > 0) {
       }
     });
 
-    // Add the clustered source
+    // Add the clustered source for pins
     if (!state.map.getSource('community-pins')) {
       state.map.addSource('community-pins', {
         type: 'geojson',
@@ -97,9 +65,9 @@ if (mapboxCoords && mapboxCoords.length > 0) {
       });
     }
 
-    // --- LAYER DEFINITIONS (with changes) ---
+    // --- LAYER DEFINITIONS ---
 
-       // Layer 1: The Cluster Circles
+    // Layer 1: The Cluster Circles
     state.map.addLayer({
       id: 'clusters',
       type: 'circle',
@@ -109,7 +77,7 @@ if (mapboxCoords && mapboxCoords.length > 0) {
         'circle-color': '#A0522D',
         'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
       }
-    });
+    }, 'user-route'); // Add layer before the user's route line
 
     // Layer 2: The Cluster Count (the numbers)
     state.map.addLayer({
@@ -123,25 +91,25 @@ if (mapboxCoords && mapboxCoords.length > 0) {
         'text-size': 12
       },
       paint: { 'text-color': '#ffffff' }
-    });
+    }, 'user-route'); // Add layer before the user's route line
 
-    // Layer 3: The Unclustered Points (individual photo thumbnails)
+    // Layer 3: The Unclustered Points (green dots)
     state.map.addLayer({
       id: 'unclustered-point',
       type: 'circle',
       source: 'community-pins',
       filter: ['!', ['has', 'point_count']],
-      paint: { // <-- A circle layer uses 'paint' to define its look
+      paint: {
         'circle-color': '#A0522D',
-        'circle-radius': 7,
+        'circle-radius': 8, // A pinch bigger
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
       }
-    });
+    }, 'user-route'); // Add layer before the user's route line
 
-    // --- INTERACTIVITY (with changes) ---
+    // --- INTERACTIVITY ---
 
-     // When a user clicks on a cluster, zoom in to it.
+    // When a user clicks on a cluster, zoom in to it.
     state.map.on('click', 'clusters', (e) => {
       const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       const clusterId = features[0].properties.cluster_id;
@@ -151,13 +119,13 @@ if (mapboxCoords && mapboxCoords.length > 0) {
       });
     });
 
-    // When a user clicks on an unclustered point, show a popup with the full image.
+    // When a user clicks on an unclustered point, show a popup with the thumbnail.
     state.map.on('click', 'unclustered-point', (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
       const popupHTML = `
         <div>
-            <img src="${properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px;"/>
+            <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px;"/>
             <p style="margin: 5px 0 0;"><strong>${properties.title}</strong></p>
             <p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${properties.category || 'Other'}</p>
             <small>By: <a href="#" class="profile-link" data-userid="${properties.userId}">${properties.username || 'A user'}</a></small>
@@ -183,24 +151,32 @@ if (mapboxCoords && mapboxCoords.length > 0) {
   }
 }
 
-/**
- * Removes all community-related routes and markers from the map.
- */
-function clearCommunityRoutes() {
-    if (!state.map || !state.map.isStyleLoaded()) return;
-  // Remove old HTML markers (if any are left from old code)
-  state.communityMarkers.forEach(marker => marker.remove());
-  state.communityMarkers = [];
+export function toggleCommunityView() {
+    state.isCommunityViewOn = !state.isCommunityViewOn;
+    const communityBtn = document.getElementById('communityBtn');
+    if (state.isCommunityViewOn) {
+        communityBtn.textContent = '🌎 Community View: ON';
+        communityBtn.classList.remove('off');
+        fetchAndDisplayCommunityRoutes();
+    } else {
+        communityBtn.textContent = '🌎 Community View: OFF';
+        communityBtn.classList.add('off');
+        clearCommunityRoutes();
+    }
+}
 
-  // Remove the new layers we just added
+function clearCommunityRoutes() {
+  if (!state.map || !state.map.isStyleLoaded()) return;
+
+  // Remove the cluster layers
   if (state.map.getLayer('clusters')) state.map.removeLayer('clusters');
   if (state.map.getLayer('cluster-count')) state.map.removeLayer('cluster-count');
   if (state.map.getLayer('unclustered-point')) state.map.removeLayer('unclustered-point');
   
-  // Remove the new data source
+  // Remove the data source
   if (state.map.getSource('community-pins')) state.map.removeSource('community-pins');
 
-  // Remove the old route line layers and sources
+  // Remove the route line layers and sources
   state.communityLayers.forEach(layer => {
     if (state.map.getLayer(layer.id)) state.map.removeLayer(layer.id);
     if (state.map.getSource(layer.id)) state.map.removeSource(layer.id);
@@ -210,9 +186,6 @@ function clearCommunityRoutes() {
 
 // --- Publishing & Profile Management ---
 
-/**
- * Publishes the current user's route to the public collection.
- */
 export async function publishRoute() {
     if (!state.currentUser) return;
     if (state.routeCoordinates.length < 2 || state.photoPins.length === 0) {
@@ -235,9 +208,7 @@ export async function publishRoute() {
             pins: convertPinsForFirestore(state.photoPins)
         });
 
-        // NOTE: A better solution would be to await a Cloud Function response.
-        // This timeout is a simple way to allow Firestore triggers to run.
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         const afterSnap = await getDoc(publicProfileRef);
         const badgesAfter = afterSnap.exists() ? Object.keys(afterSnap.data().badges || {}) : [];
@@ -519,7 +490,6 @@ export function setupPoiClickListeners() {
                 if (e.features.length > 0) {
                     const feature = e.features[0];
                     const popupHTML = `<div><strong>${feature.properties.name}</strong><div class="poi-popup-buttons"><button class="schedule-btn">Schedule Meetup</button><button class="view-btn">View Meetups</button></div></div>`;
-
                     const popup = new mapboxgl.Popup().setLngLat(e.lngLat).setHTML(popupHTML).addTo(state.map);
 
                     popup.getElement().querySelector('.schedule-btn').addEventListener('click', () => {
