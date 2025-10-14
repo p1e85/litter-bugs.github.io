@@ -67,7 +67,6 @@ export async function fetchAndDisplayCommunityRoutes() {
 
     // --- LAYER DEFINITIONS ---
 
-    // Layer 1: The Cluster Circles
     state.map.addLayer({
       id: 'clusters',
       type: 'circle',
@@ -77,9 +76,8 @@ export async function fetchAndDisplayCommunityRoutes() {
         'circle-color': '#A0522D',
         'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
       }
-    }, 'user-route'); // Add layer before the user's route line
+    }, 'user-route');
 
-    // Layer 2: The Cluster Count (the numbers)
     state.map.addLayer({
       id: 'cluster-count',
       type: 'symbol',
@@ -91,9 +89,8 @@ export async function fetchAndDisplayCommunityRoutes() {
         'text-size': 12
       },
       paint: { 'text-color': '#ffffff' }
-    }, 'user-route'); // Add layer before the user's route line
+    }, 'user-route');
 
-    // Layer 3: The Unclustered Points (green dots)
     state.map.addLayer({
       id: 'unclustered-point',
       type: 'circle',
@@ -101,15 +98,14 @@ export async function fetchAndDisplayCommunityRoutes() {
       filter: ['!', ['has', 'point_count']],
       paint: {
         'circle-color': '#A0522D',
-        'circle-radius': 8, // A pinch bigger
+        'circle-radius': 8,
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
       }
-    }, 'user-route'); // Add layer before the user's route line
+    }, 'user-route');
 
     // --- INTERACTIVITY ---
 
-    // When a user clicks on a cluster, zoom in to it.
     state.map.on('click', 'clusters', (e) => {
       const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       const clusterId = features[0].properties.cluster_id;
@@ -119,7 +115,6 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     });
 
-    // When a user clicks on an unclustered point, show a popup with the thumbnail.
     state.map.on('click', 'unclustered-point', (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
@@ -138,7 +133,6 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     });
 
-    // Change the cursor to a pointer when hovering over clickable items.
     const clickableLayers = ['clusters', 'unclustered-point'];
     clickableLayers.forEach(layer => {
       state.map.on('mouseenter', layer, () => { state.map.getCanvas().style.cursor = 'pointer'; });
@@ -168,15 +162,12 @@ export function toggleCommunityView() {
 function clearCommunityRoutes() {
   if (!state.map || !state.map.isStyleLoaded()) return;
 
-  // Remove the cluster layers
   if (state.map.getLayer('clusters')) state.map.removeLayer('clusters');
   if (state.map.getLayer('cluster-count')) state.map.removeLayer('cluster-count');
   if (state.map.getLayer('unclustered-point')) state.map.removeLayer('unclustered-point');
   
-  // Remove the data source
   if (state.map.getSource('community-pins')) state.map.removeSource('community-pins');
 
-  // Remove the route line layers and sources
   state.communityLayers.forEach(layer => {
     if (state.map.getLayer(layer.id)) state.map.removeLayer(layer.id);
     if (state.map.getSource(layer.id)) state.map.removeSource(layer.id);
