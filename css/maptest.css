@@ -521,3 +521,24 @@ hr {
 .profile-form .modal-button {
   margin-top: 15px;
 }
+
+/* --- Style for the 'I Agree' button in TOS modal --- */
+
+#agreeBtn {
+  background-color: var(--color-accent-danger);
+  color: var(--color-text-light); /* White text for contrast */
+  border-color: var(--color-accent-danger);
+  margin-top: 20px;
+}
+
+#agreeBtn:hover {
+  background-color: #b02a37; /* A slightly darker red for hover */
+}
+
+/* Style for the disabled state */
+#agreeBtn:disabled {
+  background-color: #f8d7da; /* Light, faded red */
+  border-color: #f5c6cb;
+  color: #721c24;
+  opacity: 0.7; /* Keep it slightly transparent */
+}
