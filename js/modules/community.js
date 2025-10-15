@@ -98,7 +98,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       filter: ['!', ['has', 'point_count']],
       paint: {
         'circle-color': '#A0522D',
-        'circle-radius': 8,
+        'circle-radius': 9,
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
       }
