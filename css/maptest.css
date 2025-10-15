@@ -478,3 +478,46 @@ hr {
 .badge-item {
   font-size: 28px; /* You can adjust the size of the badge icons here */
 }
+
+#agreeBtn {
+  display: block;          /* Makes the button take up its own line */
+  width: 100%;             /* Stretches it to the full width */
+  box-sizing: border-box;  /* Ensures padding doesn't break the layout */
+  margin-top: 20px;        /* Adds some space above the button */
+}
+
+/* --- Styling for Profile Form Modal --- */
+
+.profile-form {
+  display: flex;
+  flex-direction: column; /* Stack form elements vertically */
+  gap: 8px; /* Space between elements */
+}
+
+.profile-form label {
+  font-weight: 500;
+  margin-top: 10px;
+  color: #555;
+}
+
+.profile-form input[type="text"],
+.profile-form input[type="url"],
+.profile-form textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  font-size: 14px;
+  font-family: inherit; /* Use the same font as the rest of the page */
+  box-sizing: border-box;
+}
+
+.profile-form textarea {
+  min-height: 80px; /* Give the bio field a decent starting height */
+  resize: vertical; /* Allow vertical, but not horizontal, resizing */
+}
+
+/* Add some space above the final buttons */
+.profile-form .modal-button {
+  margin-top: 15px;
+}
