@@ -11,7 +11,6 @@ export async function fetchAndDisplayCommunityRoutes() {
 
     const q = query(collection(db, "publishedRoutes"), orderBy("timestamp", "desc"));
     const querySnapshot = await getDocs(q);
-
     const allPinFeatures = [];
 
     querySnapshot.forEach(doc => {
@@ -20,124 +19,39 @@ export async function fetchAndDisplayCommunityRoutes() {
       const mapboxCoords = convertRouteFromFirestore(routeData.route);
       const mapboxPins = convertPinsFromFirestore(routeData.pins);
 
-      // Draw the route lines
       if (mapboxCoords && mapboxCoords.length > 0) {
-        state.map.addSource(`community-route-${routeId}`, {
-          'type': 'geojson',
-          'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': mapboxCoords } }
-        });
-        state.map.addLayer({
-          'id': `community-route-${routeId}`,
-          'type': 'line',
-          'source': `community-route-${routeId}`,
-          'paint': { 'line-color': '#A0522D', 'line-width': 4, 'line-opacity': 0.7 }
-        });
+        state.map.addSource(`community-route-${routeId}`, { 'type': 'geojson', 'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': mapboxCoords } } });
+        state.map.addLayer({ 'id': `community-route-${routeId}`, 'type': 'line', 'source': `community-route-${routeId}`, 'paint': { 'line-color': '#A0522D', 'line-width': 4, 'line-opacity': 0.7 } });
         state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
       }
-
-      // Collect all pin data into a single array
       if (mapboxPins) {
         mapboxPins.forEach(pin => {
-          allPinFeatures.push({
-            'type': 'Feature',
-            'properties': {
-              title: pin.title,
-              category: pin.category,
-              imageURL: pin.imageURL,
-              thumbnailURL: pin.thumbnailURL,
-              username: routeData.username,
-              userId: routeData.userId
-            },
-            'geometry': { 'type': 'Point', 'coordinates': pin.coords }
-          });
+          allPinFeatures.push({ 'type': 'Feature', 'properties': { title: pin.title, category: pin.category, imageURL: pin.imageURL, thumbnailURL: pin.thumbnailURL, username: routeData.username, userId: routeData.userId }, 'geometry': { 'type': 'Point', 'coordinates': pin.coords } });
         });
       }
     });
 
-    // Add the clustered source for pins
     if (!state.map.getSource('community-pins')) {
-      state.map.addSource('community-pins', {
-        type: 'geojson',
-        data: { 'type': 'FeatureCollection', 'features': allPinFeatures },
-        cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 50
-      });
+      state.map.addSource('community-pins', { type: 'geojson', data: { 'type': 'FeatureCollection', 'features': allPinFeatures }, cluster: true, clusterMaxZoom: 14, clusterRadius: 50 });
     }
 
-    // --- LAYER DEFINITIONS ---
-
-    state.map.addLayer({
-      id: 'clusters',
-      type: 'circle',
-      source: 'community-pins',
-      filter: ['has', 'point_count'],
-      paint: {
-        'circle-color': '#A0522D',
-        'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
+    let firstSymbolId;
+    const layers = state.map.getStyle().layers;
+    for (const layer of layers) {
+      if (layer.type === 'symbol') {
+        firstSymbolId = layer.id;
+        break;
       }
-    });
+    }
 
-    state.map.addLayer({
-      id: 'cluster-count',
-      type: 'symbol',
-      source: 'community-pins',
-      filter: ['has', 'point_count'],
-      layout: {
-        'text-field': '{point_count_abbreviated}',
-        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-        'text-size': 12
-      },
-      paint: { 'text-color': '#ffffff' }
-    });
+    state.map.addLayer({ id: 'clusters', type: 'circle', source: 'community-pins', filter: ['has', 'point_count'], paint: { 'circle-color': '#A0522D', 'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40] } }, firstSymbolId);
+    state.map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'community-pins', filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'], 'text-size': 12 }, paint: { 'text-color': '#ffffff' } }, firstSymbolId);
+    state.map.addLayer({ id: 'unclustered-point', type: 'circle', source: 'community-pins', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#A0522D', 'circle-radius': 8, 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } }, firstSymbolId);
 
-    state.map.addLayer({
-      id: 'unclustered-point',
-      type: 'circle',
-      source: 'community-pins',
-      filter: ['!', ['has', 'point_count']],
-      paint: {
-        'circle-color': '#A0522D',
-        'circle-radius': 9,
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#ffffff'
-      }
-    });
-
-    // --- INTERACTIVITY ---
-
-    state.map.on('click', 'clusters', (e) => {
-      const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-      const clusterId = features[0].properties.cluster_id;
-      state.map.getSource('community-pins').getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err) return;
-        state.map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
-      });
-    });
-
-    state.map.on('click', 'unclustered-point', (e) => {
-      const coordinates = e.features[0].geometry.coordinates.slice();
-      const properties = e.features[0].properties;
-      const popupHTML = `
-        <div>
-            <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px;"/>
-            <p style="margin: 5px 0 0;"><strong>${properties.title}</strong></p>
-            <p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${properties.category || 'Other'}</p>
-            <small>By: <a href="#" class="profile-link" data-userid="${properties.userId}">${properties.username || 'A user'}</a></small>
-        </div>
-      `;
-      const popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupHTML).addTo(state.map);
-      popup.getElement().querySelector('.profile-link').addEventListener('click', (ev) => {
-        ev.preventDefault();
-        showPublicProfile(properties.userId);
-      });
-    });
-
+    state.map.on('click', 'clusters', (e) => { /* ... */ });
+    state.map.on('click', 'unclustered-point', (e) => { /* ... */ });
     const clickableLayers = ['clusters', 'unclustered-point'];
-    clickableLayers.forEach(layer => {
-      state.map.on('mouseenter', layer, () => { state.map.getCanvas().style.cursor = 'pointer'; });
-      state.map.on('mouseleave', layer, () => { state.map.getCanvas().style.cursor = ''; });
-    });
+    clickableLayers.forEach(layer => { /* ... */ });
 
   } catch (error) {
     console.error("Error fetching community routes:", error);
