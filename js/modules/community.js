@@ -381,6 +381,8 @@ export async function fetchAndDisplayLeaderboard(metric) {
             const li = document.createElement('li');
             li.dataset.userid = doc.id;
 
+          li.classList.toggle('current-user-entry', state.currentUser && doc.id === state.currentUser.uid);
+
             const score = metric === 'totalDistance' ?
                 `${((profileData.totalDistance || 0) * 0.000621371).toFixed(2)} mi` :
                 (profileData.totalPins || 0);
