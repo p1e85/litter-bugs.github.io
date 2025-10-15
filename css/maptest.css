@@ -345,3 +345,122 @@ hr {
   color: var(--color-text-light);
   font-weight: bold;
 }
+
+/* --- 6. Leaderboard Modal Redesign --- */
+
+/* Tab Group Styling */
+.leaderboard-tabs {
+  display: flex;
+  justify-content: stretch;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  overflow: hidden; /* Clips the corners of the buttons inside */
+  border: 1px solid var(--color-border);
+}
+
+.leaderboard-tab {
+  width: 100%; /* Each tab takes up equal space */
+  margin: 0;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 0;
+  border-right: 1px solid var(--color-border);
+  background-color: #f0f0f0;
+  font-weight: 500;
+  color: var(--color-text-dark);
+}
+
+.leaderboard-tab:last-child {
+  border-right: none;
+}
+
+.leaderboard-tab.active {
+  background-color: var(--color-primary-green);
+  color: var(--color-text-light);
+  font-weight: bold;
+}
+
+/* Leaderboard List Styling */
+.leaderboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.leaderboard-list li {
+  display: flex;
+  align-items: center;
+  padding: 12px 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 16px;
+}
+
+.leaderboard-list li:last-child {
+  border-bottom: none;
+}
+
+.leaderboard-rank {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #888;
+  width: 30px;
+  text-align: center;
+}
+
+.leaderboard-name {
+  flex-grow: 1;
+  padding: 0 15px;
+  font-weight: 500;
+}
+
+.leaderboard-name a {
+  text-decoration: none;
+  color: var(--color-primary-green);
+}
+
+.leaderboard-score {
+  font-weight: bold;
+  color: var(--color-text-dark);
+}
+
+/* Highlight for the current user's entry */
+.leaderboard-list li.current-user-entry {
+  background-color: #e8f5e9; /* A light green highlight */
+  border-radius: 6px;
+}
+
+
+/* "My Stats" Section Styling */
+.my-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  border: 1px solid #eee;
+}
+
+.my-stats-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--color-primary-green);
+}
+
+.my-stats-label {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+}
+
+.my-stats-container h4 {
+  margin-top: 25px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
