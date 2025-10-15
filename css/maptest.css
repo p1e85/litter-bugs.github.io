@@ -375,3 +375,14 @@ hr {
   flex-grow: 1; /* Allows the search bar to take up all available space */
   width: auto; /* Overrides any fixed width */
 }
+
+.top-bar-right {
+  display: flex;
+  gap: 10px; /* Adjust the space between buttons */
+}
+
+/* Make sure this rule for the container is correct */
+.top-row {
+  display: flex;
+  justify-content: flex-end; /* This pushes the whole button group to the right */
+}
