@@ -65,8 +65,18 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     }
 
-    // --- LAYER DEFINITIONS ---
+    // --- LAYER DEFINITIONS & ORDERING ---
 
+    let firstSymbolId;
+    const layers = state.map.getStyle().layers;
+    for (const layer of layers) {
+      if (layer.type === 'symbol') {
+        firstSymbolId = layer.id;
+        break;
+      }
+    }
+
+    // Layer 1: The Cluster Circles
     state.map.addLayer({
       id: 'clusters',
       type: 'circle',
@@ -76,8 +86,9 @@ export async function fetchAndDisplayCommunityRoutes() {
         'circle-color': '#A0522D',
         'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
       }
-    });
+    }, firstSymbolId); // Insert before the first symbol layer
 
+    // Layer 2: The Cluster Count (the numbers)
     state.map.addLayer({
       id: 'cluster-count',
       type: 'symbol',
@@ -89,8 +100,9 @@ export async function fetchAndDisplayCommunityRoutes() {
         'text-size': 12
       },
       paint: { 'text-color': '#ffffff' }
-    });
+    }, firstSymbolId); // Insert before the first symbol layer
 
+    // Layer 3: The Unclustered Points (brown dots)
     state.map.addLayer({
       id: 'unclustered-point',
       type: 'circle',
@@ -98,14 +110,15 @@ export async function fetchAndDisplayCommunityRoutes() {
       filter: ['!', ['has', 'point_count']],
       paint: {
         'circle-color': '#A0522D',
-        'circle-radius': 9,
+        'circle-radius': 8,
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
       }
-    });
+    }, firstSymbolId); // Insert before the first symbol layer
 
     // --- INTERACTIVITY ---
 
+    // When a user clicks on a cluster, zoom in to it.
     state.map.on('click', 'clusters', (e) => {
       const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       const clusterId = features[0].properties.cluster_id;
@@ -115,6 +128,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     });
 
+    // When a user clicks on an unclustered point, show a popup with the thumbnail.
     state.map.on('click', 'unclustered-point', (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
@@ -133,6 +147,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     });
 
+    // Change the cursor to a pointer when hovering over clickable items.
     const clickableLayers = ['clusters', 'unclustered-point'];
     clickableLayers.forEach(layer => {
       state.map.on('mouseenter', layer, () => { state.map.getCanvas().style.cursor = 'pointer'; });
