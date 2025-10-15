@@ -542,3 +542,17 @@ hr {
   color: #721c24;
   opacity: 0.7; /* Keep it slightly transparent */
 }
+
+/* --- Styling for POI Popup Buttons --- */
+
+.poi-popup-buttons {
+  display: flex; /* Arrange buttons side-by-side */
+  gap: 8px;      /* Add a small space between them */
+  margin-top: 15px;
+}
+
+/* Override the default full-width style for modal buttons inside this specific container */
+.poi-popup-buttons .modal-button {
+  width: 100%; /* Each button will take up half the space */
+  margin: 0;   /* Remove the default vertical margin */
+}
