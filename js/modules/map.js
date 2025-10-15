@@ -49,7 +49,7 @@ function initializeMapLayers() {
     if (!state.map.getLayer('user-location-pulse')) state.map.addLayer({ id: 'user-location-pulse', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 15, 'circle-color': '#4A7C59', 'circle-opacity': 0.2 } });
     if (!state.map.getLayer('user-location-dot')) state.map.addLayer({ id: 'user-location-dot', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 2, 'circle-stroke-color': '#4A7C59' } });
     if (!state.map.getSource('user-pins-source')) state.map.addSource('user-pins-source', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    if (!state.map.getLayer('user-pins-dots')) state.map.addLayer({ id: 'user-pins-dots', type: 'circle', source: 'user-pins-source', maxzoom: ZOOM_THRESHOLD, paint: { 'circle-radius': 6, 'circle-color': '#4A7C59', 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } });
+    //if (!state.map.getLayer('user-pins-dots')) state.map.addLayer({ id: 'user-pins-dots', type: 'circle', source: 'user-pins-source', maxzoom: ZOOM_THRESHOLD, paint: { 'circle-radius': 6, 'circle-color': '#4A7C59', 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } });
     if (!state.map.getSource('community-pins-source')) state.map.addSource('community-pins-source', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     if (!state.map.getLayer('community-pins-dots')) state.map.addLayer({ id: 'community-pins-dots', type: 'circle', source: 'community-pins-source', maxzoom: ZOOM_THRESHOLD, paint: { 'circle-radius': 6, 'circle-color': '#28a745', 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } });
 }
