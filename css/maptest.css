@@ -386,3 +386,56 @@ hr {
   display: flex;
   justify-content: flex-end; /* This pushes the whole button group to the right */
 }
+
+/* --- Main Top UI Layout --- */
+
+.top-ui-container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column; /* Stack the two rows vertically */
+  gap: 8px; /* Space between the rows */
+  pointer-events: none; /* Allows map clicks to pass through empty space */
+}
+
+/* Row 1: Search Bar and Menu */
+.top-row {
+  display: flex;
+  justify-content: space-between; /* Pushes items to opposite ends */
+  align-items: center;
+  gap: 10px;
+}
+
+#geocoder-container {
+  flex-grow: 1; /* Allows search bar to fill available space */
+  pointer-events: auto; /* Make the search bar clickable */
+  max-width: 75%; /* Limits search bar to 3/4 of the width */
+}
+
+/* Row 2: The three centered buttons */
+.bottom-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: auto; /* Make the buttons in this row clickable */
+}
+
+/* --- "See-Thru" Button Style --- */
+
+.top-bar-button,
+.community-button {
+  width: auto; /* Let buttons size to their content */
+  margin: 0;
+  background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent white */
+  backdrop-filter: blur(4px); /* Frosted glass effect (optional, but looks great) */
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--color-text-dark);
+}
+
+.top-bar-button:hover,
+.community-button:hover {
+  background-color: rgba(255, 255, 255, 0.9); /* More opaque on hover */
+}
