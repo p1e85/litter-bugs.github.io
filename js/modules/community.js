@@ -76,7 +76,7 @@ export async function fetchAndDisplayCommunityRoutes() {
         'circle-color': '#A0522D',
         'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
       }
-    }, 'user-route');
+    });
 
     state.map.addLayer({
       id: 'cluster-count',
@@ -89,7 +89,7 @@ export async function fetchAndDisplayCommunityRoutes() {
         'text-size': 12
       },
       paint: { 'text-color': '#ffffff' }
-    }, 'user-route');
+    });
 
     state.map.addLayer({
       id: 'unclustered-point',
@@ -102,7 +102,7 @@ export async function fetchAndDisplayCommunityRoutes() {
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
       }
-    }, 'user-route');
+    });
 
     // --- INTERACTIVITY ---
 
