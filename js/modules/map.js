@@ -43,15 +43,43 @@ export function initializeMap() {
  * Sets up the initial GeoJSON sources and layers for routes and pins.
  */
 function initializeMapLayers() {
-    if (!state.map.getSource('user-route')) state.map.addSource('user-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
-    if (!state.map.getLayer('user-route')) state.map.addLayer({ id: 'user-route', type: 'line', source: 'user-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#4A7C59', 'line-width': 5 } });
-    if (!state.map.getSource('user-location-point')) state.map.addSource('user-location-point', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', 'coordinates': [] } } });
-    if (!state.map.getLayer('user-location-pulse')) state.map.addLayer({ id: 'user-location-pulse', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 15, 'circle-color': '#4A7C59', 'circle-opacity': 0.2 } });
-    if (!state.map.getLayer('user-location-dot')) state.map.addLayer({ id: 'user-location-dot', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 2, 'circle-stroke-color': '#4A7C59' } });
-    if (!state.map.getSource('user-pins-source')) state.map.addSource('user-pins-source', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    //if (!state.map.getLayer('user-pins-dots')) state.map.addLayer({ id: 'user-pins-dots', type: 'circle', source: 'user-pins-source', maxzoom: ZOOM_THRESHOLD, paint: { 'circle-radius': 6, 'circle-color': '#4A7C59', 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } });
-    if (!state.map.getSource('community-pins-source')) state.map.addSource('community-pins-source', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    if (!state.map.getLayer('community-pins-dots')) state.map.addLayer({ id: 'community-pins-dots', type: 'circle', source: 'community-pins-source', maxzoom: ZOOM_THRESHOLD, paint: { 'circle-radius': 6, 'circle-color': '#28a745', 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } });
+  // Find the ID of the first symbol layer in the map style
+  // to ensure our layers go underneath map labels.
+  let firstSymbolId;
+  const layers = state.map.getStyle().layers;
+  for (const layer of layers) {
+    if (layer.type === 'symbol') {
+      firstSymbolId = layer.id;
+      break;
+    }
+  }
+
+  // --- Add User-Specific Layers ---
+
+  if (!state.map.getSource('user-route')) {
+    state.map.addSource('user-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
+  }
+  // Add the user's route line UNDERNEATH the labels
+  if (!state.map.getLayer('user-route')) {
+    state.map.addLayer({
+      id: 'user-route',
+      type: 'line',
+      source: 'user-route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#4A7C59', 'line-width': 5 }
+    }, firstSymbolId); // <-- CRITICAL FIX: Add the insertion point
+  }
+
+  // User location and pin layers (these go on top, so no second argument is needed)
+  if (!state.map.getSource('user-location-point')) {
+    state.map.addSource('user-location-point', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', 'coordinates': [] } } });
+  }
+  if (!state.map.getLayer('user-location-pulse')) {
+    state.map.addLayer({ id: 'user-location-pulse', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 15, 'circle-color': '#4A7C59', 'circle-opacity': 0.2 } });
+  }
+  if (!state.map.getLayer('user-location-dot')) {
+    state.map.addLayer({ id: 'user-location-dot', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 2, 'circle-stroke-color': '#4A7C59' } });
+  }
 }
 
 /**
