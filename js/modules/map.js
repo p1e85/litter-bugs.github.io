@@ -42,24 +42,15 @@ export function initializeMap() {
 /**
  * Sets up the initial GeoJSON sources and layers for routes and pins.
  */
+// In js/modules/map.js
+
 function initializeMapLayers() {
-  // Find the ID of the first symbol layer in the map style
-  // to ensure our layers go underneath map labels.
-  let firstSymbolId;
-  const layers = state.map.getStyle().layers;
-  for (const layer of layers) {
-    if (layer.type === 'symbol') {
-      firstSymbolId = layer.id;
-      break;
-    }
-  }
+  // --- User-Specific Layers ---
 
-  // --- Add User-Specific Layers ---
-
+  // User's route line
   if (!state.map.getSource('user-route')) {
     state.map.addSource('user-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
   }
-  // Add the user's route line UNDERNEATH the labels
   if (!state.map.getLayer('user-route')) {
     state.map.addLayer({
       id: 'user-route',
@@ -67,10 +58,10 @@ function initializeMapLayers() {
       source: 'user-route',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: { 'line-color': '#4A7C59', 'line-width': 5 }
-    }, firstSymbolId); // <-- CRITICAL FIX: Add the insertion point
+    });
   }
 
-  // User location and pin layers (these go on top, so no second argument is needed)
+  // User's current location dot
   if (!state.map.getSource('user-location-point')) {
     state.map.addSource('user-location-point', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', 'coordinates': [] } } });
   }
