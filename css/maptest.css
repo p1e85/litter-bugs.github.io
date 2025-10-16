@@ -12,10 +12,7 @@
 }
 
 body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
+  margin: 0; padding: 0; height: 100%; width: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: var(--color-text-dark);
   overflow: hidden;
@@ -29,77 +26,45 @@ hr {
 
 /* --- 2. Main Layout & Map --- */
 
-#map {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 100%;
-}
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
 
 .top-ui-container {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
+  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 1;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
   align-items: center;
 }
 
 .top-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
   width: 100%;
+  pointer-events: auto; /* Fix for unclickable menu button */
 }
 
 .bottom-row {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  pointer-events: auto;
+  display: flex; justify-content: center; gap: 10px; pointer-events: auto;
 }
 
 .bottom-container {
-  position: absolute;
-  bottom: 20px;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  z-index: 1;
-  pointer-events: none;
+    position: absolute; bottom: 20px; width: 100%;
+    display: flex; justify-content: center; z-index: 1; pointer-events: none;
 }
 
 /* --- 3. Buttons --- */
 
-/* Base style for all buttons and button-like links */
-.modal-button, .top-bar-button, .community-button, .skip-button, .delete-account-button, .leaderboard-tab, #logoutBtn, #loginSignupBtn, #authActionBtn {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  text-decoration: none;
-  text-align: center;
-  padding: 12px;
-  margin: 8px 0;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  background-color: #f0f0f0;
-  color: var(--color-text-dark);
+/* Base style for DESIGNED buttons (the ones with color) */
+.modal-button, #authActionBtn {
+  display: block; box-sizing: border-box; width: 100%; text-decoration: none;
+  text-align: center; padding: 12px; margin: 8px 0; font-size: 14px;
+  font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease;
+  border-radius: 8px; border: 1px solid transparent;
+  background-color: #f0f0f0; color: var(--color-text-dark);
 }
 
-.modal-button:hover, .top-bar-button:hover, .community-button:hover, .skip-button:hover, #logoutBtn:hover, #loginSignupBtn:hover, #authActionBtn:hover {
+.modal-button:hover, #authActionBtn:hover {
   background-color: #e9e9e9;
 }
 
-/* Button Color Classes */
+/* Color Classes for designed buttons */
 .btn-primary { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
 .btn-primary:hover { background-color: #3e684b; border-color: #3e684b; }
 .btn-secondary { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
@@ -109,39 +74,27 @@ hr {
 .btn-danger { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
 .btn-danger:hover { background-color: #b02a37; border-color: #b02a37; }
 
-/* Disabled State */
-:disabled {
-  background-color: #e9ecef !important;
-  color: #adb5bd !important;
-  border-color: #dee2e6 !important;
-  cursor: not-allowed;
-  opacity: 0.8;
+/* Disabled State for designed buttons */
+.modal-button:disabled, #authActionBtn:disabled {
+  background-color: #e9ecef !important; color: #adb5bd !important;
+  border-color: #dee2e6 !important; cursor: not-allowed; opacity: 0.8;
 }
 
-/* See-Thru Style for Top Buttons */
+/* See-Thru Style for Top Bar Buttons */
 .top-bar-button, .community-button {
-  width: auto;
-  margin: 0;
-  background-color: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 8px 12px; border-radius: 6px; cursor: pointer;
+  font-size: 14px; font-weight: 500; transition: background-color 0.2s ease;
+  background-color: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px);
+  border: 1px solid rgba(0, 0, 0, 0.1); color: var(--color-text-dark);
 }
 .top-bar-button:hover, .community-button:hover { background-color: rgba(255, 255, 255, 0.9); }
 
 /* Floating map buttons */
 #findMeBtn, #pictureBtn {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background-color: var(--color-background-modal);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  font-size: 24px;
-  padding: 0;
-  margin: 0;
-  outline: none;
-  border: 1px solid var(--color-border);
+  width: 50px; height: 50px; border-radius: 50%; background-color: var(--color-background-modal);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2); font-size: 24px; padding: 0;
+  outline: none; border: 1px solid var(--color-border); cursor: pointer;
 }
-
 #findMeBtn { position: absolute; bottom: 30px; left: 20px; z-index: 1; }
 #pictureBtn { position: absolute; bottom: 30px; right: 20px; z-index: 1; }
 #findMeBtn.active { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
@@ -155,23 +108,19 @@ hr {
   z-index: 10; display: none; justify-content: center; align-items: center;
   padding: 10px; box-sizing: border-box;
 }
-
 .modal-content {
   background: var(--color-background-modal); padding: 20px; border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 100%; max-width: 500px;
   position: relative; max-height: 90vh; overflow-y: auto;
 }
-
 .modal-content h2 {
   text-align: center; margin-top: 0; margin-bottom: 25px;
   font-size: 24px; color: var(--color-text-dark);
 }
-
 .modal-content p {
   font-size: 14px; color: #666; text-align: center;
   margin-top: -10px; margin-bottom: 15px;
 }
-
 .close-btn {
   position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; color: #aaa;
   cursor: pointer; background: none; border: none; padding: 0; line-height: 1;
@@ -193,17 +142,20 @@ hr {
 }
 .user-status-display span { margin-right: 10px; }
 #guestContent, #loggedInContent { display: flex; align-items: center; }
+#logoutBtn, #loginSignupBtn {
+  background: none; border: none; color: var(--color-secondary-blue); text-decoration: underline;
+  cursor: pointer; padding: 0; font-size: 14px;
+}
 
+/* ... Styles for popups, session lists, forms, leaderboard, etc. ... */
 .mapboxgl-popup-content { padding: 15px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px !important; }
 .pin-popup-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .pin-popup-form input, .pin-popup-form select, .pin-popup-form button { width: 100%; box-sizing: border-box; }
-
 .session-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
 .session-list li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
 .session-list li:hover { background-color: #f9f9f9; }
 .session-list li:last-child { border-bottom: none; }
 .session-date { font-size: 0.8em; color: #777; }
-
 .auth-form { display: flex; flex-direction: column; gap: 10px; }
 .auth-form.login-mode #usernameInput, .auth-form.login-mode #ageGateContainer { display: none; }
 .auth-form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
