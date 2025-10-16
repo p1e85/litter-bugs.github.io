@@ -556,3 +556,69 @@ hr {
   width: 100%; /* Each button will take up half the space */
   margin: 0;   /* Remove the default vertical margin */
 }
+
+/* --- 7. Post-Cleanup Summary Modal Redesign --- */
+
+.summary-modal {
+  text-align: center; /* Center-align all text inside */
+}
+
+.summary-modal h2 {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+/* Add a celebratory icon before the title */
+.summary-modal h2::before {
+  content: '🎉';
+  display: block;
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.summary-modal p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 25px;
+}
+
+/* Stat cards layout */
+.summary-stats {
+  display: flex;
+  justify-content: space-around; /* Distribute cards evenly */
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.summary-stats > div {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 15px;
+  flex-grow: 1; /* Allow cards to grow equally */
+  border: 1px solid #eee;
+}
+
+.stat-value {
+  display: block;
+  font-size: 26px;
+  font-weight: bold;
+  color: var(--color-primary-green);
+}
+
+.stat-label {
+  display: block;
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+}
+
+/* Button styling */
+.share-button {
+  background-color: var(--color-primary-green);
+  color: var(--color-text-light);
+  border-color: var(--color-primary-green);
+}
+
+.share-button:hover {
+  background-color: #3e684b;
+}
