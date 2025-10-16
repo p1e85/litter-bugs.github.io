@@ -2,12 +2,12 @@
 
 :root {
   --color-primary-green: #4A7C59;
-  --color-secondary-brown: #A0522D;
-  --color-background-light: #F9F9F7;
+  --color-secondary-blue: #4682B4;
+  --color-support-gold: #D4AF37;
+  --color-accent-danger: #dc3545;
   --color-background-modal: #ffffff;
   --color-text-dark: #333333;
   --color-text-light: #ffffff;
-  --color-accent-danger: #dc3545;
   --color-border: #ccc;
 }
 
@@ -17,7 +17,6 @@ body, html {
   height: 100%;
   width: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--color-background-light);
   color: var(--color-text-dark);
   overflow: hidden;
 }
@@ -66,21 +65,19 @@ hr {
 }
 
 .bottom-container {
-    position: absolute;
-    bottom: 20px;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    z-index: 1;
-    pointer-events: none;
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
 }
 
 /* --- 3. Buttons --- */
 
-.modal-button,
-.control-btn,
-.skip-button,
-.delete-account-button {
+/* Base style for all buttons and button-like links */
+.modal-button, .top-bar-button, .community-button, .skip-button, .delete-account-button, .leaderboard-tab, #logoutBtn, #loginSignupBtn, #authActionBtn {
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -92,46 +89,47 @@ hr {
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease;
-  pointer-events: auto;
+  border-radius: 8px;
+  border: 1px solid transparent;
   background-color: #f0f0f0;
   color: var(--color-text-dark);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
 }
 
-.modal-button:hover,
-.control-btn:hover,
-.skip-button:hover {
+.modal-button:hover, .top-bar-button:hover, .community-button:hover, .skip-button:hover, #logoutBtn:hover, #loginSignupBtn:hover, #authActionBtn:hover {
   background-color: #e9e9e9;
 }
 
+/* Button Color Classes */
+.btn-primary { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
+.btn-primary:hover { background-color: #3e684b; border-color: #3e684b; }
+.btn-secondary { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
+.btn-secondary:hover { background-color: #3a6a92; border-color: #3a6a92; }
+.btn-support { background-color: var(--color-support-gold); color: var(--color-text-dark); border-color: var(--color-support-gold); }
+.btn-support:hover { background-color: #c5a02e; border-color: #c5a02e; }
+.btn-danger { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
+.btn-danger:hover { background-color: #b02a37; border-color: #b02a37; }
+
+/* Disabled State */
+:disabled {
+  background-color: #e9ecef !important;
+  color: #adb5bd !important;
+  border-color: #dee2e6 !important;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
 /* See-Thru Style for Top Buttons */
-.top-bar-button,
-.community-button {
+.top-bar-button, .community-button {
   width: auto;
   margin: 0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-  pointer-events: auto;
   background-color: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(4px);
   border: 1px solid rgba(0, 0, 0, 0.1);
-  color: var(--color-text-dark);
 }
-
-.top-bar-button:hover,
-.community-button:hover {
-  background-color: rgba(255, 255, 255, 0.9);
-}
-
+.top-bar-button:hover, .community-button:hover { background-color: rgba(255, 255, 255, 0.9); }
 
 /* Floating map buttons */
-#findMeBtn,
-#pictureBtn {
+#findMeBtn, #pictureBtn {
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -141,546 +139,136 @@ hr {
   padding: 0;
   margin: 0;
   outline: none;
+  border: 1px solid var(--color-border);
 }
 
-#findMeBtn {
-  position: absolute;
-  bottom: 30px;
-  left: 20px;
-  z-index: 1;
-}
-
-#pictureBtn {
-  position: absolute;
-  bottom: 30px;
-  right: 20px;
-  z-index: 1;
-}
-
-#findMeBtn.active {
-  background-color: var(--color-primary-green);
-  color: var(--color-text-light);
-  border-color: var(--color-primary-green);
-}
-
-.modal-button.tracking {
-  background-color: var(--color-accent-danger);
-  color: var(--color-text-light);
-  border-color: var(--color-accent-danger);
-}
-
-#pictureBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.modal-button.publish {
-    background-color: var(--color-primary-green);
-    color: var(--color-text-light);
-}
-.modal-button.publish:hover {
-    background-color: #3e684b;
-}
-
-.delete-account-button {
-    background-color: var(--color-accent-danger);
-    color: var(--color-text-light);
-    border-color: var(--color-accent-danger);
-}
+#findMeBtn { position: absolute; bottom: 30px; left: 20px; z-index: 1; }
+#pictureBtn { position: absolute; bottom: 30px; right: 20px; z-index: 1; }
+#findMeBtn.active { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
+.modal-button.tracking { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
+#pictureBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* --- 4. Modals --- */
 
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 10;
-  display: none;
-  justify-content: center;
-  align-items: center;
-  padding: 10px;
-  box-sizing: border-box;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6);
+  z-index: 10; display: none; justify-content: center; align-items: center;
+  padding: 10px; box-sizing: border-box;
 }
 
 .modal-content {
-  background: var(--color-background-modal);
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  width: 100%;
-  max-width: 500px;
-  position: relative;
-  max-height: 90vh;
-  overflow-y: auto;
+  background: var(--color-background-modal); padding: 20px; border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 100%; max-width: 500px;
+  position: relative; max-height: 90vh; overflow-y: auto;
 }
 
-.close-btn {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 28px;
-  font-weight: bold;
-  color: #aaa;
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
-  line-height: 1;
-}
-.close-btn:hover {
-  color: var(--color-text-dark);
-}
-
-/* --- 5. Specific Components --- */
-
-#geocoder-container {
-  pointer-events: auto;
-  flex-grow: 1;
-  max-width: 75%;
-}
-
-#geocoder-container .mapboxgl-ctrl-geocoder {
-  width: 100%;
-  max-width: none;
-  font-size: 15px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  border-radius: 8px;
-  background-color: var(--color-background-modal);
-}
-
-.user-status-display {
-  display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.85);
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  pointer-events: auto;
-  font-size: 14px;
-  padding: 6px 12px;
-}
-.user-status-display span {
-  margin-right: 10px;
-}
-#guestContent, #loggedInContent {
-  display: flex;
-  align-items: center;
-}
-
-.mapboxgl-popup-content {
-  padding: 15px !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  border-radius: 8px !important;
-}
-.pin-popup-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
-}
-.pin-popup-form input,
-.pin-popup-form select,
-.pin-popup-form button {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.session-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-height: 300px;
-  overflow-y: auto;
-}
-.session-list li {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-}
-.session-list li:hover {
-  background-color: #f9f9f9;
-}
-.session-list li:last-child {
-  border-bottom: none;
-}
-.session-date {
-  font-size: 0.8em;
-  color: #777;
-}
-
-/* Authentication form styles */
-.auth-form { display: flex; flex-direction: column; gap: 10px; }
-.auth-form.login-mode #usernameInput,
-.auth-form.login-mode #ageGateContainer { display: none; }
-.auth-form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-.age-gate-container { display: flex; align-items: center; gap: 5px; }
-
-/* Leaderboard Tabs */
-.leaderboard-tabs {
-  display: flex;
-  justify-content: stretch;
-  margin-bottom: 15px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-}
-.leaderboard-tab {
-  width: 100%;
-  margin: 0;
-  border: none;
-  border-radius: 0;
-  border-right: 1px solid var(--color-border);
-  background-color: #f0f0f0;
-}
-.leaderboard-tab:last-child {
-  border-right: none;
-}
-.leaderboard-tab.active {
-  background-color: var(--color-primary-green);
-  color: var(--color-text-light);
-  font-weight: bold;
-}
-
-/* --- 6. Leaderboard Modal Redesign --- */
-
-/* Tab Group Styling */
-.leaderboard-tabs {
-  display: flex;
-  justify-content: stretch;
-  margin-bottom: 15px;
-  border-radius: 8px;
-  overflow: hidden; /* Clips the corners of the buttons inside */
-  border: 1px solid var(--color-border);
-}
-
-.leaderboard-tab {
-  width: 100%; /* Each tab takes up equal space */
-  margin: 0;
-  padding: 10px 12px;
-  border: none;
-  border-radius: 0;
-  border-right: 1px solid var(--color-border);
-  background-color: #f0f0f0;
-  font-weight: 500;
-  color: var(--color-text-dark);
-}
-
-.leaderboard-tab:last-child {
-  border-right: none;
-}
-
-.leaderboard-tab.active {
-  background-color: var(--color-primary-green);
-  color: var(--color-text-light);
-  font-weight: bold;
-}
-
-/* Leaderboard List Styling */
-.leaderboard-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.leaderboard-list li {
-  display: flex;
-  align-items: center;
-  padding: 12px 8px;
-  border-bottom: 1px solid #eee;
-  font-size: 16px;
-}
-
-.leaderboard-list li:last-child {
-  border-bottom: none;
-}
-
-.leaderboard-rank {
-  font-weight: bold;
-  font-size: 1.1em;
-  color: #888;
-  width: 30px;
-  text-align: center;
-}
-
-.leaderboard-name {
-  flex-grow: 1;
-  padding: 0 15px;
-  font-weight: 500;
-}
-
-.leaderboard-name a {
-  text-decoration: none;
-  color: var(--color-primary-green);
-}
-
-.leaderboard-score {
-  font-weight: bold;
-  color: var(--color-text-dark);
-}
-
-/* Highlight for the current user's entry */
-.leaderboard-list li.current-user-entry {
-  background-color: #e8f5e9; /* A light green highlight */
-  border-radius: 6px;
-}
-
-
-/* "My Stats" Section Styling */
-.my-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  padding: 15px;
-  text-align: center;
-  border: 1px solid #eee;
-}
-
-.my-stats-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: var(--color-primary-green);
-}
-
-.my-stats-label {
-  font-size: 14px;
-  color: #666;
-  margin-top: 5px;
-}
-
-.my-stats-container h4 {
-  margin-top: 25px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
-}
-
-/* --- Fix for Horizontal Achievements Layout --- */
-
-.badge-container {
-  display: flex;
-  flex-wrap: wrap; /* Allows badges to wrap onto the next line */
-  justify-content: center; /* Centers the badges in the available space */
-  gap: 10px; /* Adds a nice space between each badge */
-  margin-top: 10px;
-}
-
-.badge-item {
-  font-size: 28px; /* You can adjust the size of the badge icons here */
-}
-
-#agreeBtn {
-  display: block;          /* Makes the button take up its own line */
-  width: 100%;             /* Stretches it to the full width */
-  box-sizing: border-box;  /* Ensures padding doesn't break the layout */
-  margin-top: 20px;        /* Adds some space above the button */
-}
-
-/* --- Styling for Profile Form Modal --- */
-
-.profile-form {
-  display: flex;
-  flex-direction: column; /* Stack form elements vertically */
-  gap: 8px; /* Space between elements */
-}
-
-.profile-form label {
-  font-weight: 500;
-  margin-top: 10px;
-  color: #555;
-}
-
-.profile-form input[type="text"],
-.profile-form input[type="url"],
-.profile-form textarea {
-  width: 100%;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  font-size: 14px;
-  font-family: inherit; /* Use the same font as the rest of the page */
-  box-sizing: border-box;
-}
-
-.profile-form textarea {
-  min-height: 80px; /* Give the bio field a decent starting height */
-  resize: vertical; /* Allow vertical, but not horizontal, resizing */
-}
-
-/* Add some space above the final buttons */
-.profile-form .modal-button {
-  margin-top: 15px;
-}
-
-/* --- Style for the 'I Agree' button in TOS modal --- */
-
-#agreeBtn {
-  background-color: var(--color-accent-danger);
-  color: var(--color-text-light); /* White text for contrast */
-  border-color: var(--color-accent-danger);
-  margin-top: 20px;
-}
-
-#agreeBtn:hover {
-  background-color: #b02a37; /* A slightly darker red for hover */
-}
-
-/* Style for the disabled state */
-#agreeBtn:disabled {
-  background-color: #f8d7da; /* Light, faded red */
-  border-color: #f5c6cb;
-  color: #721c24;
-  opacity: 0.7; /* Keep it slightly transparent */
-}
-
-/* --- Styling for POI Popup Buttons --- */
-
-.poi-popup-buttons {
-  display: flex; /* Arrange buttons side-by-side */
-  gap: 8px;      /* Add a small space between them */
-  margin-top: 15px;
-}
-
-/* Override the default full-width style for modal buttons inside this specific container */
-.poi-popup-buttons .modal-button {
-  width: 100%; /* Each button will take up half the space */
-  margin: 0;   /* Remove the default vertical margin */
-}
-
-/* --- 7. Post-Cleanup Summary Modal Redesign --- */
-
-.summary-modal {
-  text-align: center; /* Center-align all text inside */
-}
-
-.summary-modal h2 {
-  font-size: 28px;
-  margin-bottom: 10px;
-}
-
-/* Add a celebratory icon before the title */
-.summary-modal h2::before {
-  content: '🎉';
-  display: block;
-  font-size: 48px;
-  margin-bottom: 10px;
-}
-
-.summary-modal p {
-  font-size: 16px;
-  color: #666;
-  margin-bottom: 25px;
-}
-
-/* Stat cards layout */
-.summary-stats {
-  display: flex;
-  justify-content: space-around; /* Distribute cards evenly */
-  gap: 15px;
-  margin-bottom: 30px;
-}
-
-.summary-stats > div {
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  padding: 15px;
-  flex-grow: 1; /* Allow cards to grow equally */
-  border: 1px solid #eee;
-}
-
-.stat-value {
-  display: block;
-  font-size: 26px;
-  font-weight: bold;
-  color: var(--color-primary-green);
-}
-
-.stat-label {
-  display: block;
-  font-size: 14px;
-  color: #666;
-  margin-top: 5px;
-}
-
-/* Button styling */
-.share-button {
-  background-color: var(--color-primary-green);
-  color: var(--color-text-light);
-  border-color: var(--color-primary-green);
-}
-
-.share-button:hover {
-  background-color: #3e684b;
-}
-
-/* --- 8. Menu & Data Modal Redesign --- */
-
-/* General styling for both modals */
 .modal-content h2 {
-  text-align: center;
-  margin-top: 0;
-  margin-bottom: 25px;
-  font-size: 24px;
-  color: var(--color-text-dark);
-}
-
-.modal-content hr {
-  border: none;
-  border-top: 1px solid #eee;
-  margin: 20px 0;
+  text-align: center; margin-top: 0; margin-bottom: 25px;
+  font-size: 24px; color: var(--color-text-dark);
 }
 
 .modal-content p {
-  font-size: 14px;
-  color: #666;
-  text-align: center;
-  margin-top: -10px;
-  margin-bottom: 15px;
+  font-size: 14px; color: #666; text-align: center;
+  margin-top: -10px; margin-bottom: 15px;
 }
 
-/* Specific style for the main menu modal */
-#menuModal .modal-button {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start; /* Left-align content */
-  text-align: left;
-  gap: 15px; /* Space between icon and text */
+.close-btn {
+  position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; color: #aaa;
+  cursor: pointer; background: none; border: none; padding: 0; line-height: 1;
+}
+.close-btn:hover { color: var(--color-text-dark); }
+
+/* --- 5. Specific Components --- */
+
+#geocoder-container { pointer-events: auto; flex-grow: 1; max-width: 75%; }
+#geocoder-container .mapboxgl-ctrl-geocoder {
+  width: 100%; max-width: none; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border-radius: 8px; background-color: var(--color-background-modal);
 }
 
-/* Specific style for the data management modal */
-#dataModal .modal-button {
-  background-color: #f8f9fa;
-  border-color: #dee2e6;
+.user-status-display {
+  display: flex; align-items: center; background: rgba(255, 255, 255, 0.85);
+  border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: auto;
+  font-size: 14px; padding: 6px 12px;
 }
+.user-status-display span { margin-right: 10px; }
+#guestContent, #loggedInContent { display: flex; align-items: center; }
 
-#dataModal .modal-button:hover {
-  background-color: #e9ecef;
+.mapboxgl-popup-content { padding: 15px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px !important; }
+.pin-popup-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.pin-popup-form input, .pin-popup-form select, .pin-popup-form button { width: 100%; box-sizing: border-box; }
+
+.session-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+.session-list li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.session-list li:hover { background-color: #f9f9f9; }
+.session-list li:last-child { border-bottom: none; }
+.session-date { font-size: 0.8em; color: #777; }
+
+.auth-form { display: flex; flex-direction: column; gap: 10px; }
+.auth-form.login-mode #usernameInput, .auth-form.login-mode #ageGateContainer { display: none; }
+.auth-form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+.age-gate-container { display: flex; align-items: center; gap: 5px; }
+
+/* --- 6. Specific Modal Styles --- */
+
+/* Leaderboard Modal */
+.leaderboard-tabs {
+  display: flex; justify-content: stretch; margin-bottom: 15px;
+  border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border);
 }
-
-#dataModal .modal-button.disabled {
-  background-color: #f8f9fa;
-  color: #adb5bd;
-  cursor: not-allowed;
-  opacity: 0.7;
+.leaderboard-tab {
+  width: 100%; margin: 0; border: none; border-radius: 0;
+  border-right: 1px solid var(--color-border); background-color: #f0f0f0;
 }
+.leaderboard-tab:last-child { border-right: none; }
+.leaderboard-tab.active { background-color: var(--color-primary-green); color: var(--color-text-light); font-weight: bold; }
+.leaderboard-list { list-style: none; padding: 0; margin: 0; }
+.leaderboard-list li { display: flex; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; font-size: 16px; }
+.leaderboard-list li:last-child { border-bottom: none; }
+.leaderboard-rank { font-weight: bold; font-size: 1.1em; color: #888; width: 30px; text-align: center; }
+.leaderboard-name { flex-grow: 1; padding: 0 15px; font-weight: 500; }
+.leaderboard-name a { text-decoration: none; color: var(--color-primary-green); }
+.leaderboard-score { font-weight: bold; color: var(--color-text-dark); }
+.leaderboard-list li.current-user-entry { background-color: #e8f5e9; border-radius: 6px; }
+.my-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.stat-card { background-color: #f9f9f9; border-radius: 8px; padding: 15px; text-align: center; border: 1px solid #eee; }
+.my-stats-value { font-size: 24px; font-weight: bold; color: var(--color-primary-green); }
+.my-stats-label { font-size: 14px; color: #666; margin-top: 5px; }
+.my-stats-container h4 { margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+.badge-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+.badge-item { font-size: 28px; }
 
-/* Style for the "Export" button in the data modal */
-#dataModal .export {
-  background-color: var(--color-secondary-brown);
-  color: var(--color-text-light);
-  border-color: var(--color-secondary-brown);
+/* Post-Cleanup Summary Modal */
+.summary-modal { text-align: center; }
+.summary-modal h2::before { content: '🎉'; display: block; font-size: 48px; margin-bottom: 10px; }
+.summary-stats { display: flex; justify-content: space-around; gap: 15px; margin-bottom: 30px; }
+.summary-stats > div { background-color: #f9f9f9; border-radius: 8px; padding: 15px; flex-grow: 1; border: 1px solid #eee; }
+.stat-value { display: block; font-size: 26px; font-weight: bold; color: var(--color-primary-green); }
+.stat-label { display: block; font-size: 14px; color: #666; margin-top: 5px; }
+
+/* Menu & Data Modals */
+#menuModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
+#dataModal .modal-button { background-color: #f8f9fa; border-color: #dee2e6; }
+#dataModal .modal-button:hover { background-color: #e9ecef; }
+#dataModal .export { background-color: var(--color-secondary-brown); color: var(--color-text-light); border-color: var(--color-secondary-brown); }
+#dataModal .export:hover { background-color: #8b4723; }
+
+/* Profile Form Modal */
+.profile-form { display: flex; flex-direction: column; gap: 8px; }
+.profile-form label { font-weight: 500; margin-top: 10px; color: #555; }
+.profile-form input[type="text"], .profile-form input[type="url"], .profile-form textarea {
+  width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-border);
+  font-size: 14px; font-family: inherit; box-sizing: border-box;
 }
+.profile-form textarea { min-height: 80px; resize: vertical; }
+.profile-form .modal-button { margin-top: 15px; }
 
-#dataModal .export:hover {
-  background-color: #8b4723;
+/* POI Popup Buttons */
+.poi-popup-buttons { display: flex; gap: 8px; margin-top: 15px; }
+.poi-popup-buttons .modal-button { width: 100%; margin: 0; }
+
+/* TOS Modal Button */
+#agreeBtn { width: 100%; box-sizing: border-box; margin-top: 20px; }
+#agreeBtn:disabled {
+  background-color: #f8d7da !important; border-color: #f5c6cb !important; color: #721c24 !important; opacity: 0.7;
 }
