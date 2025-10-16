@@ -622,3 +622,65 @@ hr {
 .share-button:hover {
   background-color: #3e684b;
 }
+
+/* --- 8. Menu & Data Modal Redesign --- */
+
+/* General styling for both modals */
+.modal-content h2 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 25px;
+  font-size: 24px;
+  color: var(--color-text-dark);
+}
+
+.modal-content hr {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 20px 0;
+}
+
+.modal-content p {
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+  margin-top: -10px;
+  margin-bottom: 15px;
+}
+
+/* Specific style for the main menu modal */
+#menuModal .modal-button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* Left-align content */
+  text-align: left;
+  gap: 15px; /* Space between icon and text */
+}
+
+/* Specific style for the data management modal */
+#dataModal .modal-button {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+}
+
+#dataModal .modal-button:hover {
+  background-color: #e9ecef;
+}
+
+#dataModal .modal-button.disabled {
+  background-color: #f8f9fa;
+  color: #adb5bd;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Style for the "Export" button in the data modal */
+#dataModal .export {
+  background-color: var(--color-secondary-brown);
+  color: var(--color-text-light);
+  border-color: var(--color-secondary-brown);
+}
+
+#dataModal .export:hover {
+  background-color: #8b4723;
+}
