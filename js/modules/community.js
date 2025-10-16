@@ -48,10 +48,83 @@ export async function fetchAndDisplayCommunityRoutes() {
     state.map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'community-pins', filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'], 'text-size': 12 }, paint: { 'text-color': '#ffffff' } }, firstSymbolId);
     state.map.addLayer({ id: 'unclustered-point', type: 'circle', source: 'community-pins', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#A0522D', 'circle-radius': 8, 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } }, firstSymbolId);
 
-    state.map.on('click', 'clusters', (e) => { /* ... */ });
-    state.map.on('click', 'unclustered-point', (e) => { /* ... */ });
+// Layer 1: The Cluster Circles
+    state.map.addLayer({
+      id: 'clusters',
+      type: 'circle',
+      source: 'community-pins',
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': '#A0522D',
+        'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
+      }
+    }, firstSymbolId); // Insert before the first symbol layer
+
+    // Layer 2: The Cluster Count (the numbers)
+    state.map.addLayer({
+      id: 'cluster-count',
+      type: 'symbol',
+      source: 'community-pins',
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+        'text-size': 12
+      },
+      paint: { 'text-color': '#ffffff' }
+    }, firstSymbolId); // Insert before the first symbol layer
+
+    // Layer 3: The Unclustered Points (brown dots)
+    state.map.addLayer({
+      id: 'unclustered-point',
+      type: 'circle',
+      source: 'community-pins',
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-color': '#A0522D',
+        'circle-radius': 8,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff'
+      }
+    }, firstSymbolId); // Insert before the first symbol layer
+
+    // --- INTERACTIVITY ---
+
+    // When a user clicks on a cluster, zoom in to it.
+    state.map.on('click', 'clusters', (e) => {
+      const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+      const clusterId = features[0].properties.cluster_id;
+      state.map.getSource('community-pins').getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        state.map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+      });
+    });
+
+    // When a user clicks on an unclustered point, show a popup with the thumbnail.
+    state.map.on('click', 'unclustered-point', (e) => {
+      const coordinates = e.features[0].geometry.coordinates.slice();
+      const properties = e.features[0].properties;
+      const popupHTML = `
+        <div>
+            <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px;"/>
+            <p style="margin: 5px 0 0;"><strong>${properties.title}</strong></p>
+            <p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${properties.category || 'Other'}</p>
+            <small>By: <a href="#" class="profile-link" data-userid="${properties.userId}">${properties.username || 'A user'}</a></small>
+        </div>
+      `;
+      const popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupHTML).addTo(state.map);
+      popup.getElement().querySelector('.profile-link').addEventListener('click', (ev) => {
+        ev.preventDefault();
+        showPublicProfile(properties.userId);
+      });
+    });
+
+    // Change the cursor to a pointer when hovering over clickable items.
     const clickableLayers = ['clusters', 'unclustered-point'];
-    clickableLayers.forEach(layer => { /* ... */ });
+    clickableLayers.forEach(layer => {
+      state.map.on('mouseenter', layer, () => { state.map.getCanvas().style.cursor = 'pointer'; });
+      state.map.on('mouseleave', layer, () => { state.map.getCanvas().style.cursor = ''; });
+    });
 
   } catch (error) {
     console.error("Error fetching community routes:", error);
