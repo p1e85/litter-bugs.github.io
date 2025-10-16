@@ -4,51 +4,67 @@ import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFire
 import { clearCurrentSession } from './data.js';
 
 // --- Community View ---
-
 export async function fetchAndDisplayCommunityRoutes() {
   try {
     clearCommunityRoutes();
 
     const q = query(collection(db, "publishedRoutes"), orderBy("timestamp", "desc"));
     const querySnapshot = await getDocs(q);
+
     const allPinFeatures = [];
 
+    // First, loop through and add all the non-clickable route lines to the map.
+    // While doing so, collect all the pin data into a single array.
     querySnapshot.forEach(doc => {
       const routeData = doc.data();
       const routeId = doc.id;
       const mapboxCoords = convertRouteFromFirestore(routeData.route);
-      const mapboxPins = convertPinsFromFirestore(routeData.pins);
-
+      
       if (mapboxCoords && mapboxCoords.length > 0) {
-        state.map.addSource(`community-route-${routeId}`, { 'type': 'geojson', 'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': mapboxCoords } } });
-        state.map.addLayer({ 'id': `community-route-${routeId}`, 'type': 'line', 'source': `community-route-${routeId}`, 'paint': { 'line-color': '#A0522D', 'line-width': 4, 'line-opacity': 0.7 } });
+        state.map.addSource(`community-route-${routeId}`, {
+          'type': 'geojson',
+          'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': mapboxCoords } }
+        });
+        state.map.addLayer({
+          'id': `community-route-${routeId}`,
+          'type': 'line',
+          'source': `community-route-${routeId}`,
+          'paint': { 'line-color': '#A0522D', 'line-width': 4, 'line-opacity': 0.7 }
+        });
         state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
       }
+      
+      const mapboxPins = convertPinsFromFirestore(routeData.pins);
       if (mapboxPins) {
         mapboxPins.forEach(pin => {
-          allPinFeatures.push({ 'type': 'Feature', 'properties': { title: pin.title, category: pin.category, imageURL: pin.imageURL, thumbnailURL: pin.thumbnailURL, username: routeData.username, userId: routeData.userId }, 'geometry': { 'type': 'Point', 'coordinates': pin.coords } });
+          allPinFeatures.push({
+            'type': 'Feature',
+            'properties': {
+              title: pin.title,
+              category: pin.category,
+              imageURL: pin.imageURL,
+              thumbnailURL: pin.thumbnailURL,
+              username: routeData.username,
+              userId: routeData.userId
+            },
+            'geometry': { 'type': 'Point', 'coordinates': pin.coords }
+          });
         });
       }
     });
 
+    // Now that all route lines are drawn, add the single source for all clickable pins.
     if (!state.map.getSource('community-pins')) {
-      state.map.addSource('community-pins', { type: 'geojson', data: { 'type': 'FeatureCollection', 'features': allPinFeatures }, cluster: true, clusterMaxZoom: 14, clusterRadius: 50 });
+      state.map.addSource('community-pins', {
+        type: 'geojson',
+        data: { 'type': 'FeatureCollection', 'features': allPinFeatures },
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50
+      });
     }
 
-    let firstSymbolId;
-    const layers = state.map.getStyle().layers;
-    for (const layer of layers) {
-      if (layer.type === 'symbol') {
-        firstSymbolId = layer.id;
-        break;
-      }
-    }
-
-    state.map.addLayer({ id: 'clusters', type: 'circle', source: 'community-pins', filter: ['has', 'point_count'], paint: { 'circle-color': '#A0522D', 'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40] } }, firstSymbolId);
-    state.map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'community-pins', filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'], 'text-size': 12 }, paint: { 'text-color': '#ffffff' } }, firstSymbolId);
-    state.map.addLayer({ id: 'unclustered-point', type: 'circle', source: 'community-pins', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#A0522D', 'circle-radius': 8, 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } }, firstSymbolId);
-
-// Layer 1: The Cluster Circles
+    // Finally, add the clickable layers. Because these are added last, Mapbox will draw them on top.
     state.map.addLayer({
       id: 'clusters',
       type: 'circle',
@@ -58,9 +74,8 @@ export async function fetchAndDisplayCommunityRoutes() {
         'circle-color': '#A0522D',
         'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
       }
-    }, firstSymbolId); // Insert before the first symbol layer
+    });
 
-    // Layer 2: The Cluster Count (the numbers)
     state.map.addLayer({
       id: 'cluster-count',
       type: 'symbol',
@@ -72,9 +87,8 @@ export async function fetchAndDisplayCommunityRoutes() {
         'text-size': 12
       },
       paint: { 'text-color': '#ffffff' }
-    }, firstSymbolId); // Insert before the first symbol layer
+    });
 
-    // Layer 3: The Unclustered Points (brown dots)
     state.map.addLayer({
       id: 'unclustered-point',
       type: 'circle',
@@ -86,10 +100,10 @@ export async function fetchAndDisplayCommunityRoutes() {
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
       }
-    }, firstSymbolId); // Insert before the first symbol layer
+    });
 
     // --- INTERACTIVITY ---
-
+    
     // When a user clicks on a cluster, zoom in to it.
     state.map.on('click', 'clusters', (e) => {
       const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
@@ -131,7 +145,6 @@ export async function fetchAndDisplayCommunityRoutes() {
     alert("Could not load community data.");
   }
 }
-
 export function toggleCommunityView() {
     state.isCommunityViewOn = !state.isCommunityViewOn;
     const communityBtn = document.getElementById('communityBtn');
