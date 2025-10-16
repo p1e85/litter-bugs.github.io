@@ -272,3 +272,7 @@ hr {
 #agreeBtn:disabled {
   background-color: #f8d7da !important; border-color: #f5c6cb !important; color: #721c24 !important; opacity: 0.7;
 }
+
+.top-row {
+  pointer-events: auto;
+}
