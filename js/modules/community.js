@@ -482,9 +482,24 @@ export function setupPoiClickListeners() {
             state.map.on('click', layerId, (e) => {
                 if (e.features.length > 0) {
                     const feature = e.features[0];
-                    const popupHTML = `<div><strong>${feature.properties.name}</strong><div class="poi-popup-buttons"><button class="modal-button" "schedule-btn">Schedule Meetup</button><button class="modal-button" "view-btn">View Meetups</button></div></div>`;
-                    const popup = new mapboxgl.Popup().setLngLat(e.lngLat).setHTML(popupHTML).addTo(state.map);
 
+                    // --- THIS IS THE CORRECTED HTML ---
+                    // The buttons now have BOTH the styling class and the identifying class.
+                    const popupHTML = `
+                        <div>
+                            <strong>${feature.properties.name}</strong>
+                            <div class="poi-popup-buttons">
+                                <button class="modal-button schedule-btn">Schedule Meetup</button>
+                                <button class="modal-button view-btn">View Meetups</button>
+                            </div>
+                        </div>`;
+
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(popupHTML)
+                        .addTo(state.map);
+
+                    // This code can now find the buttons correctly
                     popup.getElement().querySelector('.schedule-btn').addEventListener('click', () => {
                         openMeetupModal(feature.properties.name);
                         popup.remove();
