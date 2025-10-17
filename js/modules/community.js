@@ -29,7 +29,7 @@ export async function fetchAndDisplayCommunityRoutes() {
           'id': `community-route-${routeId}`,
           'type': 'line',
           'source': `community-route-${routeId}`,
-          'paint': { 'line-color': '#A0522D', 'line-width': 4, 'line-opacity': 0.7 }
+          'paint': { 'line-color': '#4A7C59', 'line-width': 4, 'line-opacity': 0.7 }
         });
         state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
       }
@@ -71,7 +71,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       source: 'community-pins',
       filter: ['has', 'point_count'],
       paint: {
-        'circle-color': '#A0522D',
+        'circle-color': '#4A7C59',
         'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40]
       }
     });
@@ -95,7 +95,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       source: 'community-pins',
       filter: ['!', ['has', 'point_count']],
       paint: {
-        'circle-color': '#A0522D',
+        'circle-color': '#4A7C59',
         'circle-radius': 8,
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
