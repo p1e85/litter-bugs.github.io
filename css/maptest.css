@@ -407,3 +407,51 @@ button.close-btn:hover {
   margin-right: auto;  /* CRITICAL: Pushes the menu button to the far right */
 }
 
+/* --- 7. POI Modal Redesign --- */
+
+/* Enlarge the meetup modals specifically */
+#meetupModal .modal-content,
+#viewMeetupsModal .modal-content {
+  max-width: 550px;
+}
+
+/* Style for the new descriptive subtitle */
+.modal-subtitle {
+  font-size: 15px;
+  color: #666;
+  text-align: center;
+  margin-top: -15px;
+  margin-bottom: 20px;
+}
+
+/* Color-code the POI popup buttons */
+.poi-popup-buttons .schedule-btn {
+  background-color: var(--color-primary-green);
+  color: var(--color-text-light);
+  border-color: var(--color-primary-green);
+}
+
+.poi-popup-buttons .schedule-btn:hover {
+  background-color: #3e684b;
+}
+
+.poi-popup-buttons .view-btn {
+  background-color: var(--color-secondary-blue);
+  color: var(--color-text-light);
+  border-color: var(--color-secondary-blue);
+}
+
+.poi-popup-buttons .view-btn:hover {
+  background-color: #3a6a92;
+}
+
+/* Color-code the "Create Meetup" button */
+#createMeetupBtn {
+  background-color: var(--color-primary-green);
+  color: var(--color-text-light);
+  border-color: var(--color-primary-green);
+}
+#createMeetupBtn:hover {
+  background-color: #3e684b;
+}
+
