@@ -455,3 +455,13 @@ button.close-btn:hover {
   background-color: #3e684b;
 }
 
+.delete-meetup-btn {
+  background-color: var(--color-accent-danger);
+  color: var(--color-text-light);
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
