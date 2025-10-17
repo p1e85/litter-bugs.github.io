@@ -439,3 +439,35 @@ button.close-btn:hover {
 #dataModal .modal-button.export:hover {
   background-color: #8b4723;
 }
+
+/* --- Data Management Modal Button Colors --- */
+
+/* Green for primary data actions */
+#dataModal #saveBtn,
+#dataModal #loadBtn {
+  background-color: var(--color-primary-green);
+  color: var(--color-text-light);
+  border-color: var(--color-primary-green);
+}
+#dataModal #saveBtn:hover,
+#dataModal #loadBtn:hover {
+  background-color: #3e684b;
+}
+
+/* Blue for secondary data actions */
+#dataModal #centerOnRouteBtn,
+#dataModal #managePublicationsBtn {
+  background-color: var(--color-secondary-blue);
+  color: var(--color-text-light);
+  border-color: var(--color-secondary-blue);
+}
+#dataModal #centerOnRouteBtn:hover,
+#dataModal #managePublicationsBtn:hover {
+  background-color: #3a6a92;
+}
+
+/* Keep the Export button brown */
+#dataModal .modal-button.export {
+  background-color: var(--color-secondary-brown);
+  border-color: var(--color-secondary-brown);
+}
