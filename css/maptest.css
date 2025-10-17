@@ -465,3 +465,16 @@ button.close-btn:hover {
   cursor: pointer;
 }
 
+/* --- Final Fix for Top Bar Layout --- */
+
+.top-row {
+  display: flex;       /* Ensures items are in a row */
+  align-items: center; /* Vertically aligns them */
+  gap: 10px;           /* Adds space between them */
+}
+
+/* This is the key rule that pushes the menu button to the right */
+#geocoder-container {
+  margin-right: auto;
+}
+
