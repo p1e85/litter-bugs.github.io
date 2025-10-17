@@ -44,6 +44,7 @@ hr {
   flex-direction: column;
   gap: 8px;
   pointer-events: none;
+  align-items: center;
 }
 
 .top-row {
@@ -399,15 +400,3 @@ button.close-btn:hover {
 #createMeetupBtn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
 #createMeetupBtn:hover { background-color: #3e684b; }
 .delete-meetup-btn { background-color: var(--color-accent-danger); color: var(--color-text-light); border: none; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
-
-/* --- Final Fix for Top Bar Layout --- */
-
-.top-row {
-  display: flex;       /* Ensures items are in a row */
-  align-items: center; /* Vertically aligns them */
-}
-
-/* This is the key rule that pushes the menu button to the right */
-#geocoder-container {
-  margin-right: auto;
-}
