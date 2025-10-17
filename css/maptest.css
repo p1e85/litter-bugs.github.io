@@ -431,9 +431,9 @@ button.close-btn:hover {
 
 /* CRITICAL FIX: Make the selector for the Export button more specific */
 #dataModal .modal-button.export {
-  background-color: var(--color-secondary-brown);
+  background-color: var(--color-primary-green);
   color: var(--color-text-light);
-  border-color: var(--color-secondary-brown);
+  border-color: var(--color-primary-green);
 }
 
 #dataModal .modal-button.export:hover {
