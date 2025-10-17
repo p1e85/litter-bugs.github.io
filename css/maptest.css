@@ -395,3 +395,15 @@ button.close-btn:hover {
 #agreeBtn { width: 100%; box-sizing: border-box; margin-top: 20px; }
 #agreeBtn:disabled { background-color: #f8d7da !important; border-color: #f5c6cb !important; color: #721c24 !important; opacity: 0.7; }
 
+/* --- Fix for Top Bar Layout --- */
+
+.top-row {
+  display: flex;       /* Arrange items side-by-side */
+  align-items: center; /* Vertically align them */
+  gap: 10px;           /* Add space between them */
+}
+
+#geocoder-container {
+  margin-right: auto;  /* CRITICAL: Pushes the menu button to the far right */
+}
+
