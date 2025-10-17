@@ -412,3 +412,45 @@ button.close-btn:hover {
   flex-shrink: 0; /* Prevents the menu button from ever shrinking */
 }
 
+/* --- 7. Data Management Modal Redesign --- */
+
+/* General styling for the data modal */
+#dataModal .modal-content h2 {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+
+#dataModal .modal-button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* Left-align content */
+  text-align: left;
+  gap: 15px; /* Space between icon and text */
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  font-weight: 500;
+  color: var(--color-text-dark);
+}
+
+#dataModal .modal-button:hover {
+  background-color: #e9ecef;
+}
+
+#dataModal .modal-button.disabled {
+  background-color: #f8f9fa;
+  color: #adb5bd;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Style for the "Export" button */
+#dataModal .export {
+  background-color: var(--color-secondary-brown);
+  color: var(--color-text-light);
+  border-color: var(--color-secondary-brown);
+}
+
+#dataModal .export:hover {
+  background-color: #8b4723;
+}
+
