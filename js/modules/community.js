@@ -585,18 +585,51 @@ function openViewMeetupsModal(poiName) {
             meetupsList.innerHTML = '<li>No meetups scheduled for this location yet. Be the first!</li>';
             return;
         }
+
         meetupsList.innerHTML = '';
         querySnapshot.forEach((doc) => {
             const meetup = doc.data();
+            const meetupId = doc.id;
             const li = document.createElement('li');
             const date = meetup.createdAt.toDate().toLocaleDateString();
+
+            // Check if the current user is the organizer
+            const isOrganizer = state.currentUser && state.currentUser.uid === meetup.organizerId;
+
             li.innerHTML = `
                 <div>
                     <span>${meetup.title}</span><br>
                     <small class="session-date">Organized by: ${meetup.organizerName} on ${date}</small>
                     <p style="margin-top: 5px; white-space: pre-wrap;">${meetup.description}</p>
-                </div>`;
+                </div>
+                ${isOrganizer ? `<button class="delete-meetup-btn" data-id="${meetupId}">Delete</button>` : ''}
+            `;
+
+            // If the delete button exists, add a click listener to it
+            const deleteBtn = li.querySelector('.delete-meetup-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteMeetup(meetupId);
+                });
+            }
+
             meetupsList.appendChild(li);
         });
     });
 }
+
+async function deleteMeetup(meetupId) {
+    if (confirm("Are you sure you want to permanently delete this meetup?")) {
+        try {
+            await deleteDoc(doc(db, "meetups", meetupId));
+            alert("Meetup deleted successfully.");
+            // The onSnapshot listener will automatically update the UI.
+        } catch (error) {
+            console.error("Error deleting meetup:", error);
+            alert("Failed to delete meetup.");
+        }
+    }
+}
+
+
