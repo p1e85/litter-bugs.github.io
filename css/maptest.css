@@ -400,3 +400,15 @@ button.close-btn:hover {
 #createMeetupBtn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
 #createMeetupBtn:hover { background-color: #3e684b; }
 .delete-meetup-btn { background-color: var(--color-accent-danger); color: var(--color-text-light); border: none; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+
+/* --- Fix for Disappearing Menu Button on Small Screens --- */
+
+#geocoder-container {
+  flex: 1;      /* Allows the search bar to grow and shrink flexibly */
+  min-width: 0; /* A flexbox trick to prevent the input from overflowing */
+}
+
+#menuBtn {
+  flex-shrink: 0; /* Prevents the menu button from ever shrinking */
+}
+
