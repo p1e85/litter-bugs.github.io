@@ -261,7 +261,8 @@
         <div class="modal-content">
             <button class="close-btn">&times;</button>
             <h2>Schedule a Meetup</h2>
-            <p>Organize a cleanup event at: <strong id="meetupLocationName"></strong></p>
+            <p class="modal-subtitle">Organize a public cleanup event at this location that other users can see and join.</p>
+            <p>Location: <strong id="meetupLocationName"></strong></p>
             <div id="meetupForm" class="profile-form">
                 <input type="hidden" id="poiNameInput">
                 <label for="meetupTitleInput">Meetup Title</label>
@@ -283,7 +284,9 @@
     <div id="viewMeetupsModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>Scheduled Meetups at <strong id="viewMeetupsLocationName"></strong></h2>
+            <h2>Scheduled Meetups</h2>
+                <p class="modal-subtitle">See cleanup events organized by the community at this location.</p>
+                <p>Location: <strong id="viewMeetupsLocationName"></strong></p>
             <ul id="meetupsList" class="session-list"></ul>
         </div>
     </div>
