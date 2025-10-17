@@ -44,7 +44,6 @@ hr {
   flex-direction: column;
   gap: 8px;
   pointer-events: none;
-  align-items: center;
 }
 
 .top-row {
@@ -367,10 +366,11 @@ button.close-btn:hover {
 
 /* Menu & Data Modals */
 #menuModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
+#dataModal .modal-content h2 { border-bottom: 1px solid #eee; padding-bottom: 15px; }
 #dataModal .modal-button { background-color: #f8f9fa; border-color: #dee2e6; }
 #dataModal .modal-button:hover { background-color: #e9ecef; }
-#dataModal .export { background-color: var(--color-secondary-brown); color: var(--color-text-light); border-color: var(--color-secondary-brown); }
-#dataModal .export:hover { background-color: #8b4723; }
+#dataModal .modal-button.export { background-color: var(--color-secondary-brown); color: var(--color-text-light); border-color: var(--color-secondary-brown); }
+#dataModal .modal-button.export:hover { background-color: #8b4723; }
 
 /* Profile Form Modal */
 .profile-form { display: flex; flex-direction: column; gap: 8px; }
@@ -400,102 +400,3 @@ button.close-btn:hover {
 #createMeetupBtn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
 #createMeetupBtn:hover { background-color: #3e684b; }
 .delete-meetup-btn { background-color: var(--color-accent-danger); color: var(--color-text-light); border: none; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
-
-/* --- Fix for Disappearing Menu Button on Small Screens --- */
-
-#geocoder-container {
-  flex: 1;      /* Allows the search bar to grow and shrink flexibly */
-  min-width: 0; /* A flexbox trick to prevent the input from overflowing */
-}
-
-#menuBtn {
-  flex-shrink: 0; /* Prevents the menu button from ever shrinking */
-}
-
-/* --- 7. Data Management Modal Redesign --- */
-
-/* General styling for the data modal */
-#dataModal .modal-content h2 {
-  border-bottom: 1px solid #eee;
-  padding-bottom: 15px;
-}
-
-#dataModal .modal-button {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start; /* Left-align content */
-  text-align: left;
-  gap: 15px; /* Space between icon and text */
-  background-color: #f8f9fa;
-  border-color: #dee2e6;
-  font-weight: 500;
-  color: var(--color-text-dark);
-}
-
-#dataModal .modal-button:hover {
-  background-color: #e9ecef;
-}
-
-#dataModal .modal-button.disabled {
-  background-color: #f8f9fa;
-  color: #adb5bd;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* Style for the "Export" button */
-#dataModal .export {
-  background-color: var(--color-secondary-brown);
-  color: var(--color-text-light);
-  border-color: var(--color-secondary-brown);
-}
-
-#dataModal .export:hover {
-  background-color: #8b4723;
-}
-
-/* --- 7. Data Management Modal Redesign --- */
-
-/* General styling for the data modal */
-#dataModal .modal-content h2 {
-  border-bottom: 1px solid #eee;
-  padding-bottom: 15px;
-}
-
-/* Base style for buttons inside the data modal */
-#dataModal .modal-button {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start; /* Left-align content */
-  text-align: left;
-  gap: 15px; /* Space between icon and text */
-  background-color: #f8f9fa;
-  border-color: #dee2e6;
-  font-weight: 500;
-  color: var(--color-text-dark);
-}
-
-#dataModal .modal-button:hover {
-  background-color: #e9ecef;
-}
-
-/* This makes the "Find Route" button look correctly disabled */
-#dataModal .modal-button:disabled {
-  background-color: #f8f9fa !important;
-  color: #adb5bd !important;
-  border-color: #dee2e6 !important;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* CRITICAL FIX: Make the selector for the Export button more specific */
-#dataModal .modal-button.export {
-  background-color: var(--color-secondary-brown);
-  color: var(--color-text-light);
-  border-color: var(--color-secondary-brown);
-}
-
-#dataModal .modal-button.export:hover {
-  background-color: #8b4723;
-}
-
