@@ -367,7 +367,7 @@ button.close-btn:hover {
 /* Menu & Data Modals */
 #menuModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
 #dataModal .modal-content h2 { border-bottom: 1px solid #eee; padding-bottom: 15px; }
-#dataModal .modal-button { background-color: #f8f9fa; border-color: #dee2e6; }
+
 #dataModal .modal-button:hover { background-color: #e9ecef; }
 #dataModal .modal-button.export { background-color: var(--color-secondary-brown); color: var(--color-text-light); border-color: var(--color-secondary-brown); }
 #dataModal .modal-button.export:hover { background-color: #8b4723; }
