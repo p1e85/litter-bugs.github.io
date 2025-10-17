@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Litter Bugs - Map Tracker</title>
 
     <script type="text/javascript">
         (function(c,l,a,r,i,t,y){
@@ -11,8 +12,10 @@
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
         })(window, document, "clarity", "script", "tilw8qneix");
     </script>
-    
-    <title>Litter Bugs - Map Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@1.0.17/dist/browser-image-compression.js"></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js'></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪲</text></svg>">
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css' rel='stylesheet' />
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
@@ -20,240 +23,26 @@
 </head>
 <body>
 
-   <!-- Top UI Container (RESTRUCTURED) -->
     <div class="top-ui-container">
         <div class="top-row">
-            <div id="geocoder-container"></div>
-            <div class="top-bar-right">
-                <button id="menuBtn" class="top-bar-button">☰ Menu</button>
-            </div>
+            <button id="menuBtn" class="top-bar-button">☰ Menu</button>
         </div>
         <div class="bottom-row">
              <button id="leaderboardBtn" class="top-bar-button">🏆 Leaderboard</button>
              <button id="communityBtn" class="community-button off">🌎 Community View: OFF</button>
-             <!-- "Change Style" button moved here -->
              <button id="changeStyleBtn" class="top-bar-button">🎨 Change Style</button>
         </div>
     </div>
 
-    <!-- Menu Modal (MODIFIED) -->
-    <div id="menuModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Menu</h2>
-            <button id="infoBtn" class="modal-button">ℹ️ Info</button>
-            <!-- "Publish" button is now here -->
-            <hr>
-            <p>Publish your completed route to the public community map for everyone to see.</p>
-            <button id="publishBtn" class="modal-button publish">🚀 Publish to Community</button>
-            <button id="dataBtn" class="modal-button">💾 Data Management</button>
-            <hr>
-            <button id="editProfileBtn" class="modal-button edit-profile">👤 Edit My Profile</button>
-            <a href="https://www.buymeacoffee.com/p1skates" target="_blank" class="modal-button donate-button">
-                ☕ Support
-            </a>
-        </div>
+
+    <div class="map-wrapper">
+    <div id="map"></div>
+      <div id="geocoder-container"></div>
+      <button id="findMeBtn" class="control-btn">📍</button>
+      <button id="pictureBtn" class="control-btn" disabled>📸</button>
+      <input type="file" id="cameraInput" accept="image/*" capture style="display: none;">
     </div>
 
-    <!-- Info Modal -->
-    <div id="infoModal" class="modal-overlay">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>About Litter Bugs</h2>
-            <div class="info-modal-body">
-                <h4>The Mission (Why)</h4>
-                <p>Litter Bugs transforms the chore of cleaning up our neighborhoods into a visible and rewarding achievement. By tracking your cleanup routes and pinning the litter you collect, you create a tangible record of your positive impact. Share your efforts on the community map to inspire others, see our collective progress, and help identify areas that need our attention the most.</p>
-                <h4>How to Use the App</h4>
-                <ol class="info-list">
-                    <li><strong>Sign Up or Skip:</strong> Create an account to save your data to the cloud, or 'Skip' to use the app as a guest...</li>
-                    <li><strong>Track a Route:</strong> Press 'Start Tracking' to draw your path on the map as you walk.</li>
-                    <li><strong>Pin Litter:</strong> When you find litter, press 'Pin Picture' to take a photo.</li>
-                    <li><strong>Save/Load:</strong> Use the 'Data' button to save your current session or load a previous one.</li>
-                    <li><strong>Publish:</strong> When logged in, you can use the 'Publish to Community' button to share your completed route.</li>
-                    <li><strong>Community View:</strong> Toggle the 'Community View' button to see all the routes published by other users!</li>
-                </ol>
-            </div>
-            <p class="tos-link-container">You can review the full <a href="#" id="viewTermsLink">Terms of Use</a> at any time.</p>
-        </div>
-    </div>
-    
-    <!-- Terms of Use Modal -->
-    <div id="termsModal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Terms of Use</h2>
-            <div class="terms-box">
-                <p><strong>AGE REQUIREMENT:</strong> You must be 18 years of age or older to use this Service, including creating an account or using it as a guest. By using this Service, you represent and warrant that you are 18 years of age or older.</p>
-                <p>Welcome to Litter Bugs! By accessing or using our application (the "Service"), you agree to be bound by these Terms of Use.</p>
-                <p><strong>1. Description of Service:</strong> This Service is for the sole purpose of identifying and documenting refuse, trash, and litter (collectively, "Garbage").</p>
-                <p><strong>2. Prohibited Content:</strong> You may NOT upload any photograph containing people, illegal activities, or personal information. The focus must be exclusively on Garbage.</p>
-                <p><strong>3. Disclaimer:</strong> This Service is provided "AS IS". Your use of this service is entirely at your own risk. We are not liable for any damages or harm arising from your use of the Service.</p>
-            </div>
-            <div class="agreement-section">
-                <input type="checkbox" id="termsCheckbox">
-                <label for="termsCheckbox">I have read, understood, and agree to the Terms of Use.</label>
-            </div>
-            <button id="agreeBtn" disabled>I Agree</button>
-        </div>
-    </div>
-    
-    <!-- Authentication Modal -->
-    <div id="authModal" class="modal-overlay">
-        <div class="modal-content auth-modal">
-            <h2 id="authTitle">Create a Litter Bugs Account</h2>
-            <p id="authSubtitle">Or <a href="#" id="switchAuthModeLink">log in to an existing account.</a></p>
-            <div id="authForm" class="auth-form signup-mode">
-                <input type="text" id="usernameInput" placeholder="Public Username">
-                <input type="email" id="emailInput" placeholder="Email (for login)">
-                <input type="password" id="passwordInput" placeholder="Password (min. 6 characters)">
-                <div id="ageGateContainer" class="age-gate-container">
-                    <input type="checkbox" id="ageCheckbox">
-                    <label for="ageCheckbox">I certify that I am 18 years of age or older.</label>
-                </div>
-                <button id="authActionBtn" disabled>Sign Up</button>
-            </div>
-            <hr>
-            <button id="skipBtn" class="skip-button">Skip for now</button>
-            <p id="authError" class="error-message"></p>
-        </div>
-    </div>
-    
-    <!-- Profile Modals -->
-    <div id="profileModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Edit Your Public Profile</h2>
-            <div class="profile-form">
-                <label for="bioInput">Short Bio</label>
-                <textarea id="bioInput" placeholder="Tell the community a little about yourself..." maxlength="150"></textarea>
-                <label for="locationInput">Location</label>
-                <input type="text" id="locationInput" placeholder="e.g., Chicago, IL" maxlength="50">
-                <label for="coffeeLinkInput">"Buy Me a Coffee" Link</label>
-                <input type="url" id="coffeeLinkInput" placeholder="https://www.buymeacoffee.com/yourname">
-                <button id="saveProfileBtn" class="modal-button">Save Profile</button>
-                <hr>
-                <button id="deleteAccountBtn" class="modal-button delete-account-button">Permanently Delete Account</button>
-            </div>
-        </div>
-    </div>
-    <div id="publicProfileModal" class="modal">
-        <div class="modal-content profile-modal">
-            <span class="close-btn">&times;</span>
-            <h2 id="profileUsername"></h2>
-            <p id="profileLocation" class="profile-location"></p>
-            <p id="profileBio" class="profile-bio"></p>
-            <hr>
-            <h4>Lifetime Stats</h4>
-            <div id="profileStats" class="profile-stats-grid"></div>
-            <hr>
-            <h4>Achievements</h4>
-            <div id="profileAchievements" class="badge-container"></div>
-            <button id="profileSupportBtn" class="modal-button support-button">☕ Support Them</button>
-        </div>
-    </div>
-
-    <!-- Safety Reminder Modal -->
-    <div id="safetyModal" class="modal">
-        <div class="modal-content safety-modal">
-            <span class="close-btn">&times;</span>
-            <h2>Be Safe Out There!</h2>
-            <p>A quick reminder before you start your cleanup:</p>
-            <ul class="info-list">
-                <li><strong>Gear Up:</strong> Always consider using gloves and sturdy trash bags.</li>
-                <li><strong>Be Aware:</strong> Watch out for traffic, sharp objects, and wildlife.</li>
-                <li><strong>Don't Risk It:</strong> If an item looks hazardous or is in an unsafe location, leave it. Your safety is the top priority!</li>
-            </ul>
-            <button id="safetyModalOkBtn" class="modal-button">Got it, Let's Go!</button>
-        </div>
-    </div>
-    
-    <!-- Post-Cleanup Summary Modal -->
-    <div id="summaryModal" class="modal">
-        <div class="modal-content summary-modal">
-            <span class="close-btn">&times;</span>
-            <h2>Great Job!</h2>
-            <p>Here's a summary of your cleanup session:</p>
-            <div class="summary-stats">
-                <div>
-                    <span class="stat-value" id="summaryDistance">0.0 mi</span>
-                    <span class="stat-label">Distance</span>
-                </div>
-                <div>
-                    <span class="stat-value" id="summaryPins">0</span>
-                    <span class="stat-label">Items Pinned</span>
-                </div>
-                <div>
-                    <span class="stat-value" id="summaryDuration">0m 0s</span>
-                    <span class="stat-label">Duration</span>
-                </div>
-            </div>
-            <button id="shareBtn" class="modal-button share-button">📣 Share Your Cleanup!</button>
-            <button id="summaryOkBtn" class="modal-button">Awesome!</button>
-        </div>
-    </div>
-    
-    <!-- Leaderboard Modal -->
-    <div id="leaderboardModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Community Leaderboard</h2>
-            <div class="leaderboard-tabs">
-                <button class="leaderboard-tab" id="myStatsBtn">My Stats</button>
-                <button class="leaderboard-tab active" data-metric="totalPins">Most Pins Collected</button>
-                <button class="leaderboard-tab" data-metric="totalDistance">Most Distance Cleaned</button>
-            </div>
-            <ol id="leaderboardList" class="leaderboard-list"></ol>
-            <div id="myStatsContainer" class="my-stats-container" style="display: none;"></div>
-        </div>
-    </div>
-
-    <!-- Achievement Unlocked Modal -->
-    <div id="achievementModal" class="modal">
-        <div class="modal-content achievement-modal">
-            <span class="achievement-icon"></span>
-            <h2>Achievement Unlocked!</h2>
-            <h3 id="achievementName"></h3>
-            <p id="achievementDescription"></p>
-            <button id="achievementOkBtn" class="modal-button">Awesome!</button>
-        </div>
-    </div>
-    
-    <!-- Meetup Modals -->
-    <div id="meetupModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Schedule a Meetup</h2>
-            <p>Organize a cleanup event at: <strong id="meetupLocationName"></strong></p>
-            <div id="meetupForm" class="profile-form">
-                <input type="hidden" id="poiNameInput">
-                <label for="meetupTitleInput">Meetup Title</label>
-                <input type="text" id="meetupTitleInput" placeholder="e.g., Saturday Morning Cleanup" maxlength="50">
-                <label for="meetupDescriptionInput">Description</label>
-                <textarea id="meetupDescriptionInput" placeholder="e.g., Let's meet by the main entrance at 9 AM!" maxlength="200"></textarea>
-                
-                <div class="safety-disclaimer">
-                     <strong>Safety First:</strong> You are organizing a public event. For your safety and the safety of others, always meet in well-lit, public places and be aware of your surroundings. Litter Bugs is a platform for connecting people; we are not responsible for any incidents that occur at user-organized meetups.
-                </div>
-                <div class="agreement-section">
-                    <input type="checkbox" id="safetyCheckbox">
-                    <label for="safetyCheckbox">I understand and agree to the safety guidelines.</label>
-                </div>
-                <p id="profanityWarning" class="error-message" style="display: none;">Please use appropriate language.</p>
-                <button id="createMeetupBtn" class="modal-button" disabled>Create Meetup</button>
-            </div>
-        </div>
-    </div>
-    <div id="viewMeetupsModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Scheduled Meetups at <strong id="viewMeetupsLocationName"></strong></h2>
-            <ul id="meetupsList" class="session-list"></ul>
-        </div>
-    </div>
-
-    <!-- Map Container -->
-    <div id='map'></div>
-
-    <!-- Bottom Container -->
     <div class="bottom-container">
         <div id="userStatus" class="user-status-display">
             <div id="loggedInContent">
@@ -265,20 +54,87 @@
                 <button id="loginSignupBtn">Log In / Sign Up</button>
             </div>
         </div>
-        <div class="controls">
-            <button id="findMeBtn">📍 Find Me</button>
-            <button id="trackBtn">🛰️ Start Tracking</button>
-            <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display: none;">
-            <button id="pictureBtn">📸 Pin Picture</button>
+    </div>
+
+    <div id="menuModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn">&times;</button>
+            <h2>Menu</h2>
+            <button id="trackBtn" class="modal-button btn-secondary">🛰️ Start Tracking</button>
+            <button id="dataBtn" class="modal-button btn-secondary">💾 Data Management</button>
+            <hr>
+            <button id="infoBtn" class="modal-button">ℹ️ Info & Terms</button>
+            <button id="editProfileBtn" class="modal-button btn-secondary edit-profile">👤 Edit My Profile</button>
+            <a href="https://www.litter-bugs.com" target="_blank" class="modal-button">🌐 Visit Website</a>
+            <a href="https://www.buymeacoffee.com/p1skates" target="_blank" class="modal-button btn-support">☕ Support</a>
+            <hr>
+            <p>Publish your completed route for the community to see.</p>
+            <button id="publishBtn" class="modal-button btn-primary">🚀 Publish to Community</button>
         </div>
     </div>
 
-             <!-- Data Management Modal (MODIFIED) -->
-    <div id="dataModal" class="modal">
+    <div id="infoModal" class="modal-overlay">
         <div class="modal-content">
-            <span class="close-btn">&times;</span>
+            <button class="close-btn">&times;</button>
+            <h2>About Litter Bugs</h2>
+            <div class="info-modal-body">
+                <h4>The Mission (Why)</h4>
+                <p>Litter Bugs transforms the chore of cleaning up our neighborhoods into a visible and rewarding achievement...</p>
+                <h4>How to Use the App</h4>
+                <ol class="info-list">
+                    <li><strong>Start Tracking:</strong> Open the menu and press 'Start Tracking'...</li>
+                    <li><strong>Pin Litter:</strong> When you find litter, press the 'Pin Picture' camera button...</li>
+                    <li><strong>Manage Data:</strong> Use the 'Data Management' button to save, load, or export...</li>
+                    <li><strong>Publish:</strong> When logged in, 'Publish to Community' shares your completed route...</li>
+                    <li><strong>Community View:</strong> Toggle the 'Community View' button to see all routes...</li>
+                </ol>
+            </div>
+            <p class="tos-link-container">You can review the full <a href="#" id="viewTermsLink">Terms of Use</a> at any time.</p>
+        </div>
+    </div>
+    
+    <div id="termsModal" class="modal-overlay">
+         <div class="modal-content">
+            <h2>Terms of Use</h2>
+            <div class="terms-box">
+                <p><strong>AGE REQUIREMENT:</strong> You must be 18 years of age or older to use this Service...</p>
+                <p><strong>1. Description of Service:</strong> This Service is for the sole purpose of identifying and documenting refuse...</p>
+                <p><strong>2. Prohibited Content:</strong> You may NOT upload any photograph containing people, illegal activities...</p>
+                <p><strong>3. Disclaimer:</strong> This Service is provided "AS IS". Your use of this service is entirely at your own risk...</p>
+            </div>
+            <div class="agreement-section">
+                <input type="checkbox" id="termsCheckbox">
+                <label for="termsCheckbox">I have read, understood, and agree to the Terms of Use.</label>
+            </div>
+            <button id="agreeBtn" class="modal-button btn-danger" disabled>I Agree</button>
+        </div>
+    </div>
+    
+    <div id="authModal" class="modal-overlay">
+        <div class="modal-content auth-modal">
+            <button class="close-btn">&times;</button>
+            <h2 id="authTitle">Create a Litter Bugs Account</h2>
+            <p id="authSubtitle">Or <a href="#" id="switchAuthModeLink">log in to an existing account.</a></p>
+            <div id="authForm" class="auth-form signup-mode">
+                <input type="text" id="usernameInput" placeholder="Public Username">
+                <input type="email" id="emailInput" placeholder="Email (for login)">
+                <input type="password" id="passwordInput" placeholder="Password (min. 6 characters)">
+                <div id="ageGateContainer" class="age-gate-container">
+                    <input type="checkbox" id="ageCheckbox">
+                    <label for="ageCheckbox">I certify that I am 18 years of age or older.</label>
+                </div>
+                <button id="authActionBtn" class="btn-primary" disabled>Sign Up</button>
+            </div>
+            <hr>
+            <button id="skipBtn" class="skip-button">Skip for now</button>
+            <p id="authError" class="error-message"></p>
+        </div>
+    </div>
+
+    <div id="dataModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn">&times;</button>
             <h2>Data Management</h2>
-            <!-- "Publish" button was removed from here -->
             <button id="saveBtn" class="modal-button">Save Private Session</button>
             <button id="loadBtn" class="modal-button">Load Private Session</button>
             <button id="centerOnRouteBtn" class="modal-button disabled">🎯 Find Route</button>
@@ -289,46 +145,150 @@
         </div>
     </div>
 
-    <!-- Saved Cloud Sessions Modal -->
-    <div id="sessionsModal" class="modal">
+    <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
-            <span class="close-btn">&times;</span>
+            <button class="close-btn">&times;</button>
+            <h2>Edit Your Public Profile</h2>
+            <div class="profile-form">
+                <label for="bioInput">Short Bio</label>
+                <textarea id="bioInput" placeholder="Tell the community a little about yourself..." maxlength="150"></textarea>
+                <label for="locationInput">Location</label>
+                <input type="text" id="locationInput" placeholder="e.g., Chicago, IL" maxlength="50">
+                <label for="coffeeLinkInput">"Buy Me a Coffee" Link</label>
+                <input type="url" id="coffeeLinkInput" placeholder="https://www.buymeacoffee.com/yourname">
+                <button id="saveProfileBtn" class="modal-button btn-primary">Save Profile</button>
+                <hr>
+                <button id="deleteAccountBtn" class="modal-button btn-danger">Permanently Delete Account</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="publicProfileModal" class="modal-overlay">
+        <div class="modal-content profile-modal">
+            <button class="close-btn">&times;</button>
+            <h2 id="profileUsername"></h2>
+            <p id="profileLocation" class="profile-location"></p>
+            <p id="profileBio" class="profile-bio"></p>
+            <hr>
+            <h4>Lifetime Stats</h4>
+            <div id="profileStats" class="profile-stats-grid"></div>
+            <hr>
+            <h4>Achievements</h4>
+            <div id="profileAchievements" class="badge-container"></div>
+            <button id="profileSupportBtn" class="modal-button btn-support">☕ Support Them</button>
+        </div>
+    </div>
+
+    <div id="summaryModal" class="modal-overlay">
+        <div class="modal-content summary-modal">
+            <button class="close-btn">&times;</button>
+            <h2>Great Job!</h2>
+            <p>Here's a summary of your cleanup session:</p>
+            <div class="summary-stats">
+                <div><span class="stat-value" id="summaryDistance">0.0 mi</span><span class="stat-label">Distance</span></div>
+                <div><span class="stat-value" id="summaryPins">0</span><span class="stat-label">Items Pinned</span></div>
+                <div><span class="stat-value" id="summaryDuration">0m 0s</span><span class="stat-label">Duration</span></div>
+            </div>
+            <button id="shareBtn" class="modal-button btn-primary">📣 Share Your Cleanup!</button>
+            <button id="summaryOkBtn" class="ok-btn modal-button btn-secondary">Awesome!</button>
+        </div>
+    </div>
+
+    <div id="sessionsModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn">&times;</button>
             <h2>Load a Private Session</h2>
             <p>Select a previously saved session to load it onto the map.</p>
             <ul id="sessionList" class="session-list"></ul>
         </div>
     </div>
-
-    <!-- Saved Local Sessions Modal -->
-    <div id="localSessionsModal" class="modal">
+    <div id="localSessionsModal" class="modal-overlay">
         <div class="modal-content">
-            <span class="close-btn">&times;</span>
+            <button class="close-btn">&times;</button>
             <h2>Load a Local Session</h2>
             <p>Select a session saved on this browser to load it.</p>
-            <p class="disclaimer-text">
-                <strong>Note:</strong> As a guest, sessions are saved only to this browser. They will be lost if you clear your cache or switch devices. Sign up for a free account to save your data permanently!
-            </p>
             <ul id="localSessionList" class="session-list"></ul>
         </div>
     </div>
-
-    <!-- Published Routes Modal -->
-    <div id="publishedRoutesModal" class="modal">
+    <div id="publishedRoutesModal" class="modal-overlay">
         <div class="modal-content">
-            <span class="close-btn">&times;</span>
+            <button class="close-btn">&times;</button>
             <h2>Manage My Published Routes</h2>
             <p>Here you can view and permanently delete your contributions to the community map.</p>
             <ul id="publishedRoutesList" class="session-list"></ul>
         </div>
     </div>
 
-    <!-- JavaScript Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
-    <script src='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js'></script>
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
-    <script src="js/maptest.js" type="module"></script>
+    <div id="safetyModal" class="modal-overlay">
+        <div class="modal-content safety-modal">
+            <button class="close-btn">&times;</button>
+            <h2>Be Safe Out There!</h2>
+            <p>A quick reminder before you start your cleanup:</p>
+            <ul class="info-list">
+                <li><strong>Gear Up:</strong> Always consider using gloves and sturdy trash bags.</li>
+                <li><strong>Be Aware:</strong> Watch out for traffic, sharp objects, and wildlife.</li>
+                <li><strong>Don't Risk It:</strong> If an item looks hazardous or is in an unsafe location, leave it. Your safety is the top priority!</li>
+            </ul>
+            <button id="safetyModalOkBtn" class="ok-btn modal-button">Got it, Let's Go!</button>
+        </div>
+    </div>
+
+    <div id="leaderboardModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn">&times;</button>
+            <h2>Community Leaderboard</h2>
+            <div class="leaderboard-tabs">
+                <button class="leaderboard-tab" id="myStatsBtn">My Stats</button>
+                <button class="leaderboard-tab active" data-metric="totalPins">Most Pins</button>
+                <button class="leaderboard-tab" data-metric="totalDistance">Most Distance</button>
+            </div>
+            <ol id="leaderboardList" class="leaderboard-list"></ol>
+            <div id="myStatsContainer" class="my-stats-container" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div id="achievementModal" class="modal-overlay">
+        <div class="modal-content achievement-modal">
+            <span class="achievement-icon"></span>
+            <h2>Achievement Unlocked!</h2>
+            <h3 id="achievementName"></h3>
+            <p id="achievementDescription"></p>
+            <button id="achievementOkBtn" class="ok-btn modal-button">Awesome!</button>
+        </div>
+    </div>
+    
+    <div id="meetupModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn">&times;</button>
+            <h2>Schedule a Meetup</h2>
+            <p>Organize a cleanup event at: <strong id="meetupLocationName"></strong></p>
+            <div id="meetupForm" class="profile-form">
+                <input type="hidden" id="poiNameInput">
+                <label for="meetupTitleInput">Meetup Title</label>
+                <input type="text" id="meetupTitleInput" placeholder="e.g., Saturday Morning Cleanup" maxlength="50">
+                <label for="meetupDescriptionInput">Description</label>
+                <textarea id="meetupDescriptionInput" placeholder="e.g., Let's meet by the main entrance at 9 AM!" maxlength="200"></textarea>
+                <div class="safety-disclaimer">
+                    <strong>Safety First:</strong> You are organizing a public event...
+                </div>
+                <div class="agreement-section">
+                    <input type="checkbox" id="safetyCheckbox">
+                    <label for="safetyCheckbox">I understand and agree to the safety guidelines.</label>
+                </div>
+                <p id="profanityWarning" class="error-message" style="display: none;">Please use appropriate language.</p>
+                <button id="createMeetupBtn" class="modal-button" disabled>Create Meetup</button>
+            </div>
+        </div>
+    </div>
+    <div id="viewMeetupsModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn">&times;</button>
+            <h2>Scheduled Meetups at <strong id="viewMeetupsLocationName"></strong></h2>
+            <ul id="meetupsList" class="session-list"></ul>
+        </div>
+    </div>
+    
+    <script src="js/main.js" type="module"></script>
 
 </body>
 </html>
-
-
