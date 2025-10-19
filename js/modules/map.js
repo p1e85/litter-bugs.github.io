@@ -117,7 +117,7 @@ export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
     el.className = 'photo-marker';
     //el.style.backgroundImage = `url(${pinInfo.imageURL || pinInfo.image})`;
     el.style.backgroundImage = `url(${pinInfo.thumbnailURL || pinInfo.imageURL || pinInfo.image})`;
-    el.style.display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
+    //el.style.display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
 
     const popup = createPinPopup(pinInfo, type, routeInfo);
     const marker = new mapboxgl.Marker(el).setLngLat(pinInfo.coords).setPopup(popup).addTo(state.map);
