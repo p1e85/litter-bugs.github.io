@@ -99,7 +99,7 @@ export function changeMapStyle() {
 /**
  * Shows or hides photo markers based on the map's zoom level.
  */
-function toggleMarkerVisibility() {
+export function toggleMarkerVisibility() {
   // Use requestAnimationFrame to defer style changes until after the zoom event finishes
   requestAnimationFrame(() => {
     // Check if the map still exists (safety measure)
