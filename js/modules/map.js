@@ -88,7 +88,7 @@ export function changeMapStyle() {
         initializeMapLayers();
         state.userMarkers.forEach(marker => marker.addTo(state.map));
         state.communityMarkers.forEach(marker => marker.addTo(state.map));
-        ();
+        toggleMarkerVisibility();
         if (state.isCommunityViewOn) {
             fetchAndDisplayCommunityRoutes();
         }
