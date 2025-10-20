@@ -193,6 +193,12 @@ async function loadSpecificSession(sessionId) {
  * Clears the current route and pin data from the state and map.
  */
 export function clearCurrentSession() {
+    state.userMarkers.forEach(marker => {
+        if (marker.getPopup().isOpen()) {
+          marker.getPopup().remove();
+        }
+      });
+    
     state.userMarkers.forEach(marker => marker.remove());
     state.userMarkers = [];
     state.photoPins = [];
