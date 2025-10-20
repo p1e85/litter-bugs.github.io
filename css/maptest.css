@@ -224,3 +224,15 @@ button.close-btn:hover { color: var(--color-text-dark); }
   background-color: #f8f9fa !important; color: #adb5bd !important;
   border-color: #dee2e6 !important; cursor: not-allowed; opacity: 0.7;
 }
+
+/* --- Style for User Photo Markers --- */
+.photo-marker {
+  width: 40px;            /* Size of the marker */
+  height: 40px;
+  border-radius: 50%;     /* Make it circular */
+  background-size: cover; /* Ensure the image fills the circle */
+  background-position: center;
+  border: 2px solid #fff; /* White border */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3); /* Subtle shadow */
+  cursor: pointer;
+}
