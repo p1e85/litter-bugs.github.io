@@ -222,8 +222,10 @@ export function centerOnRoute() {
     state.routeCoordinates.forEach(coord => bounds.extend(coord));
     state.photoPins.forEach(pin => bounds.extend(pin.coords));
 
-    state.map.fitBounds(bounds, {
-        padding: { top: 150, bottom: 150, left: 60, right: 60 },
-        maxZoom: 16
+requestAnimationFrame(() => {
+        state.map.fitBounds(bounds, {
+            padding: {top: 150, bottom: 150, left: 60, right: 60},
+            maxZoom: 16
+        });
     });
 }
