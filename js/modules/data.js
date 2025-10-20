@@ -217,6 +217,10 @@ export function clearCurrentSession() {
  * Renders session data (pins and route) onto the map.
  */
 function displaySessionData(data) {
+    console.log('--- displaySessionData ---'); // Add this line
+    console.log('Received data:', data);       // Add this line
+    console.log('Pins to display:', data.pins); // Add this line
+    
     state.photoPins = data.pins || [];
     state.routeCoordinates = data.route || [];
 
