@@ -100,24 +100,40 @@ export function changeMapStyle() {
  * Shows or hides photo markers based on the map's zoom level.
  */
 function toggleMarkerVisibility() {
-  // Determine if markers should be visible based on zoom
-  const display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
+  // Use requestAnimationFrame to defer style changes until after the zoom event finishes
+  requestAnimationFrame(() => {
+    // Check if the map still exists (safety measure)
+    if (!state.map) return;
 
-  // Loop through the USER markers and set their display style
-  state.userMarkers.forEach(marker => {
-    // Check if the marker element still exists before trying to style it
-    const element = marker.getElement();
-    if (element) {
-      element.style.display = display;
+    // Determine if markers should be visible based on zoom
+    const display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
+
+    // Loop through the USER markers and set their display style
+    if (state.userMarkers && Array.isArray(state.userMarkers)) {
+        state.userMarkers.forEach(marker => {
+            try { // Use try...catch for safety
+                const element = marker.getElement();
+                if (element) {
+                    element.style.display = display;
+                }
+            } catch(e) {
+                console.warn('Minor error toggling user marker visibility:', e);
+            }
+        });
     }
-  });
 
-  // Also handle community markers (though clustering replaces this)
-  // We keep this for now, although communityMarkers should usually be empty
-  state.communityMarkers.forEach(marker => {
-     const element = marker.getElement();
-    if (element) {
-        element.style.display = display;
+    // Also handle community markers (though clustering replaces this)
+    if (state.communityMarkers && Array.isArray(state.communityMarkers)) {
+        state.communityMarkers.forEach(marker => {
+            try { // Use try...catch for safety
+                const element = marker.getElement();
+                if (element) {
+                    element.style.display = display;
+                }
+            } catch(e) {
+                console.warn('Minor error toggling community marker visibility:', e);
+            }
+        });
     }
   });
 }
