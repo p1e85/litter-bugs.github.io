@@ -196,55 +196,59 @@ async function loadSpecificSession(sessionId) {
  * Clears the current route and pin data from the state and map.
  */
 export function clearCurrentSession() {
-console.log('Clearing current session...'); // Add log for debugging
+  console.log('Clearing current session (Forceful)...');
 
-  // 1. Remove markers and their popups safely
+  // 1. Explicitly remove ALL popups first
   if (state.userMarkers && Array.isArray(state.userMarkers)) {
     state.userMarkers.forEach(marker => {
-      try { // Use try...catch for safety
-        if (marker) {
-          const popup = marker.getPopup();
-          if (popup && typeof popup.remove === 'function') {
-            popup.remove(); // Remove popup first
-          }
-          if (typeof marker.remove === 'function') {
-            marker.remove(); // Then remove marker
-          }
+      try {
+        const popup = marker.getPopup();
+        if (popup && typeof popup.remove === 'function') {
+          popup.remove(); // Remove popup immediately
         }
       } catch (e) {
-        console.warn('Minor error during marker removal:', e);
+        console.warn('Minor error removing popup during clear:', e);
       }
     });
   }
 
-  // 2. Clear state arrays
+  // 2. THEN, remove all markers from the map
+  if (state.userMarkers && Array.isArray(state.userMarkers)) {
+    state.userMarkers.forEach(marker => {
+      try {
+        if (marker && typeof marker.remove === 'function') {
+          marker.remove(); // Remove marker
+        }
+      } catch (e) {
+        console.warn('Minor error removing marker during clear:', e);
+      }
+    });
+  }
+
+  // 3. Clear the state arrays AFTER removing elements
   state.userMarkers = [];
   state.photoPins = [];
   state.routeCoordinates = [];
 
-  // 3. Update map sources
-  try { // Add safety check for updateUserPinsSource
+  // 4. Update map sources
+  try {
     if (typeof updateUserPinsSource === 'function') {
-      updateUserPinsSource(); // Update source for user pins (now empty)
+      updateUserPinsSource();
     }
-  } catch(e) {
-      console.warn('Minor error during updateUserPinsSource:', e);
-  }
+  } catch(e) { console.warn('Minor error during updateUserPinsSource:', e); }
 
   if (state.map && state.map.getSource('user-route')) {
-    try { // Add safety check for map source
-        state.map.getSource('user-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
-    } catch(e) {
-        console.warn('Minor error updating user-route source:', e);
-    }
+    try {
+      state.map.getSource('user-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+    } catch(e) { console.warn('Minor error updating user-route source:', e); }
   }
 
-  // 4. Update UI
+  // 5. Update UI
   const centerBtn = document.getElementById('centerOnRouteBtn');
   if (centerBtn) {
       centerBtn.classList.add('disabled');
   }
-  console.log('Session cleared.'); // Add log for debugging
+  console.log('Session cleared (Forceful).');
 }
 
 /**
