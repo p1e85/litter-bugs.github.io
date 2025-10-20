@@ -123,6 +123,9 @@ function toggleMarkerVisibility() {
 }
 
 export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
+    console.log(` -> createAndAddMarker called for type: ${type}`); // Add this
+    console.log(`    Pin coordinates:`, pinInfo.coords);            // Add this
+    
     const el = document.createElement('div');
     el.className = 'photo-marker';
     //el.style.backgroundImage = `url(${pinInfo.imageURL || pinInfo.image})`;
@@ -131,6 +134,8 @@ export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
 
     const popup = createPinPopup(pinInfo, type, routeInfo);
     const marker = new mapboxgl.Marker(el).setLngLat(pinInfo.coords).setPopup(popup).addTo(state.map);
+
+    console.log(`    Marker created and added to map.`);          // Add this
 
     if (type === 'user') {
         state.userMarkers.push(marker);
