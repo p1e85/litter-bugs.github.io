@@ -122,13 +122,6 @@ function toggleMarkerVisibility() {
   });
 }
 
-/**
- * Creates a photo marker with a popup and adds it to the map.
- * @param {object} pinInfo - The data for the pin.
- * @param {string} type - 'user' or 'community'.
- * @param {object} routeInfo - Additional data for community pins.
- * @returns {mapboxgl.Marker} The created marker instance.
- */
 export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
     const el = document.createElement('div');
     el.className = 'photo-marker';
