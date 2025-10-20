@@ -173,11 +173,13 @@ async function loadSpecificSession(sessionId) {
         if (docSnap.exists()) {
             clearCurrentSession();
             const sessionData = docSnap.data();
-            displaySessionData({
-                ...sessionData,
-                pins: convertPinsFromFirestore(sessionData.pins),
-                route: convertRouteFromFirestore(sessionData.route)
-            });
+            setTimeout(() => { // Wrap in setTimeout
+              displaySessionData({
+                  ...sessionData,
+              pins: convertPinsFromFirestore(sessionData.pins),
+              route: convertRouteFromFirestore(sessionData.route)
+              });
+            }, 0); // Delay of 0 milliseconds
             alert(`Session "${sessionData.sessionName}" loaded!`);
             document.getElementById('sessionsModal').style.display = 'none';
  document.getElementById('centerOnRouteBtn').classList.remove('disabled');
