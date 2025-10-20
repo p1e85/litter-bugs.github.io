@@ -41,7 +41,7 @@ export function initializeMap() {
         setupPoiClickListeners(); // From community.js
     });
 
-    state.map.on('zoom', toggleMarkerVisibility);
+    state.map.on('zoom', );
 }
 
 /**
@@ -88,7 +88,7 @@ export function changeMapStyle() {
         initializeMapLayers();
         state.userMarkers.forEach(marker => marker.addTo(state.map));
         state.communityMarkers.forEach(marker => marker.addTo(state.map));
-        toggleMarkerVisibility();
+        ();
         if (state.isCommunityViewOn) {
             fetchAndDisplayCommunityRoutes();
         }
@@ -100,9 +100,26 @@ export function changeMapStyle() {
  * Shows or hides photo markers based on the map's zoom level.
  */
 function toggleMarkerVisibility() {
-    const display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
-    state.userMarkers.forEach(marker => marker.getElement().style.display = display);
-    state.communityMarkers.forEach(marker => marker.getElement().style.display = display);
+  // Determine if markers should be visible based on zoom
+  const display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
+
+  // Loop through the USER markers and set their display style
+  state.userMarkers.forEach(marker => {
+    // Check if the marker element still exists before trying to style it
+    const element = marker.getElement();
+    if (element) {
+      element.style.display = display;
+    }
+  });
+
+  // Also handle community markers (though clustering replaces this)
+  // We keep this for now, although communityMarkers should usually be empty
+  state.communityMarkers.forEach(marker => {
+     const element = marker.getElement();
+    if (element) {
+        element.style.display = display;
+    }
+  });
 }
 
 /**
