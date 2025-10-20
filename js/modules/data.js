@@ -193,21 +193,30 @@ async function loadSpecificSession(sessionId) {
  * Clears the current route and pin data from the state and map.
  */
 export function clearCurrentSession() {
-    state.userMarkers.forEach(marker => {
-        if (marker.getPopup().isOpen()) {
-          marker.getPopup().remove();
-        }
-      });
-    
-    state.userMarkers.forEach(marker => marker.remove());
-    state.userMarkers = [];
-    state.photoPins = [];
-    state.routeCoordinates = [];
-    updateUserPinsSource();
-    if (state.map && state.map.getSource('user-route')) {
-        state.map.getSource('user-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+// 1. Explicitly remove markers AND their popups from the map
+  state.userMarkers.forEach(marker => {
+    const popup = marker.getPopup();
+    if (popup) { // Check if a popup exists
+      popup.remove(); // Remove the popup first
     }
-    document.getElementById('centerOnRouteBtn').classList.add('disabled');
+    marker.remove(); // Then remove the marker
+  });
+
+  // 2. Clear the state arrays AFTER removing elements from the map
+  state.userMarkers = [];
+  state.photoPins = [];
+  state.routeCoordinates = [];
+
+  // 3. Update map sources AFTER clearing state
+  if (typeof updateUserPinsSource === 'function') { // Safety check
+      updateUserPinsSource(); // Update the source for user pins (now empty)
+  }
+  if (state.map && state.map.getSource('user-route')) {
+    state.map.getSource('user-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+  }
+
+  // 4. Update UI state
+  document.getElementById('centerOnRouteBtn').classList.add('disabled');
 }
 
 /**
