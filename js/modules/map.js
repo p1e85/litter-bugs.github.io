@@ -141,7 +141,15 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
         const optionsHTML = categories.map(cat => `<option value="${cat}" ${pinInfo.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
         popupHTML = `<div><img src="${pinInfo.imageURL || pinInfo.image}" alt="User photo" style="width:100%; height:auto; border-radius: 4px;"/><div class="pin-popup-form"><input type="text" id="title-${pinInfo.id}" value="${pinInfo.title}" placeholder="Enter a title"><select id="category-${pinInfo.id}">${optionsHTML}</select><div style="display: flex; justify-content: space-between; gap: 10px;"><button id="update-${pinInfo.id}" style="flex-grow: 1;">Update</button><button id="delete-${pinInfo.id}" style="background-color: #dc3545;">Delete</button></div></div></div>`;
     } else {
-            popupHTML = `... <button id="update-${pinInfo.id}" class="modal-button">Update</button><button id="delete-${pinInfo.id}" class="modal-button delete-account-button">Delete</button> ...`;    }
+            //popupHTML = `... <button id="update-${pinInfo.id}" class="modal-button">Update</button><button id="delete-${pinInfo.id}" class="modal-button delete-account-button">Delete</button> ...`;    }
+            popupHTML = `
+        <div>
+            <img src="${pinInfo.thumbnailURL || pinInfo.imageURL}" alt="${pinInfo.title}" style="width:100%; border-radius: 4px;"/>
+            <p style="margin: 5px 0 0;"><strong>${pinInfo.title}</strong></p>
+            <p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${pinInfo.category || 'Other'}</p>
+            <small>By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
+        </div>
+    `; }
 
     const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(popupHTML);
 
