@@ -41,7 +41,7 @@ export function initializeMap() {
         setupPoiClickListeners(); // From community.js
     });
 
-    state.map.on('zoom', );
+    state.map.on('zoom', toggleMarkerVisibility);
 }
 
 /**
@@ -99,49 +99,20 @@ export function changeMapStyle() {
 /**
  * Shows or hides photo markers based on the map's zoom level.
  */
-export function toggleMarkerVisibility() {
-  // Use requestAnimationFrame to defer style changes until after the zoom event finishes
-  requestAnimationFrame(() => {
-    // Check if the map still exists (safety measure)
-    if (!state.map) return;
-
-    // Determine if markers should be visible based on zoom
+function toggleMarkerVisibility() {
     const display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
-
-    // Loop through the USER markers and set their display style
-    if (state.userMarkers && Array.isArray(state.userMarkers)) {
-        state.userMarkers.forEach(marker => {
-            try { // Use try...catch for safety
-                const element = marker.getElement();
-                if (element) {
-                    element.style.display = display;
-                }
-            } catch(e) {
-                console.warn('Minor error toggling user marker visibility:', e);
-            }
-        });
-    }
-
-    // Also handle community markers (though clustering replaces this)
-    if (state.communityMarkers && Array.isArray(state.communityMarkers)) {
-        state.communityMarkers.forEach(marker => {
-            try { // Use try...catch for safety
-                const element = marker.getElement();
-                if (element) {
-                    element.style.display = display;
-                }
-            } catch(e) {
-                console.warn('Minor error toggling community marker visibility:', e);
-            }
-        });
-    }
-  });
+    state.userMarkers.forEach(marker => marker.getElement().style.display = display);
+    state.communityMarkers.forEach(marker => marker.getElement().style.display = display);
 }
 
+/**
+ * Creates a photo marker with a popup and adds it to the map.
+ * @param {object} pinInfo - The data for the pin.
+ * @param {string} type - 'user' or 'community'.
+ * @param {object} routeInfo - Additional data for community pins.
+ * @returns {mapboxgl.Marker} The created marker instance.
+ */
 export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
-    console.log(` -> createAndAddMarker called for type: ${type}`); // Add this
-    console.log(`    Pin coordinates:`, pinInfo.coords);            // Add this
-    
     const el = document.createElement('div');
     el.className = 'photo-marker';
     //el.style.backgroundImage = `url(${pinInfo.imageURL || pinInfo.image})`;
@@ -150,8 +121,6 @@ export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
 
     const popup = createPinPopup(pinInfo, type, routeInfo);
     const marker = new mapboxgl.Marker(el).setLngLat(pinInfo.coords).setPopup(popup).addTo(state.map);
-
-    console.log(`    Marker created and added to map.`);          // Add this
 
     if (type === 'user') {
         state.userMarkers.push(marker);
@@ -238,10 +207,8 @@ export function centerOnRoute() {
     state.routeCoordinates.forEach(coord => bounds.extend(coord));
     state.photoPins.forEach(pin => bounds.extend(pin.coords));
 
-requestAnimationFrame(() => {
-        state.map.fitBounds(bounds, {
-            padding: {top: 150, bottom: 150, left: 60, right: 60},
-            maxZoom: 16
-        });
+    state.map.fitBounds(bounds, {
+        padding: { top: 150, bottom: 150, left: 60, right: 60 },
+        maxZoom: 16
     });
 }
