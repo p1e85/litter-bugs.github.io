@@ -3,6 +3,7 @@ import { state } from './config.js';
 import { convertPinsForFirestore, convertPinsFromFirestore, convertRouteForFirestore, convertRouteFromFirestore } from './utils.js';
 import { createAndAddMarker, updateUserPinsSource } from './map.js';
 
+
 /**
  * Saves the current session (route and pins) to local storage for guests
  * or to the user's account in Firestore.
@@ -193,24 +194,55 @@ async function loadSpecificSession(sessionId) {
  * Clears the current route and pin data from the state and map.
  */
 export function clearCurrentSession() {
-  // 1. Remove markers from the map
-  state.userMarkers.forEach(marker => marker.remove());
+console.log('Clearing current session...'); // Add log for debugging
 
-  // 2. Clear the state arrays
+  // 1. Remove markers and their popups safely
+  if (state.userMarkers && Array.isArray(state.userMarkers)) {
+    state.userMarkers.forEach(marker => {
+      try { // Use try...catch for safety
+        if (marker) {
+          const popup = marker.getPopup();
+          if (popup && typeof popup.remove === 'function') {
+            popup.remove(); // Remove popup first
+          }
+          if (typeof marker.remove === 'function') {
+            marker.remove(); // Then remove marker
+          }
+        }
+      } catch (e) {
+        console.warn('Minor error during marker removal:', e);
+      }
+    });
+  }
+
+  // 2. Clear state arrays
   state.userMarkers = [];
   state.photoPins = [];
   state.routeCoordinates = [];
 
   // 3. Update map sources
-  if (typeof updateUserPinsSource === 'function') {
-      updateUserPinsSource();
-  }
-  if (state.map && state.map.getSource('user-route')) {
-    state.map.getSource('user-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+  try { // Add safety check for updateUserPinsSource
+    if (typeof updateUserPinsSource === 'function') {
+      updateUserPinsSource(); // Update source for user pins (now empty)
+    }
+  } catch(e) {
+      console.warn('Minor error during updateUserPinsSource:', e);
   }
 
-  // 4. Update UI state
-  document.getElementById('centerOnRouteBtn').classList.add('disabled');
+  if (state.map && state.map.getSource('user-route')) {
+    try { // Add safety check for map source
+        state.map.getSource('user-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+    } catch(e) {
+        console.warn('Minor error updating user-route source:', e);
+    }
+  }
+
+  // 4. Update UI
+  const centerBtn = document.getElementById('centerOnRouteBtn');
+  if (centerBtn) {
+      centerBtn.classList.add('disabled');
+  }
+  console.log('Session cleared.'); // Add log for debugging
 }
 
 /**
