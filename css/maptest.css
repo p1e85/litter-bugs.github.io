@@ -232,7 +232,7 @@ button.close-btn:hover { color: var(--color-text-dark); }
   border-radius: 50%;     /* Make it circular */
   background-size: cover; /* Ensure the image fills the circle */
   background-position: center;
-  border: 2px solid #fff; /* White border */
+  border: 2px solid #4A7C59 /* White border */
   box-shadow: 0 1px 3px rgba(0,0,0,0.3); /* Subtle shadow */
   cursor: pointer;
 }
