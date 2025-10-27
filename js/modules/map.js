@@ -155,6 +155,7 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
 
     popup.on('open', () => {
         if (type === 'user') {
+            document.getElementById(`title-${pinInfo.id}`)?.blur();
             document.getElementById(`update-${pinInfo.id}`)?.addEventListener('click', () => {
                 const pin = state.photoPins.find(p => p.id === pinInfo.id);
                 if (pin) {
