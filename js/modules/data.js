@@ -2,6 +2,7 @@ import { db, collection, addDoc, getDocs, query, orderBy, doc, getDoc, deleteDoc
 import { state } from './config.js';
 import { convertPinsForFirestore, convertPinsFromFirestore, convertRouteForFirestore, convertRouteFromFirestore } from './utils.js';
 import { createAndAddMarker, updateUserPinsSource } from './map.js';
+import { storage, ref, uploadBytes, getDownloadURL } from './firebase.js';
 
 /**
  * Saves the current session (route and pins) to local storage for guests
@@ -12,34 +13,71 @@ export async function saveSession() {
     const sessionName = prompt("Name this Litter Bugs session:", `Cleanup on ${new Date().toLocaleDateString()}`);
     if (!sessionName) return;
 
-    // Guest user logic
+    // --- Prepare Session Data ---
+    const sessionDataBase = {
+        sessionName,
+        timestamp: new Date(),
+        pins: convertPinsForFirestore(state.photoPins),
+        route: convertRouteForFirestore(state.routeCoordinates)
+    };
+
+    // --- Handle Cleanup Photo ---
+    let cleanupPhotoInfo = {}; // Will hold URL or data
+    if (state.cleanupPhoto instanceof File) {
+        if (state.currentUser) {
+            // Logged-in: Upload to Storage
+            try {
+                const timestamp = Date.now();
+                const storageRef = ref(storage, `cleanupPhotos/${state.currentUser.uid}/${timestamp}-${state.cleanupPhoto.name}`);
+                const snapshot = await uploadBytes(storageRef, state.cleanupPhoto);
+                cleanupPhotoInfo.cleanupPhotoURL = await getDownloadURL(snapshot.ref); // Get URL
+                console.log("Cleanup photo uploaded:", cleanupPhotoInfo.cleanupPhotoURL);
+            } catch (error) {
+                console.error("Error uploading cleanup photo:", error);
+                alert("Could not save the cleanup photo, but session data will be saved.");
+            }
+        } else {
+            // Guest: Convert to Base64 data URL
+            try {
+                cleanupPhotoInfo.cleanupPhotoData = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = e => reject(e);
+                    reader.readAsDataURL(state.cleanupPhoto);
+                });
+                console.log("Cleanup photo saved locally as data URL.");
+            } catch (error) {
+                console.error("Error converting cleanup photo to data URL:", error);
+                alert("Could not save the cleanup photo locally, but session data will be saved.");
+            }
+        }
+    }
+    // --- End Handle Cleanup Photo ---
+
+
+    // --- Save Session (Guest or Logged-in) ---
+    const sessionDataToSave = { ...sessionDataBase, ...cleanupPhotoInfo }; // Combine base data + photo info
+
     if (!state.currentUser) {
+        // Guest: Save to Local Storage
         const guestSessions = JSON.parse(localStorage.getItem('guestSessions')) || [];
-        guestSessions.push({
-            sessionName,
-            timestamp: new Date().toISOString(),
-            pins: convertPinsForFirestore(state.photoPins),
-            route: convertRouteForFirestore(state.routeCoordinates)
-        });
+        guestSessions.push(sessionDataToSave);
         localStorage.setItem('guestSessions', JSON.stringify(guestSessions));
         alert(`Session "${sessionName}" saved locally.`);
         dataModal.style.display = 'none';
+        state.cleanupPhoto = null; // Clear photo after saving
         return;
-    }
-
-    // Logged-in user logic
-    try {
-        await addDoc(collection(db, "users", state.currentUser.uid, "privateSessions"), {
-            sessionName,
-            timestamp: new Date(),
-            pins: convertPinsForFirestore(state.photoPins),
-            route: convertRouteForFirestore(state.routeCoordinates)
-        });
-        alert(`Session "${sessionName}" saved to your account!`);
-        dataModal.style.display = 'none';
-    } catch (error) {
-        console.error("Error saving session:", error);
-        alert("Could not save session.");
+    } else {
+        // Logged-in: Save to Firestore
+        try {
+            await addDoc(collection(db, "users", state.currentUser.uid, "privateSessions"), sessionDataToSave);
+            alert(`Session "${sessionName}" saved to your account!`);
+            dataModal.style.display = 'none';
+            state.cleanupPhoto = null; // Clear photo after saving
+        } catch (error) {
+            console.error("Error saving session to Firestore:", error);
+            alert("Could not save session.");
+        }
     }
 }
 
