@@ -161,9 +161,11 @@ function attachEventListeners() {
         startTracking();
     });
 
-    elements.summaryOkBtn.addEventListener('click', () => { // <-- And it's used here
-    elements.summaryModal.style.display = 'none';
-  });
+    // --- [FIXED] This is the corrected block ---
+    elements.summaryOkBtn.addEventListener('click', () => { 
+        elements.summaryModal.style.display = 'none';
+    });
+    // --- End of fix ---
 
     // --- Data Management (Save, Load, Export) ---
     elements.dataBtn.addEventListener('click', () => {
@@ -235,31 +237,41 @@ function attachEventListeners() {
     });
 
     // --- LOGIC FOR CLEANUP PHOTO ---
-const addCleanupPhotoBtn = document.getElementById('addCleanupPhotoBtn');
-const cleanupCameraInput = document.getElementById('cleanupCameraInput');
-const photoPreviewContainer = document.getElementById('cleanupPhotoPreviewContainer');
-const photoPreview = document.getElementById('cleanupPhotoPreview');
+    // (This includes the modifications from our previous conversation)
+    const addCleanupPhotoBtn = document.getElementById('addCleanupPhotoBtn');
+    const cleanupCameraInput = document.getElementById('cleanupCameraInput');
+    const photoPreviewContainer = document.getElementById('cleanupPhotoPreviewContainer');
+    const photoPreview = document.getElementById('cleanupPhotoPreview');
 
-if (addCleanupPhotoBtn) { // Safety check
-    addCleanupPhotoBtn.addEventListener('click', () => {
-        cleanupCameraInput.click(); // Trigger the hidden camera input
-    });
-}
+    if (addCleanupPhotoBtn) { // Safety check
+        addCleanupPhotoBtn.addEventListener('click', () => {
+            cleanupCameraInput.click(); // Trigger the hidden camera input
+        });
+    }
 
-if (cleanupCameraInput) { // Safety check
-    cleanupCameraInput.addEventListener('change', (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            // Store the file in our global state
-            state.cleanupPhoto = file;
+    if (cleanupCameraInput) { // Safety check
+        cleanupCameraInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                // Store the file in our global state
+                state.cleanupPhoto = file;
 
-            // Show a thumbnail preview in the modal
-            const objectURL = URL.createObjectURL(file);
-            photoPreview.src = objectURL;
-            photoPreviewContainer.style.display = 'block';
-        }
-    });
-}
+                // Show a thumbnail preview in the modal
+                const objectURL = URL.createObjectURL(file);
+                photoPreview.src = objectURL;
+                // Use 'flex' to allow for CSS centering
+                photoPreviewContainer.style.display = 'flex'; 
+                
+                // Clear the input value so the same file can be selected again
+                event.target.value = ''; 
+            } else {
+                 // User canceled the file picker
+                state.cleanupPhoto = null;
+                photoPreview.src = '#';
+                photoPreviewContainer.style.display = 'none';
+            }
+        });
+    }
 
     // --- Meetups ---
     elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
