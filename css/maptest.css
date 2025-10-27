@@ -236,3 +236,11 @@ button.close-btn:hover { color: var(--color-text-dark); }
   box-shadow: 0 1px 3px rgba(0,0,0,0.3); /* Subtle shadow */
   cursor: pointer;
 }
+
+.pin-popup-form label {
+  font-weight: 500;
+  font-size: 0.9em;
+  color: #555;
+  margin-top: 8px;
+  display: block; /* Ensure labels are above inputs */
+}
