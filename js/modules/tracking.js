@@ -256,6 +256,13 @@ export async function shareCleanupResults() {
     // --- 4. Attempt to use the Web Share API ---
     // We check if the browser can share the specific data (including files)
     if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+
+        // --- 🔴 DEBUGGING LOGS ARE HERE 🔴 ---
+        console.log("--- DEBUG: Sharing Data ---");
+        console.log("1. The text being sent:", shareText);
+        console.log("2. The complete shareData object:", shareData);
+        // --- End of logs ---
+        
         try {
             await navigator.share(shareData);
             console.log('Cleanup shared successfully!');
