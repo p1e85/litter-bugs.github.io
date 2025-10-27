@@ -158,6 +158,12 @@ function attachEventListeners() {
         startTracking();
     });
 
+    elements.summaryOkBtn.addEventListener('click', () => { // <-- And it's used here
+    elements.summaryModal.style.display = 'none';
+        summaryModal: document.getElementById('summaryModal'),
+        summaryOkBtn: document.getElementById('summaryOkBtn'),
+  });
+
     // --- Data Management (Save, Load, Export) ---
     elements.dataBtn.addEventListener('click', () => {
         const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
