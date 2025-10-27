@@ -224,49 +224,61 @@ function showCleanupSummary() {
  * Shares the cleanup results using the Web Share API or copies to clipboard.
  */
 export async function shareCleanupResults() {
+    // --- 1. Get summary data and prepare the base text ---
     const distance = document.getElementById('summaryDistance').textContent;
     const pins = document.getElementById('summaryPins').textContent;
     const shareText = `I just cleaned up ${distance} and pinned ${pins} items with the Litter Bugs app! Join the movement and help clean our planet. #LitterBugs #Cleanup`;
-    const shareUrl = 'https://litter-bugs.com/'; // Replace with your actual app URL
 
-    // --- Prepare Share Data ---
+    // --- 2. Prepare the share data object ---
     const shareData = {
         title: 'My Litter Bugs Cleanup!',
         text: shareText,
-        url: shareUrl,
-        files: [] // Initialize files array
+        url: 'https://www.litter-bugs.com/' // Replace with your actual app URL
     };
 
-    // --- Check if a cleanup photo exists ---
-    if (state.cleanupPhoto instanceof File) {
-        // Create a file object specifically for the Web Share API
-        const fileToShare = new File(
-            [state.cleanupPhoto],
-            state.cleanupPhoto.name,
-            { type: state.cleanupPhoto.type }
-        );
-        shareData.files.push(fileToShare);
-        console.log("Sharing with cleanup photo:", fileToShare);
-    } else {
-        console.log("Sharing without cleanup photo.");
-        // If no file, remove the empty files array (some platforms require this)
-        delete shareData.files;
+    // --- 3. Add the photo file to the share data if it exists ---
+    if (state.cleanupPhoto) {
+        shareData.files = [state.cleanupPhoto];
     }
 
-    // --- Attempt to Share using Web Share API ---
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: shareData.files || [] })) {
+    /**
+     * Resets the photo state and UI elements.
+     * This is called after a successful share or copy.
+     */
+    const resetPhotoUI = () => {
+        if (state.cleanupPhoto) {
+            state.cleanupPhoto = null; // Clear from state
+            document.getElementById('cleanupPhotoPreview').src = '#'; // Reset image source
+            document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none'; // Hide container
+        }
+    };
+
+    // --- 4. Attempt to use the Web Share API ---
+    // We check if the browser can share the specific data (including files)
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         try {
             await navigator.share(shareData);
             console.log('Cleanup shared successfully!');
+            resetPhotoUI(); // Reset the photo UI on success
         } catch (err) {
-            console.error('Error sharing:', err);
-            // Fallback to clipboard if sharing fails (e.g., user cancels)
-            copyShareTextFallback(shareText + " " + shareUrl);
+            // We don't reset here, as the user might have canceled and want to try again.
+            console.error('Share was canceled or failed:', err);
         }
     } else {
-        // Fallback for browsers that don't support Web Share API or file sharing
-        console.log("Web Share API with files not supported, falling back to clipboard.");
-        copyShareTextFallback(shareText + " " + shareUrl);
+        // --- 5. Fallback for browsers that don't support sharing files ---
+        try {
+            let fallbackText = shareText + " " + shareData.url;
+            if (state.cleanupPhoto) {
+                 // Let the user know the photo couldn't be copied
+                fallbackText += "\n\n(A photo was also taken, but it can't be copied to the clipboard.)";
+            }
+            await navigator.clipboard.writeText(fallbackText);
+            alert('Cleanup stats copied to clipboard!');
+            resetPhotoUI(); // Reset the photo UI on success
+        } catch (err) {
+            console.error('Failed to copy to clipboard: ', err);
+            alert('Sharing is not supported on this browser.');
+        }
     }
 }
 
