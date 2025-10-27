@@ -81,6 +81,9 @@ const elements = {
     viewTermsLink: document.getElementById('viewTermsLink'),
     leaderboardTabs: document.querySelectorAll('.leaderboard-tab'),
     leaderboardList: document.getElementById('leaderboardList'),
+
+    summaryModal: document.getElementById('summaryModal'),
+    summaryOkBtn: document.getElementById('summaryOkBtn'),
 };
 
 // --- Initializer ---
@@ -160,8 +163,6 @@ function attachEventListeners() {
 
     elements.summaryOkBtn.addEventListener('click', () => { // <-- And it's used here
     elements.summaryModal.style.display = 'none';
-        summaryModal: document.getElementById('summaryModal'),
-        summaryOkBtn: document.getElementById('summaryOkBtn'),
   });
 
     // --- Data Management (Save, Load, Export) ---
