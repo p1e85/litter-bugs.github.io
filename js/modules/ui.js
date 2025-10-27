@@ -227,6 +227,33 @@ function attachEventListeners() {
         }
     });
 
+    // --- LOGIC FOR CLEANUP PHOTO ---
+const addCleanupPhotoBtn = document.getElementById('addCleanupPhotoBtn');
+const cleanupCameraInput = document.getElementById('cleanupCameraInput');
+const photoPreviewContainer = document.getElementById('cleanupPhotoPreviewContainer');
+const photoPreview = document.getElementById('cleanupPhotoPreview');
+
+if (addCleanupPhotoBtn) { // Safety check
+    addCleanupPhotoBtn.addEventListener('click', () => {
+        cleanupCameraInput.click(); // Trigger the hidden camera input
+    });
+}
+
+if (cleanupCameraInput) { // Safety check
+    cleanupCameraInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            // Store the file in our global state
+            state.cleanupPhoto = file;
+
+            // Show a thumbnail preview in the modal
+            const objectURL = URL.createObjectURL(file);
+            photoPreview.src = objectURL;
+            photoPreviewContainer.style.display = 'block';
+        }
+    });
+}
+
     // --- Meetups ---
     elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
     elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
