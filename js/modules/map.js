@@ -1,5 +1,6 @@
 import { state, mapStyles, ZOOM_THRESHOLD } from './config.js';
 import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners, showPublicProfile } from './community.js';
+import { pinCategories } from './config.js';
 
 /**
  * Initializes the Mapbox map, geocoder, and initial event listeners.
@@ -136,52 +137,117 @@ export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
  */
 function createPinPopup(pinInfo, type, routeInfo = {}) {
     let popupHTML;
-    if (type === 'user') {
-        const categories = ['Plastic', 'Glass', 'Metal', 'Paper', 'Other'];
-        const optionsHTML = categories.map(cat => `<option value="${cat}" ${pinInfo.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
-        popupHTML = `<div><img src="${pinInfo.imageURL || pinInfo.image}" alt="User photo" style="width:100%; height:auto; border-radius: 4px;"/><div class="pin-popup-form"><input type="text" id="title-${pinInfo.id}" value="${pinInfo.title}" placeholder="Enter a title"><select id="category-${pinInfo.id}">${optionsHTML}</select><div style="display: flex; justify-content: space-between; gap: 10px;"><button id="update-${pinInfo.id}" style="flex-grow: 1;">Update</button><button id="delete-${pinInfo.id}" style="background-color: #dc3545;">Delete</button></div></div></div>`;
-    } else {
-            //popupHTML = `... <button id="update-${pinInfo.id}" class="modal-button">Update</button><button id="delete-${pinInfo.id}" class="modal-button delete-account-button">Delete</button> ...`;    }
-            popupHTML = `
-        <div>
-            <img src="${pinInfo.thumbnailURL || pinInfo.imageURL}" alt="${pinInfo.title}" style="width:100%; border-radius: 4px;"/>
-            <p style="margin: 5px 0 0;"><strong>${pinInfo.title}</strong></p>
-            <p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${pinInfo.category || 'Other'}</p>
-            <small>By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
-        </div>
-    `; }
 
+    // --- HTML for User's Own Pin (Editable) ---
+    if (type === 'user') {
+        const mainCategories = Object.keys(pinCategories);
+        let mainOptionsHTML = mainCategories.map(cat =>
+            `<option value="${cat}" ${pinInfo.category === cat ? 'selected' : ''}>${cat}</option>`
+        ).join('');
+
+        // Determine initial sub-categories based on saved data or default
+        const currentCategory = pinInfo.category && pinCategories[pinInfo.category] ? pinInfo.category : 'Other';
+        let subOptionsHTML = pinCategories[currentCategory].map(subCat =>
+            `<option value="${subCat}" ${pinInfo.subCategory === subCat ? 'selected' : ''}>${subCat}</option>`
+        ).join('');
+
+        popupHTML = `
+            <div>
+                <img src="${pinInfo.imageURL || pinInfo.image}" alt="User photo" style="width:100%; height:auto; border-radius: 4px;"/>
+                <div class="pin-popup-form">
+                    <input type="text" id="title-${pinInfo.id}" value="${pinInfo.title || ''}" placeholder="Enter a title">
+
+                    <label for="category-${pinInfo.id}">Category:</label>
+                    <select id="category-${pinInfo.id}">${mainOptionsHTML}</select>
+
+                    <label for="subCategory-${pinInfo.id}">Sub-Category:</label>
+                    <select id="subCategory-${pinInfo.id}">${subOptionsHTML}</select>
+
+                    <label for="brand-${pinInfo.id}">Brand (Optional):</label>
+                    <input type="text" id="brand-${pinInfo.id}" value="${pinInfo.brand || ''}" placeholder="e.g., Coca-Cola">
+
+                    <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
+                        <button id="update-${pinInfo.id}" class="modal-button btn-primary">Update</button>
+                        <button id="delete-${pinInfo.id}" class="modal-button btn-danger">Delete</button>
+                    </div>
+                </div>
+            </div>`;
+
+    // --- HTML for Community Pin (Read-only) ---
+    } else {
+        popupHTML = `
+            <div>
+                <img src="${pinInfo.thumbnailURL || pinInfo.imageURL}" alt="${pinInfo.title}" style="width:100%; border-radius: 4px;"/>
+                <p style="margin: 5px 0 0;"><strong>${pinInfo.title || 'Untitled Pin'}</strong></p>
+                <p style="margin: 5px 0 0; font-style: italic; color: #555;">
+                    Category: ${pinInfo.category || 'N/A'} ${pinInfo.subCategory ? `(${pinInfo.subCategory})` : ''}
+                </p>
+                ${pinInfo.brand ? `<p style="margin: 5px 0 0; font-style: italic; color: #555;">Brand: ${pinInfo.brand}</p>` : ''}
+                <small>By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
+            </div>
+        `;
+    }
+
+    // --- Create Popup and Add Event Listeners ---
     const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(popupHTML);
 
     popup.on('open', () => {
+        // --- Logic for User's Own Pin ---
         if (type === 'user') {
-            document.getElementById(`title-${pinInfo.id}`)?.blur();
+            const categorySelect = document.getElementById(`category-${pinInfo.id}`);
+            const subCategorySelect = document.getElementById(`subCategory-${pinInfo.id}`);
+
+            // Update sub-category dropdown when main category changes
+            categorySelect?.addEventListener('change', (e) => {
+                const selectedCategory = e.target.value;
+                const subCategories = pinCategories[selectedCategory] || [];
+                subCategorySelect.innerHTML = subCategories.map(subCat =>
+                    `<option value="${subCat}">${subCat}</option>`
+                ).join('');
+            });
+
+            // "Update" button listener
             document.getElementById(`update-${pinInfo.id}`)?.addEventListener('click', () => {
                 const pin = state.photoPins.find(p => p.id === pinInfo.id);
                 if (pin) {
                     pin.title = document.getElementById(`title-${pinInfo.id}`).value;
-                    pin.category = document.getElementById(`category-${pinInfo.id}`).value;
+                    pin.category = categorySelect.value;
+                    pin.subCategory = subCategorySelect.value;
+                    pin.brand = document.getElementById(`brand-${pinInfo.id}`).value;
                 }
                 popup.remove();
                 alert("Pin updated! Remember to save your session.");
             });
+
+            // "Delete" button listener
             document.getElementById(`delete-${pinInfo.id}`)?.addEventListener('click', () => {
                 if (confirm("Are you sure?")) {
+                    // Filter out the deleted pin from the state
                     state.photoPins = state.photoPins.filter(p => p.id !== pinInfo.id);
+                    // Find and remove the corresponding marker from the map and state
                     const markerToRemove = state.userMarkers.find(m => {
                         const lngLat = m.getLngLat();
-                        return lngLat.lng === pinInfo.coords[0] && lngLat.lat === pinInfo.coords[1];
+                        const markerCoords = [lngLat.lng, lngLat.lat];
+                        const pinCoords = Array.isArray(pinInfo.coords) ? pinInfo.coords : [pinInfo.coords.lng, pinInfo.coords.lat];
+                        return markerCoords[0] === pinCoords[0] && markerCoords[1] === pinCoords[1];
                     });
                     if (markerToRemove) {
                         markerToRemove.remove();
                         state.userMarkers = state.userMarkers.filter(m => m !== markerToRemove);
                     }
-                    updateUserPinsSource();
+                    // Update the underlying map source if it exists
+                    if (typeof updateUserPinsSource === 'function') { updateUserPinsSource(); }
                     popup.remove();
                 }
             });
+
+            // Blur the first input to prevent auto keyboard on mobile
+            document.getElementById(`title-${pinInfo.id}`)?.blur();
+
+        // --- Logic for Community Pin ---
         } else {
-            document.querySelector(`.profile-link[data-userid="${routeInfo.userId}"]`)?.addEventListener('click', (e) => {
+            // Add click listener for the profile link
+            popup.getElement().querySelector(`.profile-link[data-userid="${routeInfo.userId}"]`)?.addEventListener('click', (e) => {
                 e.preventDefault();
                 showPublicProfile(routeInfo.userId);
             });
