@@ -244,3 +244,20 @@ button.close-btn:hover { color: var(--color-text-dark); }
   margin-top: 8px;
   display: block; /* Ensure labels are above inputs */
 }
+
+#cleanupPhotoPreviewContainer {
+    display: flex; /* Makes it a flex container */
+    justify-content: center; /* Centers horizontally */
+    align-items: center; /* Centers vertically */
+    /* Add any desired height/width for the container, e.g., */
+    min-height: 150px; /* Example: ensure some height for centering */
+    margin-top: 10px; /* Example: add some space above */
+    border: 1px dashed #ccc; /* Example: visual aid for the container */
+}
+
+#cleanupPhotoPreview {
+    /* Basic image styling, ensure it scales properly */
+    max-width: 100%;
+    max-height: 100%; /* Or a specific height for the image */
+    object-fit: contain; /* Ensures the image fits without cropping, maintaining aspect ratio */
+}
