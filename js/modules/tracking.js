@@ -89,6 +89,7 @@ export function startTracking() {
     clearCurrentSession();
     const trackBtn = document.getElementById('trackBtn');
     state.trackingStartTime = new Date();
+    state.cleanupPhoto = null;
 
     // Center map on user's starting location
     navigator.geolocation.getCurrentPosition(pos => {
