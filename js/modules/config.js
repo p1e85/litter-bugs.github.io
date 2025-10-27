@@ -34,6 +34,20 @@ export const mapStyles = [
     { name: 'Satellite', url: 'mapbox://styles/mapbox/satellite-streets-v12' }
 ];
 
+export const pinCategories = {
+  'Plastic': ['Bottle', 'Container', 'Bag', 'Film/Wrapper', 'Foam', 'Hard Fragment', 'Other'],
+  'Glass': ['Bottle', 'Jar', 'Broken Shards', 'Other'],
+  'Metal': ['Aluminum Can', 'Steel Can', 'Foil', 'Scrap', 'Other'],
+  'Paper': ['Cup', 'Packaging', 'Towel/Tissue', 'Print (Flyer/etc)', 'Other'],
+  'Cardboard': ['Box', 'Food Packaging', 'Drink Carrier', 'Other'],
+  'Fabric/Textiles': ['Clothing', 'Mask', 'Other'],
+  'Rubber': ['Tire', 'Glove', 'Band', 'Other'],
+  'Wood': ['Construction Scrap', 'Furniture Fragment', 'Other'],
+  'Organic': ['Food Waste', 'Yard Waste', 'Other'],
+  'E-waste': ['Battery', 'Small Electronic', 'Wire/Cable', 'Other'],
+  'Other': ['General Litter'] // Keep 'Other' simple
+};
+
 export const allBadges = {
     first_find: { name: 'First Find', icon: '🗑️', description: 'Pinned your very first piece of litter.' },
     collector: { name: 'Collector', icon: '🛍️', description: 'Pinned a total of 50 items.' },
