@@ -17,6 +17,7 @@ export const state = {
     trackingStartTime: null,
     currentStyleIndex: 0,
     findMeState: 0, // 0: off, 1: centered, 2: centered and heading-oriented
+    cleanupPhoto: null,
 };
 
 // --- CONSTANTS ---
