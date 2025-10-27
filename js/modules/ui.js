@@ -249,27 +249,42 @@ function attachEventListeners() {
         });
     }
 
-    if (cleanupCameraInput) { // Safety check
-        cleanupCameraInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                // Store the file in our global state
-                state.cleanupPhoto = file;
-
-                // Show a thumbnail preview in the modal
-                const objectURL = URL.createObjectURL(file);
-                photoPreview.src = objectURL;
-                // Use 'flex' to allow for CSS centering
-                photoPreviewContainer.style.display = 'flex'; 
-                
-                // Clear the input value so the same file can be selected again
-                event.target.value = ''; 
-            } else {
-                 // User canceled the file picker
-                state.cleanupPhoto = null;
-                photoPreview.src = '#';
-                photoPreviewContainer.style.display = 'none';
+if (cleanupCameraInput) { // Safety check
+    // --- ADD 'async' HERE ---
+    cleanupCameraInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        
+        if (file) {
+            // --- Add the compression logic ---
+            const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280 };
+            let compressedFile;
+            try {
+                // 'await' now works because the function is 'async'
+                compressedFile = await imageCompression(file, options);
+            } catch (error) {
+                console.error("Compression error:", error);
+                compressedFile = file; // Fallback to original
             }
+            
+            // --- Store the COMPRESSED file in our global state ---
+            state.cleanupPhoto = compressedFile; 
+            
+            // --- Show a thumbnail preview of the COMPRESSED file ---
+            const objectURL = URL.createObjectURL(compressedFile); // <-- FIX 2
+            photoPreview.src = objectURL;
+            
+            // Use 'flex' to allow for CSS centering
+            photoPreviewContainer.style.display = 'flex';
+            
+            // Clear the input value so the same file can be selected again
+            event.target.value = '';
+            
+        } else {
+            // User canceled the file picker
+            state.cleanupPhoto = null;
+            photoPreview.src = '#';
+            photoPreviewContainer.style.display = 'none';
+        }
         });
     }
 
