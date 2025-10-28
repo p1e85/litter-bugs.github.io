@@ -26,7 +26,9 @@ import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
  */
 export function initializeAuthListener() {
     onAuthStateChanged(auth, async (user) => {
+        console.log('--- onAuthStateChanged listener fired ---');
         if (user) {
+            console.log('Listener detected user:', user.uid);
             state.currentUser = user;
             try {
                 // Check for and create user profile documents if they don't exist
@@ -65,6 +67,7 @@ export function initializeAuthListener() {
                 updateLoggedInStatusUI(false); // Fallback to logged-out state on error
             }
         } else {
+            console.log('Listener detected NO user (logged out).');
             state.currentUser = null;
             // Update the UI to reflect the logged-out state
             updateLoggedInStatusUI(false);
@@ -122,16 +125,20 @@ export async function handleSignUp() {
  * Handles the user login process.
  */
 export async function handleLogIn() {
+    console.log('--- handleLogIn function started ---');
     const email = document.getElementById('emailInput').value;
     const password = document.getElementById('passwordInput').value;
     const authError = document.getElementById('authError');
     authError.textContent = '';
 
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-        authError.textContent = error.message;
-    }
+try {
+    console.log('Attempting Firebase sign in for:', email); // <-- ADD THIS
+    await signInWithEmailAndPassword(auth, email, password);
+    console.log('Firebase sign in successful (or no error thrown)'); // <-- ADD THIS
+  } catch (error) {
+    console.error('Firebase sign in failed:', error); // <-- ADD THIS (or confirm it exists)
+    authError.textContent = error.message;
+  }
 }
 
 /**
