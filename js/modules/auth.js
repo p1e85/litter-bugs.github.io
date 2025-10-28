@@ -26,7 +26,7 @@ import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
  */
 export function initializeAuthListener() {
     onAuthStateChanged(auth, async (user) => {
-        console.log('--- onAuthStateChanged listener fired ---');
+        //console.log('--- onAuthStateChanged listener fired ---');
         if (user) {
             console.log('Listener detected user:', user.uid);
             state.currentUser = user;
@@ -45,7 +45,7 @@ export function initializeAuthListener() {
                 if (publicProfileSnap.exists()) {
                     username = publicProfileSnap.data().username;
                 } else {
-                    console.log("User profile missing! Creating a default one.");
+                    //console.log("User profile missing! Creating a default one.");
                     const defaultUsername = user.email.split('@')[0];
                     await setDoc(publicProfileRef, {
                         username: defaultUsername,
@@ -63,7 +63,7 @@ export function initializeAuthListener() {
                 updateLoggedInStatusUI(true, username);
 
             } catch (error) {
-                console.error("Error fetching or updating user profile:", error);
+                //console.error("Error fetching or updating user profile:", error);
                 updateLoggedInStatusUI(false); // Fallback to logged-out state on error
             }
         } else {
@@ -125,18 +125,18 @@ export async function handleSignUp() {
  * Handles the user login process.
  */
 export async function handleLogIn() {
-    console.log('--- handleLogIn function started ---');
+    //console.log('--- handleLogIn function started ---');
     const email = document.getElementById('emailInput').value;
     const password = document.getElementById('passwordInput').value;
     const authError = document.getElementById('authError');
     authError.textContent = '';
 
 try {
-    console.log('Attempting Firebase sign in for:', email); // <-- ADD THIS
+    //console.log('Attempting Firebase sign in for:', email); // <-- ADD THIS
     await signInWithEmailAndPassword(auth, email, password);
-    console.log('Firebase sign in successful (or no error thrown)'); // <-- ADD THIS
+    //console.log('Firebase sign in successful (or no error thrown)'); // <-- ADD THIS
   } catch (error) {
-    console.error('Firebase sign in failed:', error); // <-- ADD THIS (or confirm it exists)
+    //console.error('Firebase sign in failed:', error); // <-- ADD THIS (or confirm it exists)
     authError.textContent = error.message;
   }
 }
@@ -148,7 +148,7 @@ export async function handleLogOut() {
     try {
         await signOut(auth);
     } catch (error) {
-        console.error("Error signing out:", error);
+        //console.error("Error signing out:", error);
         alert("Failed to sign out.");
     }
 }
@@ -163,24 +163,24 @@ export async function handleAccountDeletion() {
 
     try {
         const userId = state.currentUser.uid;
-        console.log("Starting account deletion for user:", userId);
+        //console.log("Starting account deletion for user:", userId);
 
         // 1. Delete all private sessions
         const privateSessionsQuery = query(collection(db, "users", userId, "privateSessions"));
         const privateSessionsSnapshot = await getDocs(privateSessionsQuery);
         await Promise.all(privateSessionsSnapshot.docs.map(d => deleteDoc(d.ref)));
-        console.log("Private sessions deleted.");
+        //console.log("Private sessions deleted.");
 
         // 2. Delete all published routes
         const publishedRoutesQuery = query(collection(db, "publishedRoutes"), where("userId", "==", userId));
         const publishedRoutesSnapshot = await getDocs(publishedRoutesQuery);
         await Promise.all(publishedRoutesSnapshot.docs.map(d => deleteDoc(d.ref)));
-        console.log("Published routes deleted.");
+        //console.log("Published routes deleted.");
 
         // 3. Delete user documents
         await deleteDoc(doc(db, "users", userId));
         await deleteDoc(doc(db, "publicProfiles", userId));
-        console.log("User documents deleted.");
+        //console.log("User documents deleted.");
 
         // 4. Delete the user from Firebase Authentication
         await deleteUser(state.currentUser);
@@ -189,7 +189,7 @@ export async function handleAccountDeletion() {
         document.getElementById('profileModal').style.display = 'none';
 
     } catch (error) {
-        console.error("Error deleting account:", error);
+        //console.error("Error deleting account:", error);
         if (error.code === 'auth/requires-recent-login') {
             alert("This is a sensitive operation. Please log out and log back in to delete your account.");
         } else {
