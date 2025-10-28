@@ -109,7 +109,7 @@ export function initializeUI() {
     }
 }
 
-// --- Event Listeners ---
+// --- Event Listeners *******************
 
 /**
  * Attaches all event listeners to the DOM elements.
@@ -301,7 +301,8 @@ if (cleanupCameraInput) { // Safety check
     // --- General/Global Listeners ---
     elements.shareBtn.addEventListener('click', shareCleanupResults);
     addAllModalCloseListeners();
-}
+}  //end of event listerner! ***************
+
 
 /**
  * Adds listeners to close modals when clicking the close button or outside the modal content.
