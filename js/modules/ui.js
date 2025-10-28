@@ -135,7 +135,7 @@ function attachEventListeners() {
     elements.authActionBtn.addEventListener('click', (event) => {
         event.preventDefault();
        if (state.isSignUpMode) await handleSignUp();
-        else await handleLogIn(); }
+        else await handleLogIn();
     });
     elements.logoutBtn.addEventListener('click', handleLogOut);
     elements.emailInput.addEventListener('input', validateSignUpForm);
