@@ -132,11 +132,11 @@ function attachEventListeners() {
             updateAuthModalUI();
         }
     });
-    elements.authActionBtn.addEventListener('click', (event) => {
-        event.preventDefault();
-       if (state.isSignUpMode) await handleSignUp();
-        else await handleLogIn();
-    });
+elements.authActionBtn.addEventListener('click', async (event) => { 
+    event.preventDefault();
+   if (state.isSignUpMode) await handleSignUp();
+    else await handleLogIn();
+});
     elements.logoutBtn.addEventListener('click', handleLogOut);
     elements.emailInput.addEventListener('input', validateSignUpForm);
     elements.passwordInput.addEventListener('input', validateSignUpForm);
@@ -166,6 +166,8 @@ function attachEventListeners() {
     // --- [FIXED] This is the corrected block ---
     elements.summaryOkBtn.addEventListener('click', () => { 
         elements.summaryModal.style.display = 'none';
+        document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none';
+        document.getElementById('cleanupPhotoPreview').src = '#';
     });
     // --- End of fix ---
 
