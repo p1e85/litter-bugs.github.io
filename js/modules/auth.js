@@ -28,7 +28,7 @@ export function initializeAuthListener() {
     onAuthStateChanged(auth, async (user) => {
         //console.log('--- onAuthStateChanged listener fired ---');
         if (user) {
-            console.log('Listener detected user:', user.uid);
+            //console.log('Listener detected user:', user.uid);
             state.currentUser = user;
             try {
                 // Check for and create user profile documents if they don't exist
@@ -67,7 +67,7 @@ export function initializeAuthListener() {
                 updateLoggedInStatusUI(false); // Fallback to logged-out state on error
             }
         } else {
-            console.log('Listener detected NO user (logged out).');
+            //console.log('Listener detected NO user (logged out).');
             state.currentUser = null;
             // Update the UI to reflect the logged-out state
             updateLoggedInStatusUI(false);
