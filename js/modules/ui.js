@@ -35,6 +35,11 @@ const elements = {
     meetupModal: document.getElementById('meetupModal'),
     viewMeetupsModal: document.getElementById('viewMeetupsModal'),
     menuModal: document.getElementById('menuModal'),
+communityChallengeBtn: document.getElementById('communityChallengeBtn'),
+challengeModal: document.getElementById('challengeModal'),
+addChallengeBtn: document.getElementById('addChallengeBtn'),
+currentChallengesTab: document.getElementById('currentChallengesTab'),
+pastChallengesTab: document.getElementById('pastChallengesTab'),       
 
     // Buttons
     agreeBtn: document.getElementById('agreeBtn'),
@@ -145,6 +150,36 @@ elements.authActionBtn.addEventListener('click', async (event) => {
     elements.deleteAccountBtn.addEventListener('click', handleAccountDeletion);
 
     // --- Main Map & Menu Controls ---
+
+
+// --- Community Challenge Modal Listeners ---
+if (elements.communityChallengeBtn) {
+    elements.communityChallengeBtn.addEventListener('click', () => {
+        elements.challengeModal.style.display = 'flex';
+        elements.menuModal.style.display = 'none';
+        // We will call a function here to load the challenges
+        // fetchAndDisplayChallenges(); // <-- We'll create this next
+    });
+}
+
+if (elements.currentChallengesTab) {
+    elements.currentChallengesTab.addEventListener('click', () => {
+        document.getElementById('currentChallengesContent').style.display = 'block';
+        document.getElementById('pastChallengesContent').style.display = 'none';
+        elements.currentChallengesTab.classList.add('active');
+        elements.pastChallengesTab.classList.remove('active');
+    });
+}
+
+if (elements.pastChallengesTab) {
+    elements.pastChallengesTab.addEventListener('click', () => {
+        document.getElementById('currentChallengesContent').style.display = 'none';
+        document.getElementById('pastChallengesContent').style.display = 'block';
+        elements.currentChallengesTab.classList.remove('active');
+        elements.pastChallengesTab.classList.add('active');
+    });
+}
+// --- End of Challenge Modal Listeners ---
     elements.findMeBtn.addEventListener('click', findMe);
     elements.trackBtn.addEventListener('click', toggleTracking);
     elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
