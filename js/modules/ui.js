@@ -153,6 +153,13 @@ elements.authActionBtn.addEventListener('click', async (event) => {
 
 
 // --- Community Challenge Modal Listeners ---
+if (elements.addChallengeBtn) {
+    elements.addChallengeBtn.addEventListener('click', () => {
+        // This button will open a new modal for creating challenges.
+        alert('Add New Challenge modal will go here.'); document.getElementById('addChallengeModal').style.display = 'flex';
+    });
+}
+
 if (elements.communityChallengeBtn) {
     elements.communityChallengeBtn.addEventListener('click', () => {
         elements.challengeModal.style.display = 'flex';
