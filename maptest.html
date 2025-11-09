@@ -147,6 +147,36 @@
         </div>
     </div>
 
+<div id="challengeModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-btn">&times;</button>
+        <h2>Community Challenges</h2>
+
+        <button id="addChallengeBtn" class="modal-button btn-primary" style="display: none;">
+            Admin: Add New Challenge
+        </button>
+
+        <div class="leaderboard-tabs">
+            <button id="currentChallengesTab" class="leaderboard-tab active">Current</button>
+            <button id="pastChallengesTab" class="leaderboard-tab">Past</button>
+        </div>
+
+        <div id="currentChallengesContent">
+            <ul id="currentChallengesList" class="challenge-list">
+                <li>Loading...</li>
+            </ul>
+        </div>
+
+        <div id="pastChallengesContent" style="display: none;">
+            <ul id="pastChallengesList" class="challenge-list">
+                <li>Loading...</li>
+            </ul>
+        </div>
+
+    </div>
+</div>
+
+
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
