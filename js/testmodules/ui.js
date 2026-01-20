@@ -35,11 +35,12 @@ const elements = {
     meetupModal: document.getElementById('meetupModal'),
     viewMeetupsModal: document.getElementById('viewMeetupsModal'),
     menuModal: document.getElementById('menuModal'),
-communityChallengeBtn: document.getElementById('communityChallengeBtn'),
-challengeModal: document.getElementById('challengeModal'),
-addChallengeBtn: document.getElementById('addChallengeBtn'),
-currentChallengesTab: document.getElementById('currentChallengesTab'),
-pastChallengesTab: document.getElementById('pastChallengesTab'),       
+    communityChallengeBtn: document.getElementById('communityChallengeBtn'),
+    challengeModal: document.getElementById('challengeModal'),
+    addChallengeBtn: document.getElementById('addChallengeBtn'),
+    currentChallengesTab: document.getElementById('currentChallengesTab'),
+    pastChallengesTab: document.getElementById('pastChallengesTab'),
+    hubModal: document.getElementById('hubModal'),
 
     // Buttons
     agreeBtn: document.getElementById('agreeBtn'),
@@ -70,6 +71,10 @@ pastChallengesTab: document.getElementById('pastChallengesTab'),
     shareBtn: document.getElementById('shareBtn'),
     menuBtn: document.getElementById('menuBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
+    hubBtn: document.getElementById('hubBtn'),
+    hubChallengesBtn: document.getElementById('hubChallengesBtn'),
+    hubEventsBtn: document.getElementById('hubEventsBtn'),
+    hubFeedBtn: document.getElementById('hubFeedBtn'),
 
     // Inputs & Forms
     cameraInput: document.getElementById('cameraInput'),
@@ -343,6 +348,30 @@ if (cleanupCameraInput) { // Safety check
     // --- General/Global Listeners ---
     elements.shareBtn.addEventListener('click', shareCleanupResults);
     addAllModalCloseListeners();
+
+    // Open the Hub
+    elements.hubBtn.addEventListener('click', () => {
+    elements.menuModal.style.display = 'none';
+    elements.hubModal.style.display = 'flex';
+    });
+
+    // Sub-buttons inside the Hub
+    elements.hubChallengesBtn.addEventListener('click', () => {
+    elements.hubModal.style.display = 'none';
+    elements.challengeModal.style.display = 'flex'; // Triggers your challenge modal
+    });
+
+    elements.hubEventsBtn.addEventListener('click', () => {
+    elements.hubModal.style.display = 'none';
+    // Open your future events modal here
+    alert('Events feature coming soon!'); 
+    });
+
+    elements.hubFeedBtn.addEventListener('click', () => {
+    // This will eventually open the social feed
+    alert('Activity Feed coming soon!');
+    });
+    
 }  //end of event listerner! ***************
 
 
