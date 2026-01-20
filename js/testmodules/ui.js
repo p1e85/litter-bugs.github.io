@@ -522,8 +522,7 @@ async function loadActivityFeed() {
             card.className = 'feed-card';
             
             // Use the uploaded photo, or a placeholder if they skipped the photo step
-            const photoUrl = data.cleanupPhotoURL || 'https://via.placeholder.com/400?text=No+Photo+Provided';
-            
+            const photoUrl = data.cleanupPhotoURL || 'https://placehold.co/400x300?text=No+Photo';            
             card.innerHTML = `
                 <div class="feed-header">
                     <div class="feed-avatar">${data.username?.charAt(0).toUpperCase() || 'T'}</div>
