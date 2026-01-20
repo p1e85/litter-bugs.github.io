@@ -66,6 +66,7 @@
             <hr>
             <button id="infoBtn" class="modal-button btn-secondary">ℹ️ Info & Terms</button>
             <button id="editProfileBtn" class="modal-button btn-secondary edit-profile">👤 Edit My Profile</button>
+            <button id="hubBtn" class="modal-button btn-secondary" style="background-color: #27ae60;">🏙️ Community Hub</button>
             <a href="https://www.litter-bugs.com" target="_blank" class="modal-button btn-secondary">🌐 Visit Website</a>
             <a href="https://www.buymeacoffee.com/p1skates" target="_blank" class="modal-button btn-support">☕ Support</a>
             <hr>
@@ -302,6 +303,34 @@
             <ul id="meetupsList" class="session-list"></ul>
         </div>
     </div>
+
+    <div id="hubModal" class="modal-overlay">
+    <div class="modal-content hub-modal">
+        <button class="close-btn">&times;</button>
+        <h2>Community Hub</h2>
+        <p class="modal-subtitle">Connect, challenge, and clean together.</p>
+        
+        <div class="hub-grid">
+            <div class="hub-card" id="hubChallengesBtn">
+                <span class="hub-icon">🏆</span>
+                <h3>Challenges</h3>
+                <p>Join weekly goals and track progress.</p>
+            </div>
+
+            <div class="hub-card" id="hubEventsBtn">
+                <span class="hub-icon">📅</span>
+                <h3>Local Events</h3>
+                <p>Find or host cleanup meetups nearby.</p>
+            </div>
+
+            <div class="hub-card" id="hubFeedBtn">
+                <span class="hub-icon">📸</span>
+                <h3>Activity Feed</h3>
+                <p>See the latest cleanups from around the world.</p>
+            </div>
+        </div>
+    </div>
+</div>
     
     <script src="js/main.js" type="module"></script>
 
