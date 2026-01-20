@@ -6,12 +6,6 @@ import { clearCurrentSession } from './data.js';
 
 let locationWatcher = null;
 
-// NOTE: This imports the image-compression library from a CDN.
-// For a production app, you might want to host this file yourself.
-// This is a stable link from the unpkg CDN
-//import imageCompression from  'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.esm.js';
-//import imageCompression from 'https://cdn.jsdelivr.net/npm/browser-image-compression@latest/dist/browser-image-compression.js';
-
 /**
  * Finds the user's current location and places a one-time marker on the map.
  */
@@ -89,7 +83,10 @@ export function startTracking() {
     clearCurrentSession();
     const trackBtn = document.getElementById('trackBtn');
     state.trackingStartTime = new Date();
-    state.cleanupPhoto = null;
+    
+    // KEY FIX: We clear the photo here (when starting a NEW session), 
+    // instead of clearing it when sharing the OLD session.
+    state.cleanupPhoto = null; 
 
     // Center map on user's starting location
     navigator.geolocation.getCurrentPosition(pos => {
@@ -130,11 +127,6 @@ export async function handlePhoto(event) {
     }
     const file = event.target.files[0];
 
-    // --- ADD THESE TWO LINES ---
-    console.log('1. File object being sent to compressor:', file);
-    console.log('2. The imported imageCompression library is:', imageCompression);
-    // -------------------------
-    
     pictureBtn.innerHTML = '...';
     pictureBtn.disabled = true;
 
@@ -142,6 +134,7 @@ export async function handlePhoto(event) {
     const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
     let processedFile;
     try {
+        // We use the global imageCompression library loaded in index.html/maptest.html
         processedFile = await imageCompression(file, options);
     } catch (error) {
         console.error("Image compression error:", error);
@@ -224,79 +217,41 @@ function showCleanupSummary() {
  * Shares the cleanup results using the Web Share API or copies to clipboard.
  */
 export async function shareCleanupResults() {
-    // --- 1. Get summary data and prepare the base text ---
     const distance = document.getElementById('summaryDistance').textContent;
     const pins = document.getElementById('summaryPins').textContent;
     const shareText = `I just cleaned up ${distance} and pinned ${pins} items with the Litter Bugs app! Join the movement and help clean our planet. #LitterBugs #Cleanup`;
 
-    // --- 2. Prepare the share data object ---
     const shareData = {
         title: 'My Litter Bugs Cleanup!',
         text: shareText,
-        url: 'https://www.litter-bugs.com/' // Replace with your actual app URL
+        url: 'https://www.litter-bugs.com/' 
     };
 
-    // --- 3. Add the photo file to the share data if it exists ---
     if (state.cleanupPhoto) {
         shareData.files = [state.cleanupPhoto];
     }
 
-    /**
-     * Resets the photo state and UI elements.
-     * This is called after a successful share or copy.
-     */
-    const resetPhotoUI = () => {
-        if (state.cleanupPhoto) {
-            state.cleanupPhoto = null; // Clear from state
-            document.getElementById('cleanupPhotoPreview').src = '#'; // Reset image source
-            document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none'; // Hide container
-        }
-    };
-
-    // --- 4. Attempt to use the Web Share API ---
-    // We check if the browser can share the specific data (including files)
     if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-
-        // --- 🔴 DEBUGGING LOGS ARE HERE 🔴 ---
-        console.log("--- DEBUG: Sharing Data ---");
-        console.log("1. The text being sent:", shareText);
-        console.log("2. The complete shareData object:", shareData);
-        // --- End of logs ---
-        
         try {
             await navigator.share(shareData);
             console.log('Cleanup shared successfully!');
-            resetPhotoUI(); // Reset the photo UI on success
+            // KEY FIX: We DO NOT reset the photo here anymore.
+            // It stays in memory so the user can go publish it.
         } catch (err) {
-            // We don't reset here, as the user might have canceled and want to try again.
             console.error('Share was canceled or failed:', err);
         }
     } else {
-        // --- 5. Fallback for browsers that don't support sharing files ---
         try {
             let fallbackText = shareText + " " + shareData.url;
             if (state.cleanupPhoto) {
-                 // Let the user know the photo couldn't be copied
                 fallbackText += "\n\n(A photo was also taken, but it can't be copied to the clipboard.)";
             }
             await navigator.clipboard.writeText(fallbackText);
             alert('Cleanup stats copied to clipboard!');
-            resetPhotoUI(); // Reset the photo UI on success
         } catch (err) {
             console.error('Failed to copy to clipboard: ', err);
             alert('Sharing is not supported on this browser.');
         }
-    }
-}
-
-// Helper function for clipboard fallback
-async function copyShareTextFallback(textToCopy) {
-    try {
-        await navigator.clipboard.writeText(textToCopy);
-        alert('Cleanup stats copied to clipboard!');
-    } catch (err) {
-        console.error('Failed to copy to clipboard: ', err);
-        alert('Sharing failed, and copying to clipboard also failed.');
     }
 }
 
