@@ -216,26 +216,26 @@ function showCleanupSummary() {
 export async function shareCleanupResults() {
     const distance = document.getElementById('summaryDistance').textContent;
     const pins = document.getElementById('summaryPins').textContent;
-    
-    // This helps ensure the text (and hashtags) survives when sharing a photo.
-    const shareText = `I just cleaned up ${distance} and pinned ${pins} items with the Litter Bugs app! Join the movement and help clean our planet. #LitterBugs #Cleanup https://www.litter-bugs.com/`;
+    const shareText = `I just cleaned up ${distance} and pinned ${pins} items with the Litter Troopers app! Join the movement and help clean our planet. #LitterTroopers #Cleanup`;
 
     const shareData = {
-        title: 'My Litter Bugs Cleanup!',
-        text: shareText
-
+        title: 'My Litter Troopers Cleanup!',
+        text: shareText,
+        url: 'https://www.littertroopers.com/' 
     };
 
-    // --- Convert Blob to File ---
+    // --- FIX: Convert Blob to File ---
     if (state.cleanupPhoto) {
+        // The Web Share API specifically requires a File object, not a Blob.
+        // We create a new File object using the data from the Blob.
         const file = new File([state.cleanupPhoto], "cleanup_stats.jpg", {
             type: state.cleanupPhoto.type,
             lastModified: new Date().getTime()
         });
         shareData.files = [file];
     }
+    // --------------------------------
 
-    // --- Attempt Share ---
     if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         try {
             await navigator.share(shareData);
@@ -244,9 +244,8 @@ export async function shareCleanupResults() {
             console.error('Share was canceled or failed:', err);
         }
     } else {
-        // --- Fallback for PC / Unsupported Browsers ---
         try {
-            let fallbackText = shareText; // URL is already in here now
+            let fallbackText = shareText + " " + shareData.url;
             if (state.cleanupPhoto) {
                 fallbackText += "\n\n(A photo was also taken, but it can't be copied to the clipboard.)";
             }
