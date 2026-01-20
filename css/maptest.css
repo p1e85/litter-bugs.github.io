@@ -261,3 +261,59 @@ button.close-btn:hover { color: var(--color-text-dark); }
     max-height: 100%; /* Or a specific height for the image */
     object-fit: contain; /* Ensures the image fits without cropping, maintaining aspect ratio */
 }
+
+/* --- Community Hub Dashboard --- */
+.hub-modal {
+    max-width: 500px;
+}
+
+.hub-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.hub-card {
+    background: #fff;
+    border: 2px solid #eee;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.hub-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--color-primary-green, #2ecc71);
+}
+
+.hub-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.hub-card h3 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.hub-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Tablet/Desktop layout */
+@media (min-width: 400px) {
+    .hub-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .hub-card:last-child {
+        grid-column: span 2; /* Make the Activity Feed wide */
+    }
+}
