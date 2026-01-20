@@ -366,9 +366,9 @@ if (cleanupCameraInput) { // Safety check
     });
 
     elements.hubEventsBtn.addEventListener('click', () => {
-    elements.hubModal.style.display = 'none';
-    // Open your future events modal here
-    alert('Events feature coming soon!'); 
+        alert('Events feature coming soon!');
+    //elements.hubModal.style.display = 'none';
+    
     });
 
     elements.hubFeedBtn.addEventListener('click', () => {
