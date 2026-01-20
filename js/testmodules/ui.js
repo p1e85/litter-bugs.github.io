@@ -486,11 +486,11 @@ async function loadActivityFeed() {
     container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
 
     try {
-        // Query the publishedRoutes collection
+        // We still fetch the last 20 (or more) posts
         const q = query(
             collection(db, "publishedRoutes"), 
             orderBy("timestamp", "desc"), 
-            limit(20)
+            limit(50) // Increased limit to ensure we find enough "new" posts
         );
         
         const querySnapshot = await getDocs(q);
@@ -501,15 +501,27 @@ async function loadActivityFeed() {
             return;
         }
 
+        let visibleCount = 0;
+
         querySnapshot.forEach((doc) => {
             const data = doc.data();
+
+            // --- FILTER: SKIP OLD ROUTES ---
+            // If this route doesn't have the 'distance' field we just added, 
+            // it is an old legacy route. Skip it!
+            if (typeof data.distance === 'undefined' && typeof data.distanceMiles === 'undefined') {
+                return; 
+            }
+            // -------------------------------
+
+            visibleCount++;
             const date = data.timestamp?.toDate().toLocaleDateString() || "Recently";
             
             // Generate the Card HTML
             const card = document.createElement('div');
             card.className = 'feed-card';
             
-            // Check if there is a cleanup photo, otherwise use a placeholder
+            // Use the uploaded photo, or a placeholder if they skipped the photo step
             const photoUrl = data.cleanupPhotoURL || 'https://via.placeholder.com/400?text=No+Photo+Provided';
             
             card.innerHTML = `
@@ -524,13 +536,19 @@ async function loadActivityFeed() {
                 <div class="feed-body">
                     <div class="feed-stats">
                         <span>📍 <strong>${data.pins?.length || 0}</strong> Items</span>
-                        <span>📏 <strong>${data.distanceMiles || data.distance || '0.0 mi'}</strong></span>
+                        <span>📏 <strong>${data.distanceMiles || '0.00 mi'}</strong></span>
                     </div>
                     <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
                 </div>
             `;
             container.appendChild(card);
         });
+
+        // If we filtered out EVERYTHING (only old routes exist), show a message
+        if (visibleCount === 0) {
+            container.innerHTML = '<p>No new cleanups yet. Go publish one!</p>';
+        }
+
     } catch (error) {
         console.error("Error loading feed:", error);
         container.innerHTML = '<p>Failed to load feed. Check your connection.</p>';
