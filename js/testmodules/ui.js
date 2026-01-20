@@ -524,7 +524,7 @@ async function loadActivityFeed() {
                 <div class="feed-body">
                     <div class="feed-stats">
                         <span>📍 <strong>${data.pins?.length || 0}</strong> Items</span>
-                        <span>📏 <strong>${data.distance || '0.0 mi'}</strong></span>
+                        <span>📏 <strong>${data.distanceMiles || data.distance || '0.0 mi'}</strong></span>
                     </div>
                     <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
                 </div>
