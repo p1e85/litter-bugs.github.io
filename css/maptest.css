@@ -284,12 +284,26 @@ button.close-btn:hover { color: var(--color-text-dark); }
     transition: transform 0.2s, border-color 0.2s;
     display: flex;
     flex-direction: column;
+    align-items: center; 
+    justify-content: center; 
+    text-align: center;
     position: relative;
 }
 
 .hub-card:hover {
     transform: translateY(-3px);
     border-color: var(--color-primary-green, #2ecc71);
+}
+.hub-card h3 {
+    margin: 10px 0 5px 0;
+    color: #333;
+}
+
+.hub-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.3; 
 }
 
 .hub-icon {
