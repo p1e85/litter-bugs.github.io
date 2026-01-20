@@ -360,7 +360,8 @@ if (cleanupCameraInput) { // Safety check
     // Sub-buttons inside the Hub
     elements.hubChallengesBtn.addEventListener('click', () => {
     elements.hubModal.style.display = 'none';
-    elements.challengeModal.style.display = 'flex'; // Triggers your challenge modal
+    elements.challengeModal.style.display = 'flex'; 
+        alert('Events feature coming soon!'); 
     });
 
     elements.hubEventsBtn.addEventListener('click', () => {
@@ -371,13 +372,13 @@ if (cleanupCameraInput) { // Safety check
 
     elements.hubFeedBtn.addEventListener('click', () => {
     // This will eventually open the social feed
-    alert('Activity Feed coming soon!');
+    //alert('Activity Feed coming soon!');
     });
 
     elements.hubFeedBtn.addEventListener('click', () => {
     elements.hubModal.style.display = 'none';
     elements.feedModal.style.display = 'flex';
-    loadActivityFeed(); // We'll create this next
+    loadActivityFeed();
     });
     
 }  //end of event listerner! ***************
