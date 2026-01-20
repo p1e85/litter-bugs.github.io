@@ -12,6 +12,7 @@
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
         })(window, document, "clarity", "script", "tilw8qneix");
     </script>
+    
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@1.0.17/dist/browser-image-compression.js"></script>
     <script src='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js'></script>
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
@@ -19,7 +20,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪲</text></svg>">
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css' rel='stylesheet' />
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
-    <link rel="stylesheet" href="css/maptest.css">
+    <link rel="stylesheet" href="css/mapbetastyle.css">
 </head>
 <body>
 
@@ -70,8 +71,6 @@
             <hr>
             <p>Publish your completed route for the community to see.</p>
             <button id="publishBtn" class="modal-button btn-primary">🚀 Publish to Community</button>
-
-<button id="communityChallengeBtn" class="modal-button btn-primary">🏆 Community Challenges</button>
         </div>
     </div>
 
@@ -146,36 +145,6 @@
             <button id="exportBtn" class="modal-button btn-support export">📄 Export as GeoJSON</button>
         </div>
     </div>
-
-<div id="challengeModal" class="modal-overlay">
-    <div class="modal-content">
-        <button class="close-btn">&times;</button>
-        <h2>Community Challenges</h2>
-
-        <button id="addChallengeBtn" class="modal-button btn-primary" style="display: none;">
-            Admin: Add New Challenge
-        </button>
-
-        <div class="leaderboard-tabs">
-            <button id="currentChallengesTab" class="leaderboard-tab active">Current</button>
-            <button id="pastChallengesTab" class="leaderboard-tab">Past</button>
-        </div>
-
-        <div id="currentChallengesContent">
-            <ul id="currentChallengesList" class="challenge-list">
-                <li>Loading...</li>
-            </ul>
-        </div>
-
-        <div id="pastChallengesContent" style="display: none;">
-            <ul id="pastChallengesList" class="challenge-list">
-                <li>Loading...</li>
-            </ul>
-        </div>
-
-    </div>
-</div>
-
 
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
