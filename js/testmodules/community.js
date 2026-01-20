@@ -1,7 +1,33 @@
-import { db, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, deleteDoc, updateDoc, onSnapshot, limit } from './firebase.js';
+import { 
+    db, collection, getDocs, query, orderBy, addDoc, doc, getDoc, 
+    where, deleteDoc, updateDoc, onSnapshot, limit, 
+    storage, ref, uploadBytes, getDownloadURL // <--- NEW IMPORTS
+} from './firebase.js';
 import { state, allBadges, profanityList } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
 import { clearCurrentSession } from './data.js';
+
+// --- Helper Function: Calculate Distance (Haversine Formula) ---
+function calculateRouteDistance(coords) {
+    if (!coords || coords.length < 2) return 0;
+    
+    const R = 3958.8; // Radius of Earth in miles
+    let totalDistance = 0;
+
+    for (let i = 0; i < coords.length - 1; i++) {
+        const [lon1, lat1] = coords[i];
+        const [lon2, lat2] = coords[i + 1];
+
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        totalDistance += R * c;
+    }
+    return totalDistance;
+}
 
 // --- Community View ---
 export async function fetchAndDisplayCommunityRoutes() {
@@ -14,7 +40,6 @@ export async function fetchAndDisplayCommunityRoutes() {
     const allPinFeatures = [];
 
     // First, loop through and add all the non-clickable route lines to the map.
-    // While doing so, collect all the pin data into a single array.
     querySnapshot.forEach(doc => {
       const routeData = doc.data();
       const routeId = doc.id;
@@ -53,7 +78,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       }
     });
 
-    // Now that all route lines are drawn, add the single source for all clickable pins.
+    // Add the single source for all clickable pins.
     if (!state.map.getSource('community-pins')) {
       state.map.addSource('community-pins', {
         type: 'geojson',
@@ -64,7 +89,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     }
 
-    // Finally, add the clickable layers. Because these are added last, Mapbox will draw them on top.
+    // Add clickable layers (Clusters & Points)
     state.map.addLayer({
       id: 'clusters',
       type: 'circle',
@@ -103,8 +128,6 @@ export async function fetchAndDisplayCommunityRoutes() {
     });
 
     // --- INTERACTIVITY ---
-    
-    // When a user clicks on a cluster, zoom in to it.
     state.map.on('click', 'clusters', (e) => {
       const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       const clusterId = features[0].properties.cluster_id;
@@ -114,7 +137,6 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     });
 
-    // When a user clicks on an unclustered point, show a popup with the thumbnail.
     state.map.on('click', 'unclustered-point', (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
@@ -133,7 +155,6 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     });
 
-    // Change the cursor to a pointer when hovering over clickable items.
     const clickableLayers = ['clusters', 'unclustered-point'];
     clickableLayers.forEach(layer => {
       state.map.on('mouseenter', layer, () => { state.map.getCanvas().style.cursor = 'pointer'; });
@@ -145,6 +166,7 @@ export async function fetchAndDisplayCommunityRoutes() {
     alert("Could not load community data.");
   }
 }
+
 export function toggleCommunityView() {
     state.isCommunityViewOn = !state.isCommunityViewOn;
     const communityBtn = document.getElementById('communityBtn');
@@ -183,23 +205,55 @@ export async function publishRoute() {
         alert("You need a tracked route and at least one photo pin to publish.");
         return;
     }
+    
+    // Change button text to indicate loading
+    const publishBtn = document.getElementById('publishBtn');
+    const originalText = publishBtn.innerText;
+    publishBtn.innerText = "Publishing...";
+    publishBtn.disabled = true;
+
     document.getElementById('dataModal').style.display = 'none';
 
     try {
+        // 1. Prepare User Data
         const publicProfileRef = doc(db, "publicProfiles", state.currentUser.uid);
         const beforeSnap = await getDoc(publicProfileRef);
         const badgesBefore = beforeSnap.exists() ? Object.keys(beforeSnap.data().badges || {}) : [];
         const username = beforeSnap.exists() ? beforeSnap.data().username : "Anonymous";
 
+        // 2. Calculate Distance
+        const distanceVal = calculateRouteDistance(state.routeCoordinates);
+        const distanceStr = `${distanceVal.toFixed(2)} mi`;
+
+        // 3. Upload Cleanup Photo (if exists)
+        let cleanupPhotoURL = null;
+        if (state.cleanupPhoto) {
+            try {
+                // Create a reference: cleanup_photos/UID/timestamp.jpg
+                const photoRef = ref(storage, `cleanup_photos/${state.currentUser.uid}/${Date.now()}.jpg`);
+                const snapshot = await uploadBytes(photoRef, state.cleanupPhoto);
+                cleanupPhotoURL = await getDownloadURL(snapshot.ref);
+            } catch (uploadError) {
+                console.error("Error uploading cleanup photo:", uploadError);
+                // We continue publishing even if the photo fails
+            }
+        }
+
+        // 4. Save to Firestore
         await addDoc(collection(db, "publishedRoutes"), {
             userId: state.currentUser.uid,
-            username,
+            username: username,
             timestamp: new Date(),
             route: convertRouteForFirestore(state.routeCoordinates),
-            pins: convertPinsForFirestore(state.photoPins)
+            pins: convertPinsForFirestore(state.photoPins),
+            // NEW FIELDS:
+            distance: distanceVal,      // Number (good for sorting/math)
+            distanceMiles: distanceStr, // String (good for display)
+            cleanupPhotoURL: cleanupPhotoURL // URL or null
         });
 
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // 5. Check for Badges/Completion
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Short delay to let Cloud Functions (if any) run
 
         const afterSnap = await getDoc(publicProfileRef);
         const badgesAfter = afterSnap.exists() ? Object.keys(afterSnap.data().badges || {}) : [];
@@ -210,10 +264,16 @@ export async function publishRoute() {
         } else {
             alert("Success! Your route has been published.");
         }
+        
         clearCurrentSession();
+
     } catch (error) {
         console.error("Error publishing route:", error);
         alert("There was an error publishing your route.");
+    } finally {
+        // Reset button
+        publishBtn.innerText = originalText;
+        publishBtn.disabled = false;
     }
 }
 
@@ -483,8 +543,6 @@ export function setupPoiClickListeners() {
                 if (e.features.length > 0) {
                     const feature = e.features[0];
 
-                    // --- THIS IS THE CORRECTED HTML ---
-                    // The buttons now have BOTH the styling class and the identifying class.
                     const popupHTML = `
                         <div>
                             <strong>${feature.properties.name}</strong>
@@ -499,7 +557,6 @@ export function setupPoiClickListeners() {
                         .setHTML(popupHTML)
                         .addTo(state.map);
 
-                    // This code can now find the buttons correctly
                     popup.getElement().querySelector('.schedule-btn').addEventListener('click', () => {
                         openMeetupModal(feature.properties.name);
                         popup.remove();
@@ -593,7 +650,6 @@ function openViewMeetupsModal(poiName) {
             const li = document.createElement('li');
             const date = meetup.createdAt.toDate().toLocaleDateString();
 
-            // Check if the current user is the organizer
             const isOrganizer = state.currentUser && state.currentUser.uid === meetup.organizerId;
 
             li.innerHTML = `
@@ -605,7 +661,6 @@ function openViewMeetupsModal(poiName) {
                 ${isOrganizer ? `<button class="delete-meetup-btn" data-id="${meetupId}">Delete</button>` : ''}
             `;
 
-            // If the delete button exists, add a click listener to it
             const deleteBtn = li.querySelector('.delete-meetup-btn');
             if (deleteBtn) {
                 deleteBtn.addEventListener('click', (e) => {
@@ -624,12 +679,9 @@ async function deleteMeetup(meetupId) {
         try {
             await deleteDoc(doc(db, "meetups", meetupId));
             alert("Meetup deleted successfully.");
-            // The onSnapshot listener will automatically update the UI.
         } catch (error) {
             console.error("Error deleting meetup:", error);
             alert("Failed to delete meetup.");
         }
     }
 }
-
-
