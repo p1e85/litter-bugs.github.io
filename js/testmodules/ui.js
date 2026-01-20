@@ -41,6 +41,8 @@ const elements = {
     currentChallengesTab: document.getElementById('currentChallengesTab'),
     pastChallengesTab: document.getElementById('pastChallengesTab'),
     hubModal: document.getElementById('hubModal'),
+    feedModal: document.getElementById('feedModal'),
+    feedContainer: document.getElementById('feedContainer'),
 
     // Buttons
     agreeBtn: document.getElementById('agreeBtn'),
@@ -371,6 +373,12 @@ if (cleanupCameraInput) { // Safety check
     // This will eventually open the social feed
     alert('Activity Feed coming soon!');
     });
+
+    elements.hubFeedBtn.addEventListener('click', () => {
+    elements.hubModal.style.display = 'none';
+    elements.feedModal.style.display = 'flex';
+    loadActivityFeed(); // We'll create this next
+    });
     
 }  //end of event listerner! ***************
 
@@ -466,5 +474,63 @@ function validateSignUpForm() {
         elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid && isUsernameValid && isAgeChecked);
     } else {
         elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid);
+    }
+}
+
+import { db, collection, query, orderBy, limit, getDocs } from './firebase.js';
+
+async function loadActivityFeed() {
+    const container = elements.feedContainer;
+    container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
+
+    try {
+        // Query the publishedRoutes collection
+        const q = query(
+            collection(db, "publishedRoutes"), 
+            orderBy("timestamp", "desc"), 
+            limit(20)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        container.innerHTML = ''; // Clear loader
+
+        if (querySnapshot.empty) {
+            container.innerHTML = '<p>No cleanups shared yet. Be the first!</p>';
+            return;
+        }
+
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const date = data.timestamp?.toDate().toLocaleDateString() || "Recently";
+            
+            // Generate the Card HTML
+            const card = document.createElement('div');
+            card.className = 'feed-card';
+            
+            // Check if there is a cleanup photo, otherwise use a placeholder
+            const photoUrl = data.cleanupPhotoURL || 'https://via.placeholder.com/400?text=No+Photo+Provided';
+            
+            card.innerHTML = `
+                <div class="feed-header">
+                    <div class="feed-avatar">${data.username?.charAt(0).toUpperCase() || 'T'}</div>
+                    <div class="feed-user-info">
+                        <h4>${data.username || 'Anonymous Trooper'}</h4>
+                        <span>${date}</span>
+                    </div>
+                </div>
+                <img src="${photoUrl}" class="feed-photo" loading="lazy">
+                <div class="feed-body">
+                    <div class="feed-stats">
+                        <span>📍 <strong>${data.pins?.length || 0}</strong> Items</span>
+                        <span>📏 <strong>${data.distance || '0.0 mi'}</strong></span>
+                    </div>
+                    <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error("Error loading feed:", error);
+        container.innerHTML = '<p>Failed to load feed. Check your connection.</p>';
     }
 }
