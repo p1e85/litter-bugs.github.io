@@ -83,10 +83,7 @@ export function startTracking() {
     clearCurrentSession();
     const trackBtn = document.getElementById('trackBtn');
     state.trackingStartTime = new Date();
-    
-    // KEY FIX: We clear the photo here (when starting a NEW session), 
-    // instead of clearing it when sharing the OLD session.
-    state.cleanupPhoto = null; 
+    state.cleanupPhoto = null; // Correct place to clear the photo for a NEW session
 
     // Center map on user's starting location
     navigator.geolocation.getCurrentPosition(pos => {
@@ -219,24 +216,30 @@ function showCleanupSummary() {
 export async function shareCleanupResults() {
     const distance = document.getElementById('summaryDistance').textContent;
     const pins = document.getElementById('summaryPins').textContent;
-    const shareText = `I just cleaned up ${distance} and pinned ${pins} items with the Litter Bugs app! Join the movement and help clean our planet. #LitterBugs #Cleanup`;
+    const shareText = `I just cleaned up ${distance} and pinned ${pins} items with the Litter Troopers app! Join the movement and help clean our planet. #LitterTroopers #Cleanup`;
 
     const shareData = {
-        title: 'My Litter Bugs Cleanup!',
+        title: 'My Litter Troopers Cleanup!',
         text: shareText,
-        url: 'https://www.litter-bugs.com/' 
+        url: 'https://www.littertroopers.com/' 
     };
 
+    // --- FIX: Convert Blob to File ---
     if (state.cleanupPhoto) {
-        shareData.files = [state.cleanupPhoto];
+        // The Web Share API specifically requires a File object, not a Blob.
+        // We create a new File object using the data from the Blob.
+        const file = new File([state.cleanupPhoto], "cleanup_stats.jpg", {
+            type: state.cleanupPhoto.type,
+            lastModified: new Date().getTime()
+        });
+        shareData.files = [file];
     }
+    // --------------------------------
 
     if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         try {
             await navigator.share(shareData);
             console.log('Cleanup shared successfully!');
-            // KEY FIX: We DO NOT reset the photo here anymore.
-            // It stays in memory so the user can go publish it.
         } catch (err) {
             console.error('Share was canceled or failed:', err);
         }
