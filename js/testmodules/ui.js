@@ -361,7 +361,7 @@ if (cleanupCameraInput) { // Safety check
     elements.hubChallengesBtn.addEventListener('click', () => {
     elements.hubModal.style.display = 'none';
     elements.challengeModal.style.display = 'flex'; 
-        alert('Events feature coming soon!'); 
+        alert('Challenges feature coming soon!'); 
     });
 
     elements.hubEventsBtn.addEventListener('click', () => {
