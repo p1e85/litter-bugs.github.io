@@ -359,9 +359,10 @@ if (cleanupCameraInput) { // Safety check
 
     // Sub-buttons inside the Hub
     elements.hubChallengesBtn.addEventListener('click', () => {
-    elements.hubModal.style.display = 'none';
-    elements.challengeModal.style.display = 'flex'; 
         alert('Challenges feature coming soon!'); 
+    //elements.hubModal.style.display = 'none';
+    //elements.challengeModal.style.display = 'flex'; 
+        
     });
 
     elements.hubEventsBtn.addEventListener('click', () => {
