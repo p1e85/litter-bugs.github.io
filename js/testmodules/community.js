@@ -1,7 +1,7 @@
 import { 
     db, collection, getDocs, query, orderBy, addDoc, doc, getDoc, 
     where, deleteDoc, updateDoc, onSnapshot, limit, 
-    storage, ref, uploadBytes, getDownloadURL // <--- NEW IMPORTS
+    storage, ref, uploadBytes, getDownloadURL 
 } from './firebase.js';
 import { state, allBadges, profanityList } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
@@ -10,14 +10,11 @@ import { clearCurrentSession } from './data.js';
 // --- Helper Function: Calculate Distance (Haversine Formula) ---
 function calculateRouteDistance(coords) {
     if (!coords || coords.length < 2) return 0;
-    
     const R = 3958.8; // Radius of Earth in miles
     let totalDistance = 0;
-
     for (let i = 0; i < coords.length - 1; i++) {
         const [lon1, lat1] = coords[i];
         const [lon2, lat2] = coords[i + 1];
-
         const dLat = (lat2 - lat1) * (Math.PI / 180);
         const dLon = (lon2 - lon1) * (Math.PI / 180);
         const a = 
@@ -33,13 +30,10 @@ function calculateRouteDistance(coords) {
 export async function fetchAndDisplayCommunityRoutes() {
   try {
     clearCommunityRoutes();
-
     const q = query(collection(db, "publishedRoutes"), orderBy("timestamp", "desc"));
     const querySnapshot = await getDocs(q);
-
     const allPinFeatures = [];
 
-    // First, loop through and add all the non-clickable route lines to the map.
     querySnapshot.forEach(doc => {
       const routeData = doc.data();
       const routeId = doc.id;
@@ -78,7 +72,6 @@ export async function fetchAndDisplayCommunityRoutes() {
       }
     });
 
-    // Add the single source for all clickable pins.
     if (!state.map.getSource('community-pins')) {
       state.map.addSource('community-pins', {
         type: 'geojson',
@@ -89,7 +82,6 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     }
 
-    // Add clickable layers (Clusters & Points)
     state.map.addLayer({
       id: 'clusters',
       type: 'circle',
@@ -127,7 +119,6 @@ export async function fetchAndDisplayCommunityRoutes() {
       }
     });
 
-    // --- INTERACTIVITY ---
     state.map.on('click', 'clusters', (e) => {
       const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       const clusterId = features[0].properties.cluster_id;
@@ -183,13 +174,10 @@ export function toggleCommunityView() {
 
 function clearCommunityRoutes() {
   if (!state.map || !state.map.isStyleLoaded()) return;
-
   if (state.map.getLayer('clusters')) state.map.removeLayer('clusters');
   if (state.map.getLayer('cluster-count')) state.map.removeLayer('cluster-count');
   if (state.map.getLayer('unclustered-point')) state.map.removeLayer('unclustered-point');
-  
   if (state.map.getSource('community-pins')) state.map.removeSource('community-pins');
-
   state.communityLayers.forEach(layer => {
     if (state.map.getLayer(layer.id)) state.map.removeLayer(layer.id);
     if (state.map.getSource(layer.id)) state.map.removeSource(layer.id);
@@ -227,16 +215,23 @@ export async function publishRoute() {
 
         // 3. Upload Cleanup Photo (if exists)
         let cleanupPhotoURL = null;
+        
+        // --- DEBUG LOGS START ---
+        console.log("DEBUG: Checking state.cleanupPhoto:", state.cleanupPhoto);
+        // --- DEBUG LOGS END ---
+
         if (state.cleanupPhoto) {
             try {
-                // Create a reference: cleanup_photos/UID/timestamp.jpg
+                console.log("DEBUG: Attempting to upload photo...");
                 const photoRef = ref(storage, `cleanup_photos/${state.currentUser.uid}/${Date.now()}.jpg`);
                 const snapshot = await uploadBytes(photoRef, state.cleanupPhoto);
                 cleanupPhotoURL = await getDownloadURL(snapshot.ref);
+                console.log("DEBUG: Photo uploaded successfully. URL:", cleanupPhotoURL);
             } catch (uploadError) {
-                console.error("Error uploading cleanup photo:", uploadError);
-                // We continue publishing even if the photo fails
+                console.error("DEBUG ERROR: Photo upload failed:", uploadError);
             }
+        } else {
+            console.log("DEBUG: No cleanup photo found in state to upload.");
         }
 
         // 4. Save to Firestore
@@ -246,14 +241,13 @@ export async function publishRoute() {
             timestamp: new Date(),
             route: convertRouteForFirestore(state.routeCoordinates),
             pins: convertPinsForFirestore(state.photoPins),
-            // NEW FIELDS:
-            distance: distanceVal,      // Number (good for sorting/math)
-            distanceMiles: distanceStr, // String (good for display)
-            cleanupPhotoURL: cleanupPhotoURL // URL or null
+            distance: distanceVal,
+            distanceMiles: distanceStr,
+            cleanupPhotoURL: cleanupPhotoURL
         });
 
         // 5. Check for Badges/Completion
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Short delay to let Cloud Functions (if any) run
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         const afterSnap = await getDoc(publicProfileRef);
         const badgesAfter = afterSnap.exists() ? Object.keys(afterSnap.data().badges || {}) : [];
@@ -271,7 +265,6 @@ export async function publishRoute() {
         console.error("Error publishing route:", error);
         alert("There was an error publishing your route.");
     } finally {
-        // Reset button
         publishBtn.innerText = originalText;
         publishBtn.disabled = false;
     }
@@ -440,9 +433,7 @@ export async function fetchAndDisplayLeaderboard(metric) {
             const profileData = doc.data();
             const li = document.createElement('li');
             li.dataset.userid = doc.id;
-
           li.classList.toggle('current-user-entry', state.currentUser && doc.id === state.currentUser.uid);
-
             const score = metric === 'totalDistance' ?
                 `${((profileData.totalDistance || 0) * 0.000621371).toFixed(2)} mi` :
                 (profileData.totalPins || 0);
@@ -542,7 +533,6 @@ export function setupPoiClickListeners() {
             state.map.on('click', layerId, (e) => {
                 if (e.features.length > 0) {
                     const feature = e.features[0];
-
                     const popupHTML = `
                         <div>
                             <strong>${feature.properties.name}</strong>
@@ -649,9 +639,7 @@ function openViewMeetupsModal(poiName) {
             const meetupId = doc.id;
             const li = document.createElement('li');
             const date = meetup.createdAt.toDate().toLocaleDateString();
-
             const isOrganizer = state.currentUser && state.currentUser.uid === meetup.organizerId;
-
             li.innerHTML = `
                 <div>
                     <span>${meetup.title}</span><br>
@@ -660,7 +648,6 @@ function openViewMeetupsModal(poiName) {
                 </div>
                 ${isOrganizer ? `<button class="delete-meetup-btn" data-id="${meetupId}">Delete</button>` : ''}
             `;
-
             const deleteBtn = li.querySelector('.delete-meetup-btn');
             if (deleteBtn) {
                 deleteBtn.addEventListener('click', (e) => {
@@ -668,7 +655,6 @@ function openViewMeetupsModal(poiName) {
                     deleteMeetup(meetupId);
                 });
             }
-
             meetupsList.appendChild(li);
         });
     });
