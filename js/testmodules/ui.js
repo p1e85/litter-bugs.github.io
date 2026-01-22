@@ -3,6 +3,7 @@ import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
+import { fetchAndDisplayAllEvents } from './community.js'; 
 import {
     toggleCommunityView,
     publishRoute,
@@ -87,6 +88,8 @@ const elements = {
     viewTermsLink: document.getElementById('viewTermsLink'),
     leaderboardTabs: document.querySelectorAll('.leaderboard-tab'),
     leaderboardList: document.getElementById('leaderboardList'),
+    eventsModal: document.getElementById('eventsModal'),
+    meetupDateInput: document.getElementById('meetupDateInput'),
 };
 
 /**
@@ -303,7 +306,9 @@ function attachEventListeners() {
 
     elements.hubEventsBtn.addEventListener('click', () => {
         elements.hubModal.style.display = 'none';
-        alert('Events feature coming soon!'); 
+        elements.eventsModal.style.display = 'flex';
+        fetchAndDisplayAllEvents();
+        //alert('Events feature coming soon!'); 
     });
 
     elements.hubFeedBtn.addEventListener('click', () => {
@@ -311,7 +316,12 @@ function attachEventListeners() {
         elements.feedModal.style.display = 'flex';
         loadActivityFeed();
     });
-}
+
+    // Add listener for the new date input validation
+elements.meetupDateInput.addEventListener('change', validateMeetupForm);
+
+
+} // end of listeners
 
 function addAllModalCloseListeners() {
     const allModals = Object.values(elements).filter(el => el && el.classList && el.classList.contains('modal-overlay'));
