@@ -711,3 +711,73 @@ export async function toggleRouteLike(routeId) {
         return null;
     }
 }
+
+// --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
+
+export async function openAchievementsModal() {
+    const grid = document.getElementById('achievementsGrid');
+    grid.innerHTML = 'Loading...';
+
+    if (!state.currentUser) {
+        alert("Please log in to see your achievements.");
+        return;
+    }
+
+    try {
+        // 1. Get User's Earned Badges
+        const profileRef = doc(db, "publicProfiles", state.currentUser.uid);
+        const profileSnap = await getDoc(profileRef);
+        const userBadges = profileSnap.exists() ? (profileSnap.data().badges || {}) : {};
+
+        // 2. Clear Grid
+        grid.innerHTML = '';
+
+        // 3. Loop through ALL possible badges (from config.js)
+        // We assume allBadges is an object like { badgeID: {name, icon, description}... }
+        for (const [badgeId, badgeInfo] of Object.entries(allBadges)) {
+            const hasBadge = userBadges[badgeId] === true;
+            
+            const card = document.createElement('div');
+            card.className = `achievement-card ${hasBadge ? 'unlocked' : 'locked'}`;
+            card.title = hasBadge ? `EARNED: ${badgeInfo.description}` : `LOCKED: ${badgeInfo.description}`;
+            
+            card.innerHTML = `
+                <span class="achievement-icon">${badgeInfo.icon}</span>
+                <span class="achievement-name">${badgeInfo.name}</span>
+            `;
+            
+            // Optional: Click to see details
+            card.addEventListener('click', () => {
+                alert(`${badgeInfo.name}\n\n${badgeInfo.description}\n\nStatus: ${hasBadge ? "✅ Earned" : "🔒 Locked"}`);
+            });
+
+            grid.appendChild(card);
+        }
+
+    } catch (error) {
+        console.error("Error loading achievements:", error);
+        grid.innerHTML = '<p>Error loading data.</p>';
+    }
+}
+
+export function openCurrentChallenges() {
+    // Placeholder for next step
+    const list = document.getElementById('activeChallengesList');
+    list.innerHTML = `
+        <div style="padding:20px; text-align:center; color:#666;">
+            <p>No active challenges right now.</p>
+            <p><em>(Backend logic coming in next update!)</em></p>
+        </div>
+    `;
+}
+
+export function openPastChallenges(type) {
+    // type is 'completed' or 'uncompleted'
+    const content = document.getElementById('pastChallengesContent');
+    content.innerHTML = `
+        <div style="padding:20px; text-align:center; color:#666;">
+            <p>You have no ${type} challenges in history.</p>
+        </div>
+    `;
+}
+
