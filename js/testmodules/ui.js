@@ -13,12 +13,12 @@ import {
     fetchAndDisplayMyStats,
     showPublicProfile,
     handleMeetupSubmit,
-    validateMeetupForm
+    validateMeetupForm,
+    toggleRouteLike // <--- NEW IMPORT
 } from './community.js';
 
 // --- DOM Element Selection ---
 const elements = {
-    // Modals
     termsModal: document.getElementById('termsModal'),
     authModal: document.getElementById('authModal'),
     dataModal: document.getElementById('dataModal'),
@@ -43,8 +43,6 @@ const elements = {
     hubModal: document.getElementById('hubModal'),
     feedModal: document.getElementById('feedModal'),
     feedContainer: document.getElementById('feedContainer'),
-
-    // Buttons
     agreeBtn: document.getElementById('agreeBtn'),
     skipBtn: document.getElementById('skipBtn'),
     findMeBtn: document.getElementById('findMeBtn'),
@@ -77,8 +75,6 @@ const elements = {
     hubChallengesBtn: document.getElementById('hubChallengesBtn'),
     hubEventsBtn: document.getElementById('hubEventsBtn'),
     hubFeedBtn: document.getElementById('hubFeedBtn'),
-
-    // Inputs & Forms
     cameraInput: document.getElementById('cameraInput'),
     termsCheckbox: document.getElementById('termsCheckbox'),
     ageCheckbox: document.getElementById('ageCheckbox'),
@@ -88,31 +84,20 @@ const elements = {
     safetyCheckbox: document.getElementById('safetyCheckbox'),
     meetupTitleInput: document.getElementById('meetupTitleInput'),
     meetupDescriptionInput: document.getElementById('meetupDescriptionInput'),
-
-    // Links & Other
     viewTermsLink: document.getElementById('viewTermsLink'),
     leaderboardTabs: document.querySelectorAll('.leaderboard-tab'),
     leaderboardList: document.getElementById('leaderboardList'),
-
-    summaryModal: document.getElementById('summaryModal'),
-    summaryOkBtn: document.getElementById('summaryOkBtn'),
 };
-
-// --- Initializer ---
 
 /**
  * Main initializer for the entire UI.
  */
 export function initializeUI() {
     initializeMap();
-    
-    // Listen for user map interaction to reset the "Find Me" state
     state.map.on('dragstart', (e) => { if (e.originalEvent) resetFindMeState(); });
     state.map.on('zoomstart', (e) => { if (e.originalEvent) resetFindMeState(); });
-
     initializeAuthListener();
     attachEventListeners();
-
     if (sessionStorage.getItem('termsAccepted')) {
         elements.termsModal.style.display = 'none';
         document.getElementById('userStatus').style.display = 'flex';
@@ -121,13 +106,7 @@ export function initializeUI() {
     }
 }
 
-// --- Event Listeners *******************
-
-/**
- * Attaches all event listeners to the DOM elements.
- */
 function attachEventListeners() {
-    // --- Auth Flow & Terms ---
     elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
     elements.agreeBtn.addEventListener('click', () => {
         elements.termsModal.style.display = 'none';
@@ -144,11 +123,11 @@ function attachEventListeners() {
             updateAuthModalUI();
         }
     });
-elements.authActionBtn.addEventListener('click', async (event) => { 
-    event.preventDefault();
-   if (state.isSignUpMode) await handleSignUp();
-    else await handleLogIn();
-});
+    elements.authActionBtn.addEventListener('click', async (event) => { 
+        event.preventDefault();
+        if (state.isSignUpMode) await handleSignUp();
+        else await handleLogIn();
+    });
     elements.logoutBtn.addEventListener('click', handleLogOut);
     elements.emailInput.addEventListener('input', validateSignUpForm);
     elements.passwordInput.addEventListener('input', validateSignUpForm);
@@ -156,44 +135,34 @@ elements.authActionBtn.addEventListener('click', async (event) => {
     elements.ageCheckbox.addEventListener('change', validateSignUpForm);
     elements.deleteAccountBtn.addEventListener('click', handleAccountDeletion);
 
-    // --- Main Map & Menu Controls ---
+    if (elements.addChallengeBtn) {
+        elements.addChallengeBtn.addEventListener('click', () => {
+            alert('Add New Challenge modal will go here.'); 
+        });
+    }
+    if (elements.communityChallengeBtn) {
+        elements.communityChallengeBtn.addEventListener('click', () => {
+            elements.challengeModal.style.display = 'flex';
+            elements.menuModal.style.display = 'none';
+        });
+    }
+    if (elements.currentChallengesTab) {
+        elements.currentChallengesTab.addEventListener('click', () => {
+            document.getElementById('currentChallengesContent').style.display = 'block';
+            document.getElementById('pastChallengesContent').style.display = 'none';
+            elements.currentChallengesTab.classList.add('active');
+            elements.pastChallengesTab.classList.remove('active');
+        });
+    }
+    if (elements.pastChallengesTab) {
+        elements.pastChallengesTab.addEventListener('click', () => {
+            document.getElementById('currentChallengesContent').style.display = 'none';
+            document.getElementById('pastChallengesContent').style.display = 'block';
+            elements.currentChallengesTab.classList.remove('active');
+            elements.pastChallengesTab.classList.add('active');
+        });
+    }
 
-
-// --- Community Challenge Modal Listeners ---
-if (elements.addChallengeBtn) {
-    elements.addChallengeBtn.addEventListener('click', () => {
-        // This button will open a new modal for creating challenges.
-        alert('Add New Challenge modal will go here.'); document.getElementById('addChallengeModal').style.display = 'flex';
-    });
-}
-
-if (elements.communityChallengeBtn) {
-    elements.communityChallengeBtn.addEventListener('click', () => {
-        elements.challengeModal.style.display = 'flex';
-        elements.menuModal.style.display = 'none';
-        // We will call a function here to load the challenges
-        // fetchAndDisplayChallenges(); // <-- We'll create this next
-    });
-}
-
-if (elements.currentChallengesTab) {
-    elements.currentChallengesTab.addEventListener('click', () => {
-        document.getElementById('currentChallengesContent').style.display = 'block';
-        document.getElementById('pastChallengesContent').style.display = 'none';
-        elements.currentChallengesTab.classList.add('active');
-        elements.pastChallengesTab.classList.remove('active');
-    });
-}
-
-if (elements.pastChallengesTab) {
-    elements.pastChallengesTab.addEventListener('click', () => {
-        document.getElementById('currentChallengesContent').style.display = 'none';
-        document.getElementById('pastChallengesContent').style.display = 'block';
-        elements.currentChallengesTab.classList.remove('active');
-        elements.pastChallengesTab.classList.add('active');
-    });
-}
-// --- End of Challenge Modal Listeners ---
     elements.findMeBtn.addEventListener('click', findMe);
     elements.trackBtn.addEventListener('click', toggleTracking);
     elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
@@ -211,16 +180,11 @@ if (elements.pastChallengesTab) {
         elements.safetyModal.style.display = 'none';
         startTracking();
     });
-
-    // --- [FIXED] This is the corrected block ---
     elements.summaryOkBtn.addEventListener('click', () => { 
         elements.summaryModal.style.display = 'none';
         document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none';
         document.getElementById('cleanupPhotoPreview').src = '#';
     });
-    // --- End of fix ---
-
-    // --- Data Management (Save, Load, Export) ---
     elements.dataBtn.addEventListener('click', () => {
         const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
         elements.menuModal.style.display = 'none';
@@ -242,8 +206,6 @@ if (elements.pastChallengesTab) {
         }
     });
     elements.publishBtn.addEventListener('click', publishRoute);
-
-    // --- Profile & Publications ---
     elements.managePublicationsBtn.addEventListener('click', () => {
         if (!state.currentUser) { alert("You must be logged in to manage your publications."); return; }
         elements.dataModal.style.display = 'none';
@@ -252,13 +214,11 @@ if (elements.pastChallengesTab) {
     });
     elements.editProfileBtn.addEventListener('click', () => {
         if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
-        elements.menuModal.style.display = 'none'; // Close menu
+        elements.menuModal.style.display = 'none'; 
         loadProfileForEditing();
         elements.profileModal.style.display = 'flex';
     });
     elements.saveProfileBtn.addEventListener('click', saveProfile);
-
-    // --- Leaderboard & Stats ---
     elements.leaderboardBtn.addEventListener('click', () => {
         elements.leaderboardModal.style.display = 'flex';
         document.getElementById('leaderboardList').style.display = 'block';
@@ -289,105 +249,70 @@ if (elements.pastChallengesTab) {
         }
     });
 
-    // --- LOGIC FOR CLEANUP PHOTO ---
-    // (This includes the modifications from our previous conversation)
     const addCleanupPhotoBtn = document.getElementById('addCleanupPhotoBtn');
     const cleanupCameraInput = document.getElementById('cleanupCameraInput');
     const photoPreviewContainer = document.getElementById('cleanupPhotoPreviewContainer');
     const photoPreview = document.getElementById('cleanupPhotoPreview');
 
-    if (addCleanupPhotoBtn) { // Safety check
+    if (addCleanupPhotoBtn) { 
         addCleanupPhotoBtn.addEventListener('click', () => {
-            cleanupCameraInput.click(); // Trigger the hidden camera input
+            cleanupCameraInput.click(); 
         });
     }
 
-if (cleanupCameraInput) { // Safety check
-    // --- ADD 'async' HERE ---
-    cleanupCameraInput.addEventListener('change', async (event) => {
-        const file = event.target.files[0];
-        
-        if (file) {
-            // --- Add the compression logic ---
-            const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280 };
-            let compressedFile;
-            try {
-                // 'await' now works because the function is 'async'
-                compressedFile = await imageCompression(file, options);
-            } catch (error) {
-                console.error("Compression error:", error);
-                compressedFile = file; // Fallback to original
+    if (cleanupCameraInput) {
+        cleanupCameraInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280 };
+                let compressedFile;
+                try {
+                    compressedFile = await imageCompression(file, options);
+                } catch (error) {
+                    console.error("Compression error:", error);
+                    compressedFile = file; 
+                }
+                state.cleanupPhoto = compressedFile; 
+                const objectURL = URL.createObjectURL(compressedFile);
+                photoPreview.src = objectURL;
+                photoPreviewContainer.style.display = 'flex';
+                event.target.value = '';
+            } else {
+                state.cleanupPhoto = null;
+                photoPreview.src = '#';
+                photoPreviewContainer.style.display = 'none';
             }
-            
-            // --- Store the COMPRESSED file in our global state ---
-            state.cleanupPhoto = compressedFile; 
-            
-            // --- Show a thumbnail preview of the COMPRESSED file ---
-            const objectURL = URL.createObjectURL(compressedFile); // <-- FIX 2
-            photoPreview.src = objectURL;
-            
-            // Use 'flex' to allow for CSS centering
-            photoPreviewContainer.style.display = 'flex';
-            
-            // Clear the input value so the same file can be selected again
-            event.target.value = '';
-            
-        } else {
-            // User canceled the file picker
-            state.cleanupPhoto = null;
-            photoPreview.src = '#';
-            photoPreviewContainer.style.display = 'none';
-        }
         });
     }
 
-    // --- Meetups ---
     elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
     elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
     elements.meetupDescriptionInput.addEventListener('input', validateMeetupForm);
     elements.createMeetupBtn.addEventListener('click', handleMeetupSubmit);
-
-    // --- General/Global Listeners ---
     elements.shareBtn.addEventListener('click', shareCleanupResults);
     addAllModalCloseListeners();
 
-    // Open the Hub
     elements.hubBtn.addEventListener('click', () => {
-    elements.menuModal.style.display = 'none';
-    elements.hubModal.style.display = 'flex';
+        elements.menuModal.style.display = 'none';
+        elements.hubModal.style.display = 'flex';
     });
 
-    // Sub-buttons inside the Hub
     elements.hubChallengesBtn.addEventListener('click', () => {
         alert('Challenges feature coming soon!'); 
-    //elements.hubModal.style.display = 'none';
-    //elements.challengeModal.style.display = 'flex'; 
-        
     });
 
     elements.hubEventsBtn.addEventListener('click', () => {
-        alert('Events feature coming soon!');
-    //elements.hubModal.style.display = 'none';
-    
+        elements.hubModal.style.display = 'none';
+        alert('Events feature coming soon!'); 
     });
 
     elements.hubFeedBtn.addEventListener('click', () => {
-    // This will eventually open the social feed
-    //alert('Activity Feed coming soon!');
+        elements.hubModal.style.display = 'none';
+        elements.feedModal.style.display = 'flex';
+        loadActivityFeed();
     });
+}
 
-    elements.hubFeedBtn.addEventListener('click', () => {
-    elements.hubModal.style.display = 'none';
-    elements.feedModal.style.display = 'flex';
-    loadActivityFeed();
-    });
-    
-}  //end of event listerner! ***************
-
-
-/**
- * Adds listeners to close modals when clicking the close button or outside the modal content.
- */
 function addAllModalCloseListeners() {
     const allModals = Object.values(elements).filter(el => el && el.classList && el.classList.contains('modal-overlay'));
     allModals.forEach(modal => {
@@ -400,7 +325,6 @@ function addAllModalCloseListeners() {
             okBtn.addEventListener('click', () => modal.style.display = 'none');
         }
     });
-
     window.addEventListener('click', (event) => {
         if (event.target.classList.contains('modal-overlay')) {
             event.target.style.display = 'none';
@@ -408,11 +332,6 @@ function addAllModalCloseListeners() {
     });
 }
 
-// --- UI Update Functions ---
-
-/**
- * Updates the UI to reflect the user's login status.
- */
 export function updateLoggedInStatusUI(isLoggedIn, username = '') {
     const userStatus = document.getElementById('userStatus');
     const loggedInContent = document.getElementById('loggedInContent');
@@ -438,9 +357,6 @@ export function updateLoggedInStatusUI(isLoggedIn, username = '') {
     }
 }
 
-/**
- * Toggles the auth modal between Sign Up and Log In modes.
- */
 export function updateAuthModalUI() {
     const authForm = document.getElementById('authForm');
     const authTitle = document.getElementById('authTitle');
@@ -463,9 +379,6 @@ export function updateAuthModalUI() {
     validateSignUpForm();
 }
 
-/**
- * Validates the sign-up/login form and enables/disables the action button.
- */
 function validateSignUpForm() {
     const isEmailValid = elements.emailInput.value.includes('@');
     const isPasswordValid = elements.passwordInput.value.length >= 6;
@@ -486,43 +399,40 @@ async function loadActivityFeed() {
     container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
 
     try {
-        // We still fetch the last 20 (or more) posts
         const q = query(
             collection(db, "publishedRoutes"), 
             orderBy("timestamp", "desc"), 
-            limit(50) // Increased limit to ensure we find enough "new" posts
+            limit(20)
         );
         
         const querySnapshot = await getDocs(q);
-        container.innerHTML = ''; // Clear loader
+        container.innerHTML = '';
 
         if (querySnapshot.empty) {
             container.innerHTML = '<p>No cleanups shared yet. Be the first!</p>';
             return;
         }
 
-        let visibleCount = 0;
-
         querySnapshot.forEach((doc) => {
             const data = doc.data();
 
-            // --- FILTER: SKIP OLD ROUTES ---
-            // If this route doesn't have the 'distance' field we just added, 
-            // it is an old legacy route. Skip it!
+            // FILTER: Skip old legacy routes
             if (typeof data.distance === 'undefined' && typeof data.distanceMiles === 'undefined') {
                 return; 
             }
-            // -------------------------------
 
-            visibleCount++;
             const date = data.timestamp?.toDate().toLocaleDateString() || "Recently";
+            const photoUrl = data.cleanupPhotoURL || 'https://placehold.co/400x300?text=No+Photo';
+            
+            // --- LIKE LOGIC ---
+            const likeCount = data.likeCount || 0;
+            const likedBy = data.likedBy || [];
+            const isLiked = state.currentUser && likedBy.includes(state.currentUser.uid);
+            const likeBtnClass = isLiked ? 'like-btn active' : 'like-btn';
             
             // Generate the Card HTML
             const card = document.createElement('div');
             card.className = 'feed-card';
-            
-            // Use the uploaded photo, or a placeholder if they skipped the photo step
-            const photoUrl = data.cleanupPhotoURL || 'https://placehold.co/400x300?text=No+Photo';            
             card.innerHTML = `
                 <div class="feed-header">
                     <div class="feed-avatar">${data.username?.charAt(0).toUpperCase() || 'T'}</div>
@@ -538,16 +448,29 @@ async function loadActivityFeed() {
                         <span>📏 <strong>${data.distanceMiles || '0.00 mi'}</strong></span>
                     </div>
                     <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
+                    
+                    <div class="feed-actions">
+                         <button class="${likeBtnClass}" id="like-btn-${doc.id}">
+                            👍 <span class="like-count">${likeCount}</span>
+                         </button>
+                    </div>
+
                 </div>
             `;
             container.appendChild(card);
+
+            // --- ATTACH LISTENER ---
+            const likeBtn = card.querySelector(`#like-btn-${doc.id}`);
+            likeBtn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // prevent interfering with other clicks
+                const result = await toggleRouteLike(doc.id);
+                if (result) {
+                    likeBtn.querySelector('.like-count').innerText = result.likeCount;
+                    likeBtn.classList.toggle('active', result.isLiked);
+                }
+            });
+
         });
-
-        // If we filtered out EVERYTHING (only old routes exist), show a message
-        if (visibleCount === 0) {
-            container.innerHTML = '<p>No new cleanups yet. Go publish one!</p>';
-        }
-
     } catch (error) {
         console.error("Error loading feed:", error);
         container.innerHTML = '<p>Failed to load feed. Check your connection.</p>';
