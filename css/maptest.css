@@ -447,3 +447,161 @@ button.close-btn:hover { color: var(--color-text-dark); }
     color: white;
     border-color: #4A7C59;
 }
+
+/* Vertical Menu Buttons */
+.menu-buttons-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Achievement Grid */
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Individual Badge Styles */
+.achievement-card {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.achievement-icon {
+    font-size: 2rem;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.achievement-name {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #555;
+    line-height: 1.2;
+}
+
+/* LOCKED STATE (Grayed out) */
+.achievement-card.locked {
+    opacity: 0.5;
+    filter: grayscale(100%);
+}
+
+.achievement-card.locked .achievement-icon {
+    filter: blur(2px);
+}
+
+/* UNLOCKED STATE (Gold border + Glow) */
+.achievement-card.unlocked {
+    background: white;
+    border-color: #ffc107;
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3);
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* Modal Tabs */
+.modal-tabs {
+    display: flex;
+    border-bottom: 2px solid #eee;
+    margin-bottom: 15px;
+}
+
+.modal-tab {
+    flex: 1;
+    padding: 10px;
+    background: none;
+    border: none;
+    font-weight: bold;
+    color: #888;
+    cursor: pointer;
+}
+
+.modal-tab.active {
+    color: #4A7C59;
+    border-bottom: 3px solid #4A7C59;
+}
+
+/* --- Meetup Modal Styling --- */
+
+/* 1. Date Picker Styling */
+#meetupDateInput {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px; /* Soft rounded corners */
+    font-family: inherit;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+    transition: border-color 0.2s;
+    /* Remove default iOS appearance */
+    -webkit-appearance: none; 
+}
+
+#meetupDateInput:focus {
+    border-color: #4A7C59; /* Your Theme Green */
+    background-color: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
+}
+
+/* 2. Safety Disclaimer Box */
+.safety-disclaimer {
+    background-color: #fff8e1; /* Light pastel yellow */
+    border-left: 5px solid #ffc107; /* Solid amber warning bar */
+    color: #664d03; /* Darker amber text for readability */
+    padding: 15px;
+    border-radius: 6px;
+    margin: 15px 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    text-align: left;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.safety-disclaimer strong {
+    color: #b88b00;
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* 3. Checkbox & Label Alignment */
+#meetupModal input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    margin-right: 8px;
+    accent-color: #4A7C59; /* Makes the checkmark green */
+    cursor: pointer;
+}
+
+#meetupModal label[for="safetyCheckbox"] {
+    vertical-align: middle;
+    font-size: 0.95rem;
+    color: #333;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* 4. Textarea improvements */
+#meetupDescriptionInput {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    resize: vertical; /* Allow resizing only vertically */
+    min-height: 80px;
+    font-family: inherit;
+}
