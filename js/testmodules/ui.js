@@ -15,7 +15,10 @@ import {
     showPublicProfile,
     handleMeetupSubmit,
     validateMeetupForm,
-    toggleRouteLike // <--- NEW IMPORT
+    toggleRouteLike,
+    openAchievementsModal,
+    openCurrentChallenges,
+    openPastChallenges
 } from './community.js';
 
 // --- DOM Element Selection ---
