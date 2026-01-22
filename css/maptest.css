@@ -339,14 +339,25 @@ button.close-btn:hover { color: var(--color-text-dark); }
 
 /* Challenge Menu Modal (Fixed Layout) */
 #challengeMenuModal .modal-content {
-  display: flex; flex-direction: column; gap: 15px; padding: 25px;
-  max-width: 320px; min-height: 300px; /* Min-height for button pinning */
+  max-width: 500px; 
+  width: 100%;
+  padding: 20px;
+  display: flex; 
+  flex-direction: column; 
+  gap: 15px;
+  min-height: 350px;
 }
+
 #menuModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
 
 .menu-buttons-vertical { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px; }
-.menu-buttons-vertical .modal-button { width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; border: none; cursor: pointer; transition: transform 0.1s; }
-
+.menu-buttons-vertical .modal-button {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+    border-radius: 8px;
+}
 /* Specific Challenge Buttons */
 #btnViewAchievements { background-color: #ffc107; color: #000; font-weight: bold; }
 #btnCurrentChallenges { background-color: #4A7C59; color: white; }
