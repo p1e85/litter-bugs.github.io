@@ -123,6 +123,13 @@ export function initializeUI() {
     } else {
         elements.termsModal.style.display = 'flex';
     }
+
+    // --- NEW: Set Dynamic Date ---
+    const dateElement = document.getElementById('dynamicDateDay');
+        if (dateElement) {
+            dateElement.textContent = new Date().getDate(); // Sets the number to today (e.g., 22)
+        }
+    
 }
 
 function attachEventListeners() {
