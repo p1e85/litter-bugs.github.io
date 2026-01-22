@@ -341,7 +341,7 @@ button.close-btn:hover { color: var(--color-text-dark); }
 #challengeMenuModal .modal-content {
   max-width: 500px; 
   width: 100%;
-  padding: 20px;
+  padding: 15px;
   display: flex; 
   flex-direction: column; 
   gap: 15px;
