@@ -450,23 +450,32 @@ async function loadActivityFeed() {
                     <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
                     
                     <div class="feed-actions">
-                         <button class="${likeBtnClass}" id="like-btn-${doc.id}">
+                         <button class="${likeBtnClass}">
                             👍 <span class="like-count">${likeCount}</span>
                          </button>
                     </div>
-
                 </div>
             `;
             container.appendChild(card);
 
-            // --- ATTACH LISTENER ---
-            const likeBtn = card.querySelector(`#like-btn-${doc.id}`);
+            // --- ATTACH LISTENER (FIXED SELECTOR) ---
+            // We use .like-btn class directly instead of ID to avoid syntax errors
+            const likeBtn = card.querySelector('.like-btn');
+            
             likeBtn.addEventListener('click', async (e) => {
-                e.stopPropagation(); // prevent interfering with other clicks
+                e.stopPropagation();
+                
+                // Debugging log
+                console.log(`Toggling like for route: ${doc.id}`);
+                
                 const result = await toggleRouteLike(doc.id);
+                
                 if (result) {
-                    likeBtn.querySelector('.like-count').innerText = result.likeCount;
+                    console.log("New like count:", result.likeCount);
+                    likeBtn.querySelector('.like-count').textContent = result.likeCount;
                     likeBtn.classList.toggle('active', result.isLiked);
+                } else {
+                    console.error("Like failed. Check console for 'Missing Permissions' error.");
                 }
             });
 
