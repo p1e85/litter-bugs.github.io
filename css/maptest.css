@@ -361,14 +361,23 @@ button.close-btn:hover { color: var(--color-text-dark); }
     width: 100%;
     padding: 10px; /* Standard size */
     font-size: 14px; /* Standard size */
-    margin: 8px 0;
+    margin: 0;
     gap: 10px; /* Icon spacing */
     border-radius: 8px;
     border: 1px solid #ccc;
 }
 
 /* Specific Challenge Buttons */
-#btnViewAchievements { background-color: #ffc107; color: #000; font-weight: bold; border-color: #e0a800; }
+#btnViewAchievements { 
+    background-color: var(--color-support-gold); /* #D4AF37 */
+    color: var(--color-text-dark); 
+    font-weight: bold; 
+    border-color: var(--color-support-gold); 
+}
+#btnViewAchievements:hover {
+    background-color: #c5a02e; /* Slightly darker gold on hover */
+    border-color: #c5a02e;
+}
 #btnCurrentChallenges { background-color: #4A7C59; color: white; border-color: #4A7C59; }
 #btnPastChallenges { background-color: #6c757d; color: white; border-color: #6c757d; }
 
