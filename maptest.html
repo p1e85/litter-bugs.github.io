@@ -353,6 +353,59 @@
         </div>
     </div>
 </div>
+
+    <div id="challengeMenuModal" class="modal-overlay">
+    <div class="modal-content" style="text-align: center;">
+        <h3>🚀 Challenge Central</h3>
+        <p>Complete challenges to earn badges and climb the leaderboard!</p>
+        
+        <div class="menu-buttons-vertical">
+            <button id="btnViewAchievements" class="modal-button primary" style="background: #ffc107; color: #000;">🏆 View Achievement List</button>
+            <button id="btnCurrentChallenges" class="modal-button primary">⚡ Current Challenges</button>
+            <button id="btnPastChallenges" class="modal-button secondary">TBH Past Challenges</button>
+        </div>
+        
+        <button class="modal-button close-btn" style="margin-top: 20px;">Close</button>
+    </div>
+</div>
+
+<div id="achievementsModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>🏆 All Achievements</h3>
+        <p class="modal-subtitle">Badges you own are highlighted. Keep cleaning to unlock the rest!</p>
+        
+        <div id="achievementsGrid" class="achievements-grid">
+            </div>
+        
+        <button class="modal-button ok-btn">Back to Menu</button>
+    </div>
+</div>
+
+<div id="currentChallengesModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>⚡ Active Challenges</h3>
+        <div id="activeChallengesList" class="scrollable-list">
+            <p>Loading challenges...</p>
+        </div>
+        <button class="modal-button ok-btn">Back</button>
+    </div>
+</div>
+
+<div id="pastChallengesModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>📜 Challenge History</h3>
+        
+        <div class="modal-tabs">
+            <button class="modal-tab active" id="tabCompleted">Completed</button>
+            <button class="modal-tab" id="tabUncompleted">Uncompleted</button>
+        </div>
+
+        <div id="pastChallengesContent" class="scrollable-list">
+            </div>
+        
+        <button class="modal-button ok-btn">Back</button>
+    </div>
+</div>
     
     <script src="js/maintest.js" type="module"></script>
 
