@@ -414,3 +414,36 @@ button.close-btn:hover { color: var(--color-text-dark); }
     line-height: 1.4;
     color: #333;
 }
+
+/* Like Button Styling */
+.feed-actions {
+    margin-top: 10px;
+    border-top: 1px solid #eee;
+    padding-top: 5px;
+}
+
+.like-btn {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    color: #555;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.like-btn:hover {
+    background-color: #f9f9f9;
+    transform: scale(1.02);
+}
+
+/* When the user has liked the post */
+.like-btn.active {
+    background-color: #4A7C59; /* Your Theme Green */
+    color: white;
+    border-color: #4A7C59;
+}
