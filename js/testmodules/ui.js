@@ -313,7 +313,12 @@ function attachEventListeners() {
         elements.hubModal.style.display = 'flex';
     });
 
-    
+    if (elements.hubChallengesBtn) {
+        elements.hubChallengesBtn.addEventListener('click', () => {
+            elements.hubModal.style.display = 'none'; // Close the Hub
+            elements.challengeMenuModal.style.display = 'flex'; // Open the new menu
+        });
+    }
 
     elements.hubEventsBtn.addEventListener('click', () => {
         elements.hubModal.style.display = 'none';
