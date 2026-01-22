@@ -90,6 +90,19 @@ const elements = {
     leaderboardList: document.getElementById('leaderboardList'),
     eventsModal: document.getElementById('eventsModal'),
     meetupDateInput: document.getElementById('meetupDateInput'),
+    challengeMenuModal: document.getElementById('challengeMenuModal'),
+    achievementsModal: document.getElementById('achievementsModal'),
+    currentChallengesModal: document.getElementById('currentChallengesModal'),
+    pastChallengesModal: document.getElementById('pastChallengesModal'),
+    
+    // New Buttons
+    btnViewAchievements: document.getElementById('btnViewAchievements'),
+    btnCurrentChallenges: document.getElementById('btnCurrentChallenges'),
+    btnPastChallenges: document.getElementById('btnPastChallenges'),
+    
+    // Tabs
+    tabCompleted: document.getElementById('tabCompleted'),
+    tabUncompleted: document.getElementById('tabUncompleted'),
 };
 
 /**
@@ -319,6 +332,55 @@ function attachEventListeners() {
 
     // Add listener for the new date input validation
 elements.meetupDateInput.addEventListener('change', validateMeetupForm);
+
+    // 1. Open Main Menu (Replace the old 'communityChallengeBtn' listener)
+    if (elements.communityChallengeBtn) {
+        elements.communityChallengeBtn.addEventListener('click', () => {
+            elements.menuModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+
+    // 2. Menu Buttons
+    elements.btnViewAchievements.addEventListener('click', () => {
+        elements.challengeMenuModal.style.display = 'none';
+        elements.achievementsModal.style.display = 'flex';
+        openAchievementsModal();
+    });
+
+    elements.btnCurrentChallenges.addEventListener('click', () => {
+        elements.challengeMenuModal.style.display = 'none';
+        elements.currentChallengesModal.style.display = 'flex';
+        openCurrentChallenges();
+    });
+
+    elements.btnPastChallenges.addEventListener('click', () => {
+        elements.challengeMenuModal.style.display = 'none';
+        elements.pastChallengesModal.style.display = 'flex';
+        // Default to completed tab
+        elements.tabCompleted.classList.add('active');
+        elements.tabUncompleted.classList.remove('active');
+        openPastChallenges('completed');
+    });
+
+    // 3. Past Challenges Tabs
+    elements.tabCompleted.addEventListener('click', () => {
+        elements.tabCompleted.classList.add('active');
+        elements.tabUncompleted.classList.remove('active');
+        openPastChallenges('completed');
+    });
+
+    elements.tabUncompleted.addEventListener('click', () => {
+        elements.tabUncompleted.classList.add('active');
+        elements.tabCompleted.classList.remove('active');
+        openPastChallenges('uncompleted');
+    });
+
+    // 4. Back Buttons (Re-open the Main Menu instead of closing everything)
+    // Find the 'ok-btn' inside these specific modals and override them if needed, 
+    // or just let them close. A better UX is to have a "Back" button go to menu.
+    
+    // (This logic assumes standard close behavior, but you can customize to go back to menu)
 
 
 } // end of listeners
