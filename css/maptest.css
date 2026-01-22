@@ -1,4 +1,6 @@
-/* --- 1. Color Palette & Global Styles --- */
+/* =========================================
+   1. COLOR PALETTE & GLOBAL STYLES
+   ========================================= */
 :root {
   --color-primary-green: #4A7C59;
   --color-secondary-blue: #4682B4;
@@ -23,12 +25,12 @@ hr {
   margin: 15px 0;
 }
 
-/* --- 2. Main Layout & Map --- */
+/* =========================================
+   2. MAIN LAYOUT & MAP
+   ========================================= */
 #map {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 100%;
+  top: 0; bottom: 0; width: 100%;
 }
 
 .top-ui-container {
@@ -50,9 +52,11 @@ hr {
   display: flex; justify-content: center; z-index: 1; pointer-events: none;
 }
 
-/* --- 3. Buttons --- */
+/* =========================================
+   3. BUTTONS (GLOBAL)
+   ========================================= */
 
-/* Base style for DESIGNED, full-width modal buttons */
+/* Base Modal Button */
 .modal-button {
   display: block; box-sizing: border-box; width: 100%; text-decoration: none;
   text-align: center; padding: 12px; margin: 8px 0; font-size: 14px;
@@ -64,23 +68,26 @@ hr {
   background-color: #e9e9e9;
 }
 
-/* Color classes for .modal-button */
+/* Button Colors */
 .btn-primary { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
 .btn-primary:hover { background-color: #3e684b; border-color: #3e684b; }
+
 .btn-secondary { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
 .btn-secondary:hover { background-color: #3a6a92; border-color: #3a6a92; }
+
 .btn-support { background-color: var(--color-support-gold); color: var(--color-text-dark); border-color: var(--color-support-gold); }
 .btn-support:hover { background-color: #c5a02e; border-color: #c5a02e; }
+
 .btn-danger { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
 .btn-danger:hover { background-color: #b02a37; border-color: #b02a37; }
 
-/* Disabled state for designed buttons */
+/* Disabled State */
 .modal-button:disabled, #authActionBtn:disabled {
   background-color: #e9ecef !important; color: #adb5bd !important;
   border-color: #dee2e6 !important; cursor: not-allowed; opacity: 0.8;
 }
 
-/* See-Thru Style for Top Bar Buttons */
+/* Top Bar / See-Thru Buttons */
 .top-bar-button, .community-button {
   padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;
   font-weight: 500; background-color: rgba(255, 255, 255, 0.7);
@@ -91,7 +98,7 @@ hr {
   background-color: rgba(255, 255, 255, 0.9);
 }
 
-/* Floating map buttons */
+/* Floating Map Buttons (Find Me / Camera) */
 #findMeBtn, #pictureBtn {
   width: 50px; height: 50px; border-radius: 50%; background-color: var(--color-background-modal);
   box-shadow: 0 2px 6px rgba(0,0,0,0.2); font-size: 24px; padding: 0;
@@ -99,11 +106,14 @@ hr {
 }
 #findMeBtn { position: absolute; bottom: 30px; left: 20px; z-index: 1; }
 #pictureBtn { position: absolute; bottom: 30px; right: 20px; z-index: 1; }
+
 #findMeBtn.active { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
 .modal-button.tracking { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
 #pictureBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* --- 4. Modals & Simple Buttons --- */
+/* =========================================
+   4. MODALS (BASE STYLES)
+   ========================================= */
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.6); z-index: 10; display: none;
@@ -122,23 +132,35 @@ hr {
   font-size: 14px; color: #666; text-align: center;
   margin-top: -10px; margin-bottom: 15px;
 }
+.modal-subtitle { 
+  font-size: 15px; color: #666; text-align: center; margin-top: -15px; margin-bottom: 20px; 
+}
+
+/* Close Link/Button (X) */
 button.close-btn {
   position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; color: #aaa;
   cursor: pointer; background: none; border: none; padding: 0; line-height: 1;
 }
 button.close-btn:hover { color: var(--color-text-dark); }
+
+/* Text Links (Login/Skip) */
 #logoutBtn, #loginSignupBtn, .skip-button {
   background: none; border: none; color: var(--color-secondary-blue); text-decoration: underline;
   cursor: pointer; padding: 0; font-size: 14px; font-family: inherit;
 }
 .skip-button { color: #888; }
+#agreeBtn { width: 100%; box-sizing: border-box; margin-top: 20px; }
+#agreeBtn:disabled { background-color: #f8d7da !important; border-color: #f5c6cb !important; color: #721c24 !important; opacity: 0.7; }
 
-/* --- 5. Specific Components --- */
+/* =========================================
+   5. MAP COMPONENTS & FORMS
+   ========================================= */
 #geocoder-container { pointer-events: auto; flex-grow: 1; max-width: 75%; }
 #geocoder-container .mapboxgl-ctrl-geocoder {
   width: 100%; max-width: none; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   border-radius: 8px; background-color: var(--color-background-modal);
 }
+
 .user-status-display {
   display: flex; align-items: center; background: rgba(255, 255, 255, 0.85);
   border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: auto;
@@ -146,30 +168,44 @@ button.close-btn:hover { color: var(--color-text-dark); }
 }
 .user-status-display span { margin-right: 10px; }
 #guestContent, #loggedInContent { display: flex; align-items: center; }
+
+/* Popups */
 .mapboxgl-popup-content { padding: 15px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px !important; }
 .pin-popup-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .pin-popup-form input, .pin-popup-form select, .pin-popup-form button { width: 100%; box-sizing: border-box; }
-.session-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
-.session-list li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-.session-list li:hover { background-color: #f9f9f9; }
-.session-list li:last-child { border-bottom: none; }
-.session-date { font-size: 0.8em; color: #777; }
+.pin-popup-form label { font-weight: 500; font-size: 0.9em; color: #555; margin-top: 8px; display: block; }
+
+/* Photo Marker */
+.photo-marker {
+  width: 40px; height: 40px; border-radius: 50%;
+  background-size: cover; background-position: center;
+  border: 2px solid #4A7C59; box-shadow: 0 1px 3px rgba(0,0,0,0.3); cursor: pointer;
+}
+
+/* Auth Forms */
 .auth-form { display: flex; flex-direction: column; gap: 10px; }
 .auth-form.login-mode #usernameInput, .auth-form.login-mode #ageGateContainer { display: none; }
 .auth-form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
 .age-gate-container { display: flex; align-items: center; gap: 5px; }
 
-/* --- 6. Specific Modal Styles --- */
+/* =========================================
+   6. PROFILE, LEADERBOARD, STATS
+   ========================================= */
+/* Leaderboard Tabs */
 .leaderboard-tabs { display: flex; justify-content: stretch; margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); }
 .leaderboard-tab { width: 100%; margin: 0; padding: 10px 12px; border: none; border-radius: 0; border-right: 1px solid var(--color-border); background-color: #f0f0f0; }
 .leaderboard-tab:last-child { border-right: none; }
 .leaderboard-tab.active { background-color: var(--color-primary-green); color: var(--color-text-light); font-weight: bold; }
+
+/* Leaderboard List */
 .leaderboard-list li { display: flex; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; font-size: 16px; }
 .leaderboard-rank { font-weight: bold; font-size: 1.1em; color: #888; width: 30px; text-align: center; }
 .leaderboard-name { flex-grow: 1; padding: 0 15px; font-weight: 500; }
 .leaderboard-name a { text-decoration: none; color: var(--color-primary-green); }
 .leaderboard-score { font-weight: bold; color: var(--color-text-dark); }
 .leaderboard-list li.current-user-entry { background-color: #e8f5e9; border-radius: 6px; }
+
+/* My Stats */
 .my-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; margin-bottom: 20px; }
 .stat-card { background-color: #f9f9f9; border-radius: 8px; padding: 15px; text-align: center; border: 1px solid #eee; }
 .my-stats-value { font-size: 24px; font-weight: bold; color: var(--color-primary-green); }
@@ -177,619 +213,179 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .my-stats-container h4 { margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
 .badge-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
 .badge-item { font-size: 28px; }
+
+/* Summary Modal */
 .summary-modal h2::before { content: '🎉'; display: block; font-size: 48px; margin-bottom: 10px; }
 .summary-stats { display: flex; justify-content: space-around; gap: 15px; margin-bottom: 30px; }
 .summary-stats > div { background-color: #f9f9f9; border-radius: 8px; padding: 15px; flex-grow: 1; border: 1px solid #eee; }
 .stat-value { display: block; font-size: 26px; font-weight: bold; color: var(--color-primary-green); }
 .stat-label { display: block; font-size: 14px; color: #666; margin-top: 5px; }
-#menuModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
+#cleanupPhotoPreviewContainer { display: flex; justify-content: center; align-items: center; min-height: 150px; margin-top: 10px; border: 1px dashed #ccc; }
+#cleanupPhotoPreview { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+/* Profile Edit */
 .profile-form { display: flex; flex-direction: column; gap: 8px; }
 .profile-form label { font-weight: 500; margin-top: 10px; color: #555; text-align: left; }
 .profile-form input[type="text"], .profile-form input[type="url"], .profile-form textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-border); font-size: 14px; font-family: inherit; box-sizing: border-box; }
 .profile-form textarea { min-height: 80px; resize: vertical; }
 .profile-form .modal-button { margin-top: 15px; }
+
+/* =========================================
+   7. DATA MANAGEMENT MODAL
+   ========================================= */
+#dataModal .modal-content h2 { border-bottom: 1px solid #eee; padding-bottom: 15px; }
+#dataModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
+#dataModal #saveBtn, #dataModal #loadBtn, #dataModal #exportBtn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
+#dataModal #saveBtn:hover, #dataModal #loadBtn:hover, #dataModal #exportBtn:hover { background-color: #3e684b; }
+#dataModal #centerOnRouteBtn, #dataModal #managePublicationsBtn { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
+#dataModal #centerOnRouteBtn:hover, #dataModal #managePublicationsBtn:hover { background-color: #3a6a92; }
+#dataModal .modal-button:disabled { background-color: #f8f9fa !important; color: #adb5bd !important; border-color: #dee2e6 !important; cursor: not-allowed; opacity: 0.7; }
+.session-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+.session-list li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.session-list li:hover { background-color: #f9f9f9; }
+.session-list li:last-child { border-bottom: none; }
+.session-date { font-size: 0.8em; color: #777; }
+
+/* =========================================
+   8. COMMUNITY HUB & FEED
+   ========================================= */
+.hub-modal { max-width: 500px; }
+.hub-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+.hub-card {
+  background: #fff; border: 2px solid #eee; border-radius: 12px; padding: 20px;
+  text-align: center; cursor: pointer; transition: transform 0.2s, border-color 0.2s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;
+}
+.hub-card:hover { transform: translateY(-3px); border-color: var(--color-primary-green); }
+.hub-card h3 { margin: 10px 0 5px 0; color: #333; }
+.hub-card p { margin: 0; font-size: 0.9rem; color: #666; line-height: 1.3; }
+.hub-icon { font-size: 2rem; margin-bottom: 10px; }
+
+@media (min-width: 400px) {
+  .hub-grid { grid-template-columns: 1fr 1fr; }
+  .hub-card:last-child { grid-column: span 2; }
+}
+
+/* Activity Feed */
+.feed-modal { max-width: 600px; height: 80vh; display: flex; flex-direction: column; }
+.feed-container { flex-grow: 1; overflow-y: auto; padding: 10px 5px; margin-top: 10px; }
+.feed-card { background: #fff; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 20px; overflow: hidden; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.feed-header { padding: 12px; display: flex; align-items: center; gap: 10px; }
+.feed-avatar { width: 35px; height: 35px; background: var(--color-primary-green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.feed-user-info h4 { margin: 0; font-size: 1rem; }
+.feed-user-info span { font-size: 0.75rem; color: #888; }
+.feed-photo { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #eee; }
+.feed-body { padding: 12px; }
+.feed-stats { display: flex; gap: 15px; font-size: 0.85rem; color: #555; margin-bottom: 8px; }
+.feed-stats strong { color: var(--color-primary-green); }
+.feed-caption { font-size: 0.9rem; line-height: 1.4; color: #333; }
+
+/* Like Button */
+.feed-actions { margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
+.like-btn {
+  background: white; border: 1px solid #ccc; border-radius: 20px; padding: 5px 12px;
+  font-size: 14px; cursor: pointer; color: #555; transition: all 0.2s ease;
+  display: flex; align-items: center; gap: 5px;
+}
+.like-btn:hover { background-color: #f9f9f9; transform: scale(1.02); }
+.like-btn.active { background-color: #4A7C59; color: white; border-color: #4A7C59; }
+
+/* =========================================
+   9. MEETUP / EVENTS MODAL
+   ========================================= */
+#meetupModal .modal-content, #viewMeetupsModal .modal-content { max-width: 550px; }
+
+/* POI Popup Buttons */
 .poi-popup-buttons { display: flex; gap: 8px; margin-top: 15px; }
 .poi-popup-buttons .modal-button { width: 100%; margin: 0; }
 .poi-popup-buttons .schedule-btn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
 .poi-popup-buttons .schedule-btn:hover { background-color: #3e684b; }
 .poi-popup-buttons .view-btn { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
 .poi-popup-buttons .view-btn:hover { background-color: #3a6a92; }
-#agreeBtn { width: 100%; box-sizing: border-box; margin-top: 20px; }
-#agreeBtn:disabled { background-color: #f8d7da !important; border-color: #f5c6cb !important; color: #721c24 !important; opacity: 0.7; }
-#meetupModal .modal-content, #viewMeetupsModal .modal-content { max-width: 550px; }
-.modal-subtitle { font-size: 15px; color: #666; text-align: center; margin-top: -15px; margin-bottom: 20px; }
-#createMeetupBtn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
-#createMeetupBtn:hover { background-color: #3e684b; }
+
+/* Form Elements */
+#meetupDateInput {
+  width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;
+  font-family: inherit; font-size: 1rem; margin-bottom: 15px; background-color: #f8f9fa;
+  transition: border-color 0.2s; -webkit-appearance: none; 
+}
+#meetupDateInput:focus { border-color: #4A7C59; background-color: #fff; outline: none; box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1); }
+#meetupDescriptionInput { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; min-height: 80px; font-family: inherit; }
+
+/* Safety Box */
+.safety-disclaimer {
+  background-color: #fff8e1; border-left: 5px solid #ffc107; color: #664d03;
+  padding: 15px; border-radius: 6px; margin: 15px 0; font-size: 0.85rem;
+  line-height: 1.5; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.safety-disclaimer strong { color: #b88b00; display: block; margin-bottom: 5px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Checkboxes */
+#meetupModal input[type="checkbox"] { width: 20px; height: 20px; vertical-align: middle; margin-right: 8px; accent-color: #4A7C59; cursor: pointer; }
+#meetupModal label[for="safetyCheckbox"] { vertical-align: middle; font-size: 0.95rem; color: #333; cursor: pointer; user-select: none; }
+
+/* Meetup Modal Buttons (Full Width Stacked) */
+#meetupModal .modal-content { max-height: 90vh; overflow-y: auto; }
+#meetupModal .modal-button { width: 100%; padding: 12px; margin-bottom: 8px; border-radius: 8px; font-size: 1rem; }
+#createMeetupBtn { background-color: #4A7C59; color: white; font-weight: bold; margin-top: 15px; }
+#createMeetupBtn:disabled { background-color: #ccc; cursor: not-allowed; }
+#meetupModal .modal-button.close-btn { background-color: #f1f3f5; color: #495057; border: 1px solid #dee2e6; font-weight: 600; }
+#meetupModal .modal-button.close-btn:hover { background-color: #e9ecef; color: #212529; transform: none; }
 .delete-meetup-btn { background-color: var(--color-accent-danger); color: var(--color-text-light); border: none; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
 
-/* --- 7. DEFINITIVE FIX FOR DATA MANAGEMENT MODAL --- */
-#dataModal .modal-content h2 { border-bottom: 1px solid #eee; padding-bottom: 15px; }
-#dataModal .modal-button {
-  display: flex; align-items: center; justify-content: flex-start;
-  text-align: left; gap: 15px;
-}
-#dataModal #saveBtn, #dataModal #loadBtn, #dataModal #exportBtn {
-  background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green);
-}
-#dataModal #saveBtn:hover, #dataModal #loadBtn:hover, #dataModal #exportBtn:hover {
-  background-color: #3e684b;
-}
-#dataModal #centerOnRouteBtn, #dataModal #managePublicationsBtn {
-  background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue);
-}
-#dataModal #centerOnRouteBtn:hover, #dataModal #managePublicationsBtn:hover {
-  background-color: #3a6a92;
-}
-#dataModal .modal-button:disabled {
-  background-color: #f8f9fa !important; color: #adb5bd !important;
-  border-color: #dee2e6 !important; cursor: not-allowed; opacity: 0.7;
-}
+/* =========================================
+   10. CHALLENGES & ACHIEVEMENTS
+   ========================================= */
 
-/* --- Style for User Photo Markers --- */
-.photo-marker {
-  width: 40px;            /* Size of the marker */
-  height: 40px;
-  border-radius: 50%;     /* Make it circular */
-  background-size: cover; /* Ensure the image fills the circle */
-  background-position: center;
-  border: 2px solid #4A7C59;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3); /* Subtle shadow */
-  cursor: pointer;
-}
-
-.pin-popup-form label {
-  font-weight: 500;
-  font-size: 0.9em;
-  color: #555;
-  margin-top: 8px;
-  display: block; /* Ensure labels are above inputs */
-}
-
-#cleanupPhotoPreviewContainer {
-    display: flex; /* Makes it a flex container */
-    justify-content: center; /* Centers horizontally */
-    align-items: center; /* Centers vertically */
-    /* Add any desired height/width for the container, e.g., */
-    min-height: 150px; /* Example: ensure some height for centering */
-    margin-top: 10px; /* Example: add some space above */
-    border: 1px dashed #ccc; /* Example: visual aid for the container */
-}
-
-#cleanupPhotoPreview {
-    /* Basic image styling, ensure it scales properly */
-    max-width: 100%;
-    max-height: 100%; /* Or a specific height for the image */
-    object-fit: contain; /* Ensures the image fits without cropping, maintaining aspect ratio */
-}
-
-/* --- Community Hub Dashboard --- */
-.hub-modal {
-    max-width: 500px;
-}
-
-.hub-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
-    margin-top: 20px;
-}
-
-.hub-card {
-    background: #fff;
-    border: 2px solid #eee;
-    border-radius: 12px;
-    padding: 20px;
-    text-align: left;
-    cursor: pointer;
-    transition: transform 0.2s, border-color 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: center; 
-    justify-content: center; 
-    text-align: center;
-    position: relative;
-}
-
-.hub-card:hover {
-    transform: translateY(-3px);
-    border-color: var(--color-primary-green, #2ecc71);
-}
-.hub-card h3 {
-    margin: 10px 0 5px 0;
-    color: #333;
-}
-
-.hub-card p {
-    margin: 0;
-    font-size: 0.9rem;
-    color: #666;
-    line-height: 1.3; 
-}
-
-.hub-icon {
-    font-size: 2rem;
-    margin-bottom: 10px;
-}
-
-.hub-card h3 {
-    margin: 0 0 5px 0;
-    color: #333;
-}
-
-.hub-card p {
-    margin: 0;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-/* Tablet/Desktop layout */
-@media (min-width: 400px) {
-    .hub-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-    .hub-card:last-child {
-        grid-column: span 2; /* Make the Activity Feed wide */
-    }
-}
-
-/* --- Activity Feed Styles --- */
-.feed-modal {
-    max-width: 600px;
-    height: 80vh;
-    display: flex;
-    flex-direction: column;
-}
-
-.feed-container {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 10px 5px;
-    margin-top: 10px;
-}
-
-.feed-card {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    overflow: hidden;
-    text-align: left;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.feed-header {
-    padding: 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.feed-avatar {
-    width: 35px;
-    height: 35px;
-    background: var(--color-primary-green, #2ecc71);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-}
-
-.feed-user-info h4 {
-    margin: 0;
-    font-size: 1rem;
-}
-
-.feed-user-info span {
-    font-size: 0.75rem;
-    color: #888;
-}
-
-.feed-photo {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    background: #eee;
-}
-
-.feed-body {
-    padding: 12px;
-}
-
-.feed-stats {
-    display: flex;
-    gap: 15px;
-    font-size: 0.85rem;
-    color: #555;
-    margin-bottom: 8px;
-}
-
-.feed-stats strong {
-    color: var(--color-primary-green, #2ecc71);
-}
-
-.feed-caption {
-    font-size: 0.9rem;
-    line-height: 1.4;
-    color: #333;
-}
-
-/* Like Button Styling */
-.feed-actions {
-    margin-top: 10px;
-    border-top: 1px solid #eee;
-    padding-top: 5px;
-}
-
-.like-btn {
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 20px;
-    padding: 5px 12px;
-    font-size: 14px;
-    cursor: pointer;
-    color: #555;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.like-btn:hover {
-    background-color: #f9f9f9;
-    transform: scale(1.02);
-}
-
-/* When the user has liked the post */
-.like-btn.active {
-    background-color: #4A7C59; /* Your Theme Green */
-    color: white;
-    border-color: #4A7C59;
-}
-
-/* Vertical Menu Buttons */
-.menu-buttons-vertical {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-top: 20px;
-}
-
-/* Achievement Grid */
-.achievements-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-    gap: 15px;
-    margin-top: 20px;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-/* Individual Badge Styles */
-.achievement-card {
-    background: #f5f5f5;
-    border-radius: 8px;
-    padding: 10px;
-    text-align: center;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-}
-
-.achievement-icon {
-    font-size: 2rem;
-    margin-bottom: 5px;
-    display: block;
-}
-
-.achievement-name {
-    font-size: 0.75rem;
-    font-weight: bold;
-    color: #555;
-    line-height: 1.2;
-}
-
-/* LOCKED STATE (Grayed out) */
-.achievement-card.locked {
-    opacity: 0.5;
-    filter: grayscale(100%);
-}
-
-.achievement-card.locked .achievement-icon {
-    filter: blur(2px);
-}
-
-/* UNLOCKED STATE (Gold border + Glow) */
-.achievement-card.unlocked {
-    background: white;
-    border-color: #ffc107;
-    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3);
-    opacity: 1;
-    transform: scale(1.05);
-}
-
-/* Modal Tabs */
-.modal-tabs {
-    display: flex;
-    border-bottom: 2px solid #eee;
-    margin-bottom: 15px;
-}
-
-.modal-tab {
-    flex: 1;
-    padding: 10px;
-    background: none;
-    border: none;
-    font-weight: bold;
-    color: #888;
-    cursor: pointer;
-}
-
-.modal-tab.active {
-    color: #4A7C59;
-    border-bottom: 3px solid #4A7C59;
-}
-
-/* --- Meetup Modal Styling --- */
-
-/* 1. Date Picker Styling */
-#meetupDateInput {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px; /* Soft rounded corners */
-    font-family: inherit;
-    font-size: 1rem;
-    margin-bottom: 15px;
-    background-color: #f8f9fa;
-    transition: border-color 0.2s;
-    /* Remove default iOS appearance */
-    -webkit-appearance: none; 
-}
-
-#meetupDateInput:focus {
-    border-color: #4A7C59; /* Your Theme Green */
-    background-color: #fff;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
-}
-
-/* 2. Safety Disclaimer Box */
-.safety-disclaimer {
-    background-color: #fff8e1; /* Light pastel yellow */
-    border-left: 5px solid #ffc107; /* Solid amber warning bar */
-    color: #664d03; /* Darker amber text for readability */
-    padding: 15px;
-    border-radius: 6px;
-    margin: 15px 0;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    text-align: left;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.safety-disclaimer strong {
-    color: #b88b00;
-    display: block;
-    margin-bottom: 5px;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* 3. Checkbox & Label Alignment */
-#meetupModal input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    vertical-align: middle;
-    margin-right: 8px;
-    accent-color: #4A7C59; /* Makes the checkmark green */
-    cursor: pointer;
-}
-
-#meetupModal label[for="safetyCheckbox"] {
-    vertical-align: middle;
-    font-size: 0.95rem;
-    color: #333;
-    cursor: pointer;
-    user-select: none;
-}
-
-/* 4. Textarea improvements */
-#meetupDescriptionInput {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    resize: vertical; /* Allow resizing only vertically */
-    min-height: 80px;
-    font-family: inherit;
-}
-
-/* --- Meetup Modal Buttons --- */
-
-/* Ensure buttons take full width for easier tapping on mobile */
-#meetupModal .modal-button {
-    width: 100%;
-    margin-bottom: 10px;
-}
-
-/* Specific styling for the Cancel button */
-#meetupModal .modal-button.close-btn {
-    background-color: #f1f3f5; /* Light Gray */
-    color: #495057; /* Dark Gray Text */
-    border: 1px solid #dee2e6; /* Subtle border */
-    font-weight: 600;
-}
-
-#meetupModal .modal-button.close-btn:hover {
-    background-color: #e9ecef; /* Slightly darker on hover */
-    color: #212529;
-    transform: none; /* Optional: keeps it simple */
-}
-
-/* Ensure the Schedule button (Primary) stands out */
-#meetupModal .modal-button.primary {
-    background-color: #4A7C59;
-    color: white;
-    margin-top: 10px;
-}
-
-#meetupModal .modal-button.primary:disabled {
-    background-color: #aebdb2; /* Faded green when disabled */
-    cursor: not-allowed;
-    transform: none;
-}
-
-/* --- Challenge Menu Close Button --- */
-#challengeMenuModal .modal-button.close-btn {
-    background-color: #f1f3f5; /* Light Gray */
-    color: #495057; /* Dark Gray Text */
-    border: 1px solid #dee2e6;
-    font-weight: 600;
-    margin-top: 20px; /* Adds nice breathing room from the buttons above */
-    width: 100%;
-}
-
-#challengeMenuModal .modal-button.close-btn:hover {
-    background-color: #e9ecef;
-    color: #212529;
-}
-
-/* --- 1. FIXED CHALLENGE MENU LAYOUT --- */
+/* Challenge Menu Modal (Fixed Layout) */
 #challengeMenuModal .modal-content {
-    display: flex;
-    flex-direction: column;
-    gap: 15px; /* Adds space between elements */
-    padding: 25px;
-    max-width: 320px; /* Keeps it nice and narrow like a phone menu */
+  display: flex; flex-direction: column; gap: 15px; padding: 25px;
+  max-width: 320px; min-height: 300px; /* Min-height for button pinning */
 }
+#menuModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
 
-.menu-buttons-vertical {
-    display: flex;
-    flex-direction: column;
-    gap: 12px; /* Space between the buttons */
-    width: 100%;
-    margin-top: 10px;
-}
+.menu-buttons-vertical { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px; }
+.menu-buttons-vertical .modal-button { width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; border: none; cursor: pointer; transition: transform 0.1s; }
 
-/* Style the buttons inside the menu */
-.menu-buttons-vertical .modal-button {
-    width: 100%;
-    padding: 12px;
-    font-size: 1rem;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    transition: transform 0.1s;
-}
-
-/* Specific colors for the menu buttons */
+/* Specific Challenge Buttons */
 #btnViewAchievements { background-color: #ffc107; color: #000; font-weight: bold; }
 #btnCurrentChallenges { background-color: #4A7C59; color: white; }
 #btnPastChallenges { background-color: #6c757d; color: white; }
 
-/* The Close Button at the bottom */
+/* Challenge Menu Close Button (Pinned to Bottom) */
 #challengeMenuModal .close-btn {
-    margin-top: 15px;
-    background-color: transparent;
-    border: 1px solid #ccc;
-    color: #666;
+  margin-top: auto; /* Pushes button to bottom */
+  width: 100%; background-color: #f8f9fa; border: 1px solid #dee2e6;
+  color: #6c757d; font-weight: 600; padding: 12px; border-radius: 8px;
 }
+#challengeMenuModal .close-btn:hover { background-color: #e2e6ea; color: #343a40; }
 
-/* --- 2. FIXED SCHEDULE MEETUP BUTTONS --- */
-#meetupModal .modal-content {
-    /* Ensure the modal is tall enough */
-    max-height: 90vh; 
-    overflow-y: auto;
-}
-
-#meetupModal .modal-button {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 8px; /* Space between Schedule and Cancel */
-    border-radius: 8px;
-    font-size: 1rem;
-}
-
-#createMeetupBtn {
-    background-color: #4A7C59;
-    color: white;
-    font-weight: bold;
-    margin-top: 15px; /* Push it away from the form */
-}
-
-#createMeetupBtn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-
-#meetupModal .close-btn {
-    background-color: #f8f9fa;
-    color: #333;
-    border: 1px solid #ddd;
-}
-
-/* --- 3. FIXED ACHIEVEMENTS CUT-OFF --- */
+/* Achievements Grid (Fixed Clipping) */
 .achievements-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); /* Slightly wider columns */
-    gap: 20px; /* More space between cards */
-    
-    /* CRITICAL FIX: Add padding INSIDE the scroll box so shadows don't clip */
-    padding: 15px; 
-    margin: 10px -15px 0 -15px; /* Negative margin to pull scrollbar to edge */
-    
-    max-height: 400px;
-    overflow-y: auto;
-    overflow-x: hidden; /* Prevent side-scrolling */
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 20px; 
+  padding: 15px; /* Important for shadow visibility */
+  margin: 10px -15px 0 -15px;
+  max-height: 400px; overflow-y: auto; overflow-x: hidden;
 }
 
 .achievement-card {
-    position: relative; /* Helps with stacking context */
-    background: #f5f5f5;
-    border-radius: 10px;
-    padding: 15px 5px;
-    text-align: center;
-    border: 2px solid transparent;
-    transition: transform 0.2s, box-shadow 0.2s;
+  position: relative; background: #f5f5f5; border-radius: 10px; padding: 15px 5px;
+  text-align: center; border: 2px solid transparent; transition: transform 0.2s, box-shadow 0.2s;
 }
+.achievement-icon { font-size: 2rem; margin-bottom: 5px; display: block; }
+.achievement-name { font-size: 0.75rem; font-weight: bold; color: #555; line-height: 1.2; }
 
-/* Unlocked State - The "Glow" */
+/* Badge States */
+.achievement-card.locked { opacity: 0.5; filter: grayscale(100%); }
+.achievement-card.locked .achievement-icon { filter: blur(2px); }
 .achievement-card.unlocked {
-    background: white;
-    border-color: #ffc107;
-    /* This shadow needs space, which the .achievements-grid padding now provides */
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.5);
-    z-index: 2; /* Ensure it sits on top */
+  background: white; border-color: #ffc107; opacity: 1; z-index: 2;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.5);
 }
+.achievement-card.unlocked:hover { transform: scale(1.05); }
 
-.achievement-card.unlocked:hover {
-    transform: scale(1.05); /* Slight zoom on hover */
-}
-
-/* --- Challenge Menu Bottom Button --- */
-
-/* 1. Ensure the modal content stretches so we can pin the button */
-#challengeMenuModal .modal-content {
-    display: flex;
-    flex-direction: column;
-    min-height: 300px; /* Gives the modal some height so the button travels down */
-}
-
-/* 2. Push the Close button to the very bottom */
-#challengeMenuModal .close-btn {
-    margin-top: auto; /* This magic CSS pushes the item to the bottom of a flex container */
-    width: 100%;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    color: #6c757d;
-    font-weight: 600;
-    padding: 12px;
-    border-radius: 8px;
-}
-
-#challengeMenuModal .close-btn:hover {
-    background-color: #e2e6ea;
-    color: #343a40;
-}
+/* Modal Tabs (Past Challenges) */
+.modal-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 15px; }
+.modal-tab { flex: 1; padding: 10px; background: none; border: none; font-weight: bold; color: #888; cursor: pointer; }
+.modal-tab.active { color: #4A7C59; border-bottom: 3px solid #4A7C59; }
