@@ -640,3 +640,18 @@ button.close-btn:hover { color: var(--color-text-dark); }
     cursor: not-allowed;
     transform: none;
 }
+
+/* --- Challenge Menu Close Button --- */
+#challengeMenuModal .modal-button.close-btn {
+    background-color: #f1f3f5; /* Light Gray */
+    color: #495057; /* Dark Gray Text */
+    border: 1px solid #dee2e6;
+    font-weight: 600;
+    margin-top: 20px; /* Adds nice breathing room from the buttons above */
+    width: 100%;
+}
+
+#challengeMenuModal .modal-button.close-btn:hover {
+    background-color: #e9ecef;
+    color: #212529;
+}
