@@ -389,3 +389,25 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .modal-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 15px; }
 .modal-tab { flex: 1; padding: 10px; background: none; border: none; font-weight: bold; color: #888; cursor: pointer; }
 .modal-tab.active { color: #4A7C59; border-bottom: 3px solid #4A7C59; }
+
+/* Challenge Menu Close Button (Pinned to Bottom) */
+#challengeMenuModal .close-btn {
+  /* CRITICAL FIXES: Reset the "X" button behavior */
+  position: static !important; /* Stops it from floating in the corner */
+  margin-top: auto;            /* Pushes it to the bottom of the flex container */
+  
+  /* Styling to match the Events button */
+  width: 100%; 
+  background-color: #f1f3f5; 
+  border: 1px solid #dee2e6;
+  color: #495057; 
+  font-weight: 600; 
+  padding: 12px; 
+  border-radius: 8px;
+  text-align: center;
+}
+
+#challengeMenuModal .close-btn:hover {
+  background-color: #e2e6ea;
+  color: #212529;
+}
