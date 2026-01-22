@@ -278,17 +278,17 @@
         
         <input type="text" id="meetupTitleInput" placeholder="Event Title (e.g., Sunday Cleanup)" maxlength="50">
         
-        <input type="datetime-local" id="meetupDateInput" style="margin-top: 10px; width: 100%; padding: 8px;">
+        <input type="datetime-local" id="meetupDateInput">
         
         <textarea id="meetupDescriptionInput" placeholder="Describe the plan..." rows="3" maxlength="200"></textarea>
         <div class="safety-disclaimer">
             <strong>Safety First:</strong> You are organizing a public event. For your safety and the safety of others, always meet in well-lit, public places and be aware of your surroundings. Litter Troopers is a platform for connecting people; we are not responsible for any incidents that occur at user-organized meetups.
         </div>
-        <div style="margin: 10px 0;">
+        <div>
             <input type="checkbox" id="safetyCheckbox">
             <label for="safetyCheckbox">I agree to follow local safety guidelines.</label>
         </div>
-        <p id="profanityWarning" style="color:red; display:none; font-size: 0.8em;">Please keep language clean.</p>
+        <p id="profanityWarning">Please keep language clean.</p>
         
         <button id="createMeetupBtn" class="modal-button primary" disabled>Schedule</button>
         <button class="modal-button close-btn">Cancel</button>
