@@ -767,3 +767,29 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .achievement-card.unlocked:hover {
     transform: scale(1.05); /* Slight zoom on hover */
 }
+
+/* --- Challenge Menu Bottom Button --- */
+
+/* 1. Ensure the modal content stretches so we can pin the button */
+#challengeMenuModal .modal-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 300px; /* Gives the modal some height so the button travels down */
+}
+
+/* 2. Push the Close button to the very bottom */
+#challengeMenuModal .close-btn {
+    margin-top: auto; /* This magic CSS pushes the item to the bottom of a flex container */
+    width: 100%;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    font-weight: 600;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+#challengeMenuModal .close-btn:hover {
+    background-color: #e2e6ea;
+    color: #343a40;
+}
