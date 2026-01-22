@@ -411,3 +411,42 @@ button.close-btn:hover { color: var(--color-text-dark); }
   background-color: #e2e6ea;
   color: #212529;
 }
+
+/* --- Dynamic Calendar Icon --- */
+.calendar-icon {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    background-color: #ffffff;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden; /* Keeps the red header inside the rounded corners */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+}
+
+.cal-header {
+    height: 12px;
+    width: 100%;
+    background-color: #dc3545; /* Classic Calendar Red */
+    border-bottom: 1px solid #ccc;
+}
+
+.cal-body {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    font-family: sans-serif;
+    line-height: 1;
+}
+
+/* Optional: Hover effect for the whole card updates the icon slightly */
+.hub-card:hover .calendar-icon {
+    border-color: #4A7C59; /* Green border on hover */
+    transform: scale(1.1);
+    transition: transform 0.2s;
+}
