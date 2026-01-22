@@ -337,7 +337,7 @@ button.close-btn:hover { color: var(--color-text-dark); }
    10. CHALLENGES & ACHIEVEMENTS
    ========================================= */
 
-/* Challenge Menu Modal (Fixed Layout) */
+/* Challenge Menu Modal (Standardized Match to Data Menu) */
 #challengeMenuModal .modal-content {
   max-width: 500px; 
   width: 100%;
@@ -345,31 +345,52 @@ button.close-btn:hover { color: var(--color-text-dark); }
   display: flex; 
   flex-direction: column; 
   gap: 15px;
-  min-height: 350px;
+  min-height: 300px;
 }
 
 #menuModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
 
 .menu-buttons-vertical { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px; }
+
+/* MATCHED TO DATA MENU BUTTONS */
 .menu-buttons-vertical .modal-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Forces text to the LEFT */
+    text-align: left;
     width: 100%;
-    padding: 15px;
-    font-size: 1.05rem;
-    margin-bottom: 8px;
+    padding: 12px; /* Standard size */
+    font-size: 14px; /* Standard size */
+    margin: 8px 0;
+    gap: 15px; /* Icon spacing */
     border-radius: 8px;
+    border: 1px solid #ccc;
 }
+
 /* Specific Challenge Buttons */
-#btnViewAchievements { background-color: #ffc107; color: #000; font-weight: bold; }
-#btnCurrentChallenges { background-color: #4A7C59; color: white; }
-#btnPastChallenges { background-color: #6c757d; color: white; }
+#btnViewAchievements { background-color: #ffc107; color: #000; font-weight: bold; border-color: #e0a800; }
+#btnCurrentChallenges { background-color: #4A7C59; color: white; border-color: #4A7C59; }
+#btnPastChallenges { background-color: #6c757d; color: white; border-color: #6c757d; }
 
 /* Challenge Menu Close Button (Pinned to Bottom) */
 #challengeMenuModal .close-btn {
-  margin-top: auto; /* Pushes button to bottom */
-  width: 100%; background-color: #f8f9fa; border: 1px solid #dee2e6;
-  color: #6c757d; font-weight: 600; padding: 12px; border-radius: 8px;
+  /* CRITICAL: Resets the "X" button behavior to be a bottom bar */
+  position: static !important;
+  margin-top: auto;
+  width: 100%; 
+  background-color: #f1f3f5; 
+  border: 1px solid #dee2e6;
+  color: #495057; 
+  font-weight: 600; 
+  padding: 12px; 
+  border-radius: 8px;
+  text-align: center;
 }
-#challengeMenuModal .close-btn:hover { background-color: #e2e6ea; color: #343a40; }
+
+#challengeMenuModal .close-btn:hover {
+  background-color: #e2e6ea;
+  color: #212529;
+}
 
 /* Achievements Grid (Fixed Clipping) */
 .achievements-grid {
@@ -400,28 +421,6 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .modal-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 15px; }
 .modal-tab { flex: 1; padding: 10px; background: none; border: none; font-weight: bold; color: #888; cursor: pointer; }
 .modal-tab.active { color: #4A7C59; border-bottom: 3px solid #4A7C59; }
-
-/* Challenge Menu Close Button (Pinned to Bottom) */
-#challengeMenuModal .close-btn {
-  /* CRITICAL FIXES: Reset the "X" button behavior */
-  position: static !important; /* Stops it from floating in the corner */
-  margin-top: auto;            /* Pushes it to the bottom of the flex container */
-  
-  /* Styling to match the Events button */
-  width: 100%; 
-  background-color: #f1f3f5; 
-  border: 1px solid #dee2e6;
-  color: #495057; 
-  font-weight: 600; 
-  padding: 12px; 
-  border-radius: 8px;
-  text-align: center;
-}
-
-#challengeMenuModal .close-btn:hover {
-  background-color: #e2e6ea;
-  color: #212529;
-}
 
 /* --- Dynamic Calendar Icon --- */
 .calendar-icon {
