@@ -605,3 +605,38 @@ button.close-btn:hover { color: var(--color-text-dark); }
     min-height: 80px;
     font-family: inherit;
 }
+
+/* --- Meetup Modal Buttons --- */
+
+/* Ensure buttons take full width for easier tapping on mobile */
+#meetupModal .modal-button {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+/* Specific styling for the Cancel button */
+#meetupModal .modal-button.close-btn {
+    background-color: #f1f3f5; /* Light Gray */
+    color: #495057; /* Dark Gray Text */
+    border: 1px solid #dee2e6; /* Subtle border */
+    font-weight: 600;
+}
+
+#meetupModal .modal-button.close-btn:hover {
+    background-color: #e9ecef; /* Slightly darker on hover */
+    color: #212529;
+    transform: none; /* Optional: keeps it simple */
+}
+
+/* Ensure the Schedule button (Primary) stands out */
+#meetupModal .modal-button.primary {
+    background-color: #4A7C59;
+    color: white;
+    margin-top: 10px;
+}
+
+#meetupModal .modal-button.primary:disabled {
+    background-color: #aebdb2; /* Faded green when disabled */
+    cursor: not-allowed;
+    transform: none;
+}
