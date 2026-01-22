@@ -655,3 +655,115 @@ button.close-btn:hover { color: var(--color-text-dark); }
     background-color: #e9ecef;
     color: #212529;
 }
+
+/* --- 1. FIXED CHALLENGE MENU LAYOUT --- */
+#challengeMenuModal .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Adds space between elements */
+    padding: 25px;
+    max-width: 320px; /* Keeps it nice and narrow like a phone menu */
+}
+
+.menu-buttons-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Space between the buttons */
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* Style the buttons inside the menu */
+.menu-buttons-vertical .modal-button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+/* Specific colors for the menu buttons */
+#btnViewAchievements { background-color: #ffc107; color: #000; font-weight: bold; }
+#btnCurrentChallenges { background-color: #4A7C59; color: white; }
+#btnPastChallenges { background-color: #6c757d; color: white; }
+
+/* The Close Button at the bottom */
+#challengeMenuModal .close-btn {
+    margin-top: 15px;
+    background-color: transparent;
+    border: 1px solid #ccc;
+    color: #666;
+}
+
+/* --- 2. FIXED SCHEDULE MEETUP BUTTONS --- */
+#meetupModal .modal-content {
+    /* Ensure the modal is tall enough */
+    max-height: 90vh; 
+    overflow-y: auto;
+}
+
+#meetupModal .modal-button {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 8px; /* Space between Schedule and Cancel */
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+#createMeetupBtn {
+    background-color: #4A7C59;
+    color: white;
+    font-weight: bold;
+    margin-top: 15px; /* Push it away from the form */
+}
+
+#createMeetupBtn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#meetupModal .close-btn {
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+/* --- 3. FIXED ACHIEVEMENTS CUT-OFF --- */
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); /* Slightly wider columns */
+    gap: 20px; /* More space between cards */
+    
+    /* CRITICAL FIX: Add padding INSIDE the scroll box so shadows don't clip */
+    padding: 15px; 
+    margin: 10px -15px 0 -15px; /* Negative margin to pull scrollbar to edge */
+    
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden; /* Prevent side-scrolling */
+}
+
+.achievement-card {
+    position: relative; /* Helps with stacking context */
+    background: #f5f5f5;
+    border-radius: 10px;
+    padding: 15px 5px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* Unlocked State - The "Glow" */
+.achievement-card.unlocked {
+    background: white;
+    border-color: #ffc107;
+    /* This shadow needs space, which the .achievements-grid padding now provides */
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.5);
+    z-index: 2; /* Ensure it sits on top */
+}
+
+.achievement-card.unlocked:hover {
+    transform: scale(1.05); /* Slight zoom on hover */
+}
