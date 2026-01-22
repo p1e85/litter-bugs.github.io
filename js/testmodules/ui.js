@@ -313,9 +313,7 @@ function attachEventListeners() {
         elements.hubModal.style.display = 'flex';
     });
 
-    elements.hubChallengesBtn.addEventListener('click', () => {
-        alert('Challenges feature coming soon!'); 
-    });
+    
 
     elements.hubEventsBtn.addEventListener('click', () => {
         elements.hubModal.style.display = 'none';
