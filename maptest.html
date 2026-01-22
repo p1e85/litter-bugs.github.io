@@ -270,30 +270,38 @@
         </div>
     </div>
     
-    <div id="meetupModal" class="modal-overlay">
-        <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <h2>Schedule a Meetup</h2>
-            <p class="modal-subtitle">Organize a public cleanup event at this location that other users can see and join.</p>
-            <p>Location: <strong id="meetupLocationName"></strong></p>
-            <div id="meetupForm" class="profile-form">
-                <input type="hidden" id="poiNameInput">
-                <label for="meetupTitleInput">Meetup Title</label>
-                <input type="text" id="meetupTitleInput" placeholder="e.g., Saturday Morning Cleanup" maxlength="50">
-                <label for="meetupDescriptionInput">Description</label>
-                <textarea id="meetupDescriptionInput" placeholder="e.g., Let's meet by the main entrance at 9 AM!" maxlength="200"></textarea>
-                <div class="safety-disclaimer">
-                    <strong>Safety First:</strong> You are organizing a public event. For your safety and the safety of others, always meet in well-lit, public places and be aware of your surroundings. Litter Troopers is a platform for connecting people; we are not responsible for any incidents that occur at user-organized meetups.
-                </div>
-                <div class="agreement-section">
-                    <input type="checkbox" id="safetyCheckbox">
-                    <label for="safetyCheckbox">I understand and agree to the safety guidelines.</label>
-                </div>
-                <p id="profanityWarning" class="error-message" style="display: none;">Please use appropriate language.</p>
-                <button id="createMeetupBtn" class="modal-button" disabled>Create Meetup</button>
-            </div>
+<div id="meetupModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Schedule Meetup</h3>
+        <p>Location: <span id="meetupLocationName"></span></p>
+        <input type="hidden" id="poiNameInput">
+        
+        <input type="text" id="meetupTitleInput" placeholder="Event Title (e.g., Sunday Cleanup)" maxlength="50">
+        
+        <input type="datetime-local" id="meetupDateInput" style="margin-top: 10px; width: 100%; padding: 8px;">
+        
+        <textarea id="meetupDescriptionInput" placeholder="Describe the plan..." rows="3" maxlength="200"></textarea>
+        
+        <div style="margin: 10px 0;">
+            <input type="checkbox" id="safetyCheckbox">
+            <label for="safetyCheckbox">I agree to follow local safety guidelines.</label>
         </div>
+        <p id="profanityWarning" style="color:red; display:none; font-size: 0.8em;">Please keep language clean.</p>
+        
+        <button id="createMeetupBtn" class="modal-button primary" disabled>Schedule</button>
+        <button class="modal-button close-btn">Cancel</button>
     </div>
+</div>
+
+<div id="eventsModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>📅 Upcoming Community Events</h3>
+        <ul id="allEventsList" class="scrollable-list">
+            </ul>
+        <button class="modal-button ok-btn">Close</button>
+    </div>
+</div>
+    
     <div id="viewMeetupsModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
