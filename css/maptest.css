@@ -75,7 +75,7 @@ hr {
 .btn-secondary { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
 .btn-secondary:hover { background-color: #3a6a92; border-color: #3a6a92; }
 
-.btn-support { background-color: var(--color-support-gold); color: var(--color-text-dark); border-color: var(--color-support-gold); }
+.btn-support { background-color: var(--color-support-gold); font-weight: bold; color: var(--color-text-dark); border-color: var(--color-support-gold); }
 .btn-support:hover { background-color: #c5a02e; border-color: #c5a02e; }
 
 .btn-danger { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
