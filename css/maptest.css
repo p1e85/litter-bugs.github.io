@@ -359,10 +359,10 @@ button.close-btn:hover { color: var(--color-text-dark); }
     justify-content: flex-start; /* Forces text to the LEFT */
     text-align: left;
     width: 100%;
-    padding: 12px; /* Standard size */
+    padding: 10px; /* Standard size */
     font-size: 14px; /* Standard size */
     margin: 8px 0;
-    gap: 15px; /* Icon spacing */
+    gap: 10px; /* Icon spacing */
     border-radius: 8px;
     border: 1px solid #ccc;
 }
