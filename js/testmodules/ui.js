@@ -23,6 +23,18 @@ import {
 
 // --- DOM Element Selection ---
 const elements = {
+    // Admin Elements
+    btnAdminPanel: document.getElementById('btnAdminPanel'),
+    adminChallengeModal: document.getElementById('adminChallengeModal'),
+    btnSaveChallenge: document.getElementById('btnSaveChallenge'),
+    
+    // Admin Inputs
+    adminChalTitle: document.getElementById('adminChalTitle'),
+    adminChalDesc: document.getElementById('adminChalDesc'),
+    adminChalGoal: document.getElementById('adminChalGoal'),
+    adminChalBadge: document.getElementById('adminChalBadge'),
+    adminChalExpire: document.getElementById('adminChalExpire'),
+    
     termsModal: document.getElementById('termsModal'),
     authModal: document.getElementById('authModal'),
     dataModal: document.getElementById('dataModal'),
@@ -568,5 +580,15 @@ async function loadActivityFeed() {
     } catch (error) {
         console.error("Error loading feed:", error);
         container.innerHTML = '<p>Failed to load feed. Check your connection.</p>';
+    }
+}
+
+// Function to reveal admin tools
+export function checkAdminPermissions(userProfile) {
+    if (userProfile && userProfile.role === 'admin') {
+        console.log("👮 Admin Logged In: Enabling Tools");
+        if (elements.btnAdminPanel) {
+            elements.btnAdminPanel.style.display = 'flex'; // Reveal the button
+        }
     }
 }
