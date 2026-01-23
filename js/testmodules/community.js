@@ -1,8 +1,8 @@
-import { db, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL } from './firebase.js';
+import { db, serverTimestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL } from './firebase.js';
 import { state, allBadges, profanityList } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
 import { clearCurrentSession } from './data.js';
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+
 
 // --- Helper Function: Calculate Distance ---
 function calculateRouteDistance(coords) {
