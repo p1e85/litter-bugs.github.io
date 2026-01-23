@@ -2,6 +2,7 @@ import { db, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, de
 import { state, allBadges, profanityList } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
 import { clearCurrentSession } from './data.js';
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
 // --- Helper Function: Calculate Distance ---
 function calculateRouteDistance(coords) {
@@ -779,5 +780,27 @@ export function openPastChallenges(type) {
             <p>You have no ${type} challenges in history.</p>
         </div>
     `;
+}
+
+export async function createNewChallenge(title, desc, goal, badgeId, expireDate) {
+    if (!confirm("Are you sure you want to launch this challenge globally?")) return;
+
+    try {
+        const docRef = await addDoc(collection(db, "active_challenges"), {
+            title: title,
+            description: desc,
+            goal_miles: parseFloat(goal),
+            badge_id: badgeId,
+            expires_at: new Date(expireDate),
+            created_at: serverTimestamp(),
+            active: true
+        });
+        
+        alert("✅ Challenge Launched! ID: " + docRef.id);
+        // Optional: clear form or close modal here
+    } catch (e) {
+        console.error("Error creating challenge: ", e);
+        alert("❌ Error: " + e.message + "\n(Did you set your Admin role in Firebase?)");
+    }
 }
 
