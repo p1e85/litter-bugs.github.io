@@ -407,6 +407,32 @@ elements.meetupDateInput.addEventListener('change', validateMeetupForm);
     
     // (This logic assumes standard close behavior, but you can customize to go back to menu)
 
+    // Admin Button (In Challenge Menu)
+    if (elements.btnAdminPanel) {
+        elements.btnAdminPanel.addEventListener('click', () => {
+            elements.challengeMenuModal.style.display = 'none';
+            elements.adminChallengeModal.style.display = 'flex';
+        });
+    }
+
+    // Save Challenge Button
+    if (elements.btnSaveChallenge) {
+        elements.btnSaveChallenge.addEventListener('click', () => {
+            const title = elements.adminChalTitle.value;
+            const desc = elements.adminChalDesc.value;
+            const goal = elements.adminChalGoal.value;
+            const badge = elements.adminChalBadge.value;
+            const expire = elements.adminChalExpire.value;
+
+            if(!title || !goal || !expire) {
+                alert("Please fill in Title, Goal, and Date.");
+                return;
+            }
+
+            // Import this function from community.js first!
+            createNewChallenge(title, desc, goal, badge, expire);
+        });
+    }
 
 } // end of listeners
 
