@@ -72,6 +72,9 @@
             <hr>
             <p>Publish your completed route for the community to see.</p>
             <button id="publishBtn" class="modal-button btn-primary">🚀 Publish to Community</button>
+            <button id="btnAdminPanel" class="modal-button" style="display: none; background-color: #dc3545; color: white; border-color: #dc3545;">
+        🛠️ Admin: Create Challenge
+    </button>
         </div>
     </div>
 
@@ -391,7 +394,7 @@
         <div id="activeChallengesList" class="scrollable-list">
             <p>Loading challenges...</p>
         </div>
-        <button class="modal-button ok-btn">Back</button>
+        <button class="modal-button ok-btn">Back to Menu</button>
     </div>
 </div>
 
@@ -407,7 +410,33 @@
         <div id="pastChallengesContent" class="scrollable-list">
             </div>
         
-        <button class="modal-button ok-btn">Back</button>
+        <button class="modal-button ok-btn">Back to Menu</button>
+    </div>
+</div>
+
+    <div id="adminChallengeModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-btn">&times;</button>
+        <h3>🛠️ Create New Challenge</h3>
+        
+        <div class="pin-popup-form">
+            <label>Challenge Title</label>
+            <input type="text" id="adminChalTitle" placeholder="e.g. Weekend Warrior">
+            
+            <label>Description</label>
+            <input type="text" id="adminChalDesc" placeholder="e.g. Clean 2 miles this weekend!">
+            
+            <label>Goal (Miles)</label>
+            <input type="number" id="adminChalGoal" step="0.1" placeholder="2.0">
+            
+            <label>Reward Badge ID (Optional)</label>
+            <input type="text" id="adminChalBadge" placeholder="e.g. warrior_2026">
+            
+            <label>Expiration Date</label>
+            <input type="date" id="adminChalExpire">
+            
+            <button id="btnSaveChallenge" class="modal-button primary" style="margin-top: 20px;">🚀 Launch Challenge</button>
+        </div>
     </div>
 </div>
     
