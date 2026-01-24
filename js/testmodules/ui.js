@@ -500,6 +500,18 @@ export function attachEventListeners() {
         });
     }
 
+    // --- LOCAL EVENTS BACK BUTTON ---
+    const btnEventsBack = document.getElementById('btnEventsBack');
+    if (btnEventsBack) {
+        btnEventsBack.addEventListener('click', () => {
+            // Close the Events Modal
+            elements.eventsModal.style.display = 'none';
+            
+            // Open the Main Menu
+            elements.menuModal.style.display = 'flex';
+        });
+    }
+
     // Generic Close Listeners
     addAllModalCloseListeners();
 } //end event listern**************
