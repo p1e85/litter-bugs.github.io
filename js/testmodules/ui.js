@@ -220,7 +220,7 @@ export function attachEventListeners() {
         });
     }
     
-// --- MAIN MENU: ACHIEVEMENTS ---
+    // 2. Main Menu: Achievements
     if (elements.btnAchievements) {
         elements.btnAchievements.addEventListener('click', () => {
             elements.menuModal.style.display = 'none';
@@ -443,15 +443,18 @@ export function attachEventListeners() {
         });
     }
 
-        if (elements.btnchallengeMenuBack) {
+    // 3. Challenge Menu BACK Button (The Fix!)
+    if (elements.btnchallengeMenuBack) {
         elements.btnchallengeMenuBack.addEventListener('click', (e) => {
             e.stopPropagation();
-            elements.activeChallengesModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
+            // Close the Challenge Menu
+            elements.challengeMenuModal.style.display = 'none';
+            // Return to the Community Hub
+            elements.hubModal.style.display = 'flex';
         });
     }
 
-    // 3. Past Challenges
+    // 4. Past Challenges
     elements.btnPastChallenges.addEventListener('click', () => {
         elements.challengeMenuModal.style.display = 'none';
         elements.pastChallengesModal.style.display = 'flex';
@@ -468,7 +471,7 @@ export function attachEventListeners() {
         });
     }
 
-    // 4. History Tabs
+    // 5. History Tabs
     elements.tabCompleted.addEventListener('click', () => {
         elements.tabCompleted.classList.add('active');
         elements.tabUncompleted.classList.remove('active');
@@ -481,7 +484,7 @@ export function attachEventListeners() {
         loadPastChallenges('uncompleted');
     });
 
-    // 5. Admin Panel
+    // 6. Admin Panel
     if (elements.btnAdminPanel) {
         elements.btnAdminPanel.addEventListener('click', async () => {
             elements.challengeMenuModal.style.display = 'none';
@@ -515,8 +518,7 @@ export function attachEventListeners() {
         btnEventsBack.addEventListener('click', () => {
             // Close the Events Modal
             elements.eventsModal.style.display = 'none';
-            
-            // Open the Main Menu
+            // Return to the Community Hub
             elements.hubModal.style.display = 'flex';
         });
     }
