@@ -218,22 +218,22 @@ export function attachEventListeners() {
             elements.challengeMenuModal.style.display = 'flex';
         });
     }
-
-// MAIN MENU BUTTON
+    
+// --- MAIN MENU: ACHIEVEMENTS ---
     if (elements.btnAchievements) {
         elements.btnAchievements.addEventListener('click', () => {
             elements.menuModal.style.display = 'none';
-            elements.achievementsModal.style.display = 'flex'; 
+            elements.achievementsModal.style.display = 'flex';
             
-            // Just open it. No arguments.
+            // Just call it. Simple.
             openAchievementsModal(); 
             
-            // Basic Back Button (Return to Main Menu)
+            // Simple Back Button Logic
             if (elements.achievementListBackBtn) {
-                 // Simple reset to avoid duplicate listeners
+                // Remove old listeners by cloning
                 const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
                 elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
-                elements.achievementListBackBtn = newBackBtn;
+                elements.achievementListBackBtn = newBackBtn; 
 
                 newBackBtn.addEventListener('click', () => {
                     elements.achievementsModal.style.display = 'none';
