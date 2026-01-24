@@ -804,3 +804,25 @@ export async function createNewChallenge(title, desc, goal, badgeId, expireDate)
     }
 }
 
+// --- ADMIN: MANAGE CHALLENGES ---
+
+// 1. Delete a challenge
+export async function deleteChallenge(challengeId) {
+    if (!confirm("⚠️ Are you sure you want to DELETE this challenge?")) return;
+
+    try {
+        await deleteDoc(doc(db, "active_challenges", challengeId));
+        alert("🗑️ Challenge Deleted!");
+        // We will refresh the list in the UI
+    } catch (e) {
+        console.error("Error deleting:", e);
+        alert("Error: " + e.message);
+    }
+}
+
+// 2. Fetch all challenges (for the admin list)
+export async function getAdminChallenges() {
+    const q = query(collection(db, "active_challenges"), orderBy("created_at", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
