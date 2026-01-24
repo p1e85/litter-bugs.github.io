@@ -18,6 +18,7 @@ import {
 } from './firebase.js';
 import { state } from './config.js';
 import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
+import * as ui from './ui.js'; // Ensure UI is imported at the top
 
 /**
  * Sets up the listener that responds to changes in the user's login state.
@@ -26,50 +27,56 @@ import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
  */
 export function initializeAuthListener() {
     onAuthStateChanged(auth, async (user) => {
-        //console.log('--- onAuthStateChanged listener fired ---');
         if (user) {
-            //console.log('Listener detected user:', user.uid);
             state.currentUser = user;
+            
             try {
-                // Check for and create user profile documents if they don't exist
+                // 1. Check for private user docs
                 const userDocRef = doc(db, "users", user.uid);
                 const userDocSnap = await getDoc(userDocRef);
                 if (userDocSnap.exists() && userDocSnap.data().totalPins === undefined) {
                     await updateDoc(userDocRef, { totalPins: 0, totalDistance: 0, totalRoutes: 0 });
                 }
 
+                // 2. Fetch the Public Profile (Where the 'role' lives)
                 const publicProfileRef = doc(db, "publicProfiles", user.uid);
                 const publicProfileSnap = await getDoc(publicProfileRef);
+                
                 let username;
+                let userProfileData = {}; // Store data here
 
                 if (publicProfileSnap.exists()) {
-                    username = publicProfileSnap.data().username;
+                    userProfileData = publicProfileSnap.data(); // Get the actual data
+                    username = userProfileData.username;
+                    
+                    // ✅ CORRECT PLACE: Now that we have the data, check for Admin
+                    ui.checkAdminPermissions(userProfileData);
+
                 } else {
-                    //console.log("User profile missing! Creating a default one.");
+                    // Create default profile if missing
                     const defaultUsername = user.email.split('@')[0];
-                    await setDoc(publicProfileRef, {
+                    userProfileData = {
                         username: defaultUsername,
                         bio: "This user is new to Litter Bugs!",
                         location: "",
-                        buyMeACoffeeLink: "",
                         badges: {},
-                        totalPins: 0,
-                        totalDistance: 0,
-                        totalRoutes: 0
-                    });
+                        role: "user" // Default role
+                    };
+                    
+                    await setDoc(publicProfileRef, userProfileData);
                     username = defaultUsername;
                 }
-                // Update the UI to reflect the logged-in state
+                
+                // Update UI
                 updateLoggedInStatusUI(true, username);
 
             } catch (error) {
-                //console.error("Error fetching or updating user profile:", error);
-                updateLoggedInStatusUI(false); // Fallback to logged-out state on error
+                console.error("Error fetching user profile:", error);
+                updateLoggedInStatusUI(false); 
             }
         } else {
-            //console.log('Listener detected NO user (logged out).');
+            // Logged Out
             state.currentUser = null;
-            // Update the UI to reflect the logged-out state
             updateLoggedInStatusUI(false);
         }
     });
