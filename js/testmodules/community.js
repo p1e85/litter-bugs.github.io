@@ -714,8 +714,6 @@ export async function toggleRouteLike(routeId) {
 }
 
 // --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
-import { state, allBadges } from './config.js'; 
-import { db, doc, getDoc } from './firebase.js';
 
 export async function openAchievementsModal() {
     // We target the existing list container in your HTML
