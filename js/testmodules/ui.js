@@ -9,7 +9,7 @@ import {
     toggleCommunityView, publishRoute, populatePublishedRoutesList, 
     loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, 
     fetchAndDisplayMyStats, showPublicProfile, handleMeetupSubmit, 
-    validateMeetupForm, toggleRouteLike, openAchievementsModal, 
+    validateMeetupForm, toggleRouteLike, openAchievementsModal, openEventBadgesModal, 
     // Logic Helpers
     getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents 
 } from './community.js';
@@ -154,7 +154,7 @@ export function initializeUI() {
 
 export function attachEventListeners() {
     
-    // --- AUTH ---
+    // --- AUTHENTICATION ---
     if (elements.loginBtn) {
         elements.loginBtn.addEventListener('click', () => {
             const email = prompt("Enter email:");
@@ -168,14 +168,17 @@ export function attachEventListeners() {
     }
     
     elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
+    
     elements.agreeBtn.addEventListener('click', () => {
         elements.termsModal.style.display = 'none';
         sessionStorage.setItem('termsAccepted', 'true');
         document.getElementById('userStatus').style.display = 'flex';
         if (!state.currentUser) elements.authModal.style.display = 'flex';
     });
+
     elements.loginSignupBtn.addEventListener('click', () => elements.authModal.style.display = 'flex');
     elements.skipBtn.addEventListener('click', () => elements.authModal.style.display = 'none');
+    
     elements.authModal.addEventListener('click', (e) => {
         if (e.target.id === 'switchAuthModeLink') {
             e.preventDefault();
@@ -183,11 +186,13 @@ export function attachEventListeners() {
             updateAuthModalUI();
         }
     });
+
     elements.authActionBtn.addEventListener('click', async (event) => { 
         event.preventDefault();
         if (state.isSignUpMode) await handleSignUp();
         else await handleLogIn();
     });
+
     elements.emailInput.addEventListener('input', validateSignUpForm);
     elements.passwordInput.addEventListener('input', validateSignUpForm);
     elements.usernameInput.addEventListener('input', validateSignUpForm);
@@ -197,40 +202,86 @@ export function attachEventListeners() {
     // --- MAP & TRACKING ---
     elements.findMeBtn.addEventListener('click', findMe);
     elements.trackBtn.addEventListener('click', toggleTracking);
+    
     elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
     elements.cameraInput.addEventListener('change', handlePhoto);
+    
     elements.changeStyleBtn.addEventListener('click', changeMapStyle);
-    elements.communityBtn.addEventListener('click', toggleCommunityView);
+    
+    // --- MAIN MENU NAVIGATION ---
     elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
+
+    // 1. Community Hub (Challenges)
+    if (elements.communityChallengeBtn) {
+        elements.communityChallengeBtn.addEventListener('click', () => {
+            elements.menuModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+
+    // 2. ACHIEVEMENTS (Main Menu -> Milestones)
+    if (elements.btnAchievements) {
+        elements.btnAchievements.addEventListener('click', () => {
+            elements.menuModal.style.display = 'none';     // Close Main Menu
+            elements.achievementsModal.style.display = 'flex'; // Open List
+            
+            // Call the Specific Function for Milestones
+            openAchievementsModal(); 
+            
+            // DYNAMIC BACK BUTTON: Returns to Main Menu
+            if (elements.achievementListBackBtn) {
+                // Clone node to strip old listeners
+                const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
+                elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
+                elements.achievementListBackBtn = newBackBtn; 
+
+                newBackBtn.addEventListener('click', () => {
+                    elements.achievementsModal.style.display = 'none';
+                    elements.menuModal.style.display = 'flex'; // <--- Go back to Main Menu
+                });
+            }
+        });
+    }
+
+    // 3. Community Map View
+    elements.communityBtn.addEventListener('click', toggleCommunityView);
+    
+    // 4. Info / Settings
     elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
     elements.viewTermsLink.addEventListener('click', (e) => {
         e.preventDefault();
         elements.infoModal.style.display = 'none';
         elements.termsModal.style.display = 'flex';
     });
+
+    // --- DATA & SAVING ---
     elements.safetyModalOkBtn.addEventListener('click', () => {
         elements.safetyModal.style.display = 'none';
         startTracking();
     });
+
     elements.summaryOkBtn.addEventListener('click', () => { 
         elements.summaryModal.style.display = 'none';
         document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none';
         document.getElementById('cleanupPhotoPreview').src = '#';
     });
 
-    // --- DATA ---
     elements.dataBtn.addEventListener('click', () => {
         const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
         elements.menuModal.style.display = 'none';
         elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
         elements.dataModal.style.display = 'flex';
     });
+
     elements.saveBtn.addEventListener('click', saveSession);
+    
     elements.loadBtn.addEventListener('click', () => {
         elements.dataModal.style.display = 'none';
         loadSession();
     });
+    
     elements.exportBtn.addEventListener('click', exportGeoJSON);
+    
     elements.centerOnRouteBtn.addEventListener('click', () => {
         if (elements.centerOnRouteBtn.classList.contains('disabled')) {
             alert("Please load a route first to use this feature.");
@@ -239,7 +290,9 @@ export function attachEventListeners() {
             elements.dataModal.style.display = 'none';
         }
     });
+
     elements.publishBtn.addEventListener('click', publishRoute);
+    
     elements.managePublicationsBtn.addEventListener('click', () => {
         if (!state.currentUser) { alert("You must be logged in to manage your publications."); return; }
         elements.dataModal.style.display = 'none';
@@ -265,6 +318,7 @@ export function attachEventListeners() {
         document.querySelector('.leaderboard-tab[data-metric="totalPins"]').classList.add('active');
         fetchAndDisplayLeaderboard('totalPins');
     });
+
     elements.leaderboardTabs.forEach(tab => {
         tab.addEventListener('click', () => {
             elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
@@ -276,6 +330,7 @@ export function attachEventListeners() {
             else { fetchAndDisplayLeaderboard(tab.dataset.metric); }
         });
     });
+
     elements.leaderboardList.addEventListener('click', (e) => {
         if (e.target && e.target.classList.contains('leaderboard-profile-link')) {
             e.preventDefault();
@@ -345,61 +400,33 @@ export function attachEventListeners() {
         loadActivityFeed();
     });
 
-    // --- MAIN MENU NAVIGATION: ACHIEVEMENTS (Milestones) ---
-    if (elements.btnAchievements) {
-        elements.btnAchievements.addEventListener('click', () => {
-            elements.menuModal.style.display = 'none'; // Close Menu
-            elements.achievementsModal.style.display = 'flex'; // Open List
-            
-            // Default to 'standard' (Milestones)
-            openAchievementsModal('standard'); 
-            
-            // DYNAMIC BACK BUTTON: Go back to Main Menu
-            if (elements.achievementListBackBtn) {
-                const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
-                elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
-                elements.achievementListBackBtn = newBackBtn; 
+    // --- CHALLENGE MENU NAVIGATION ---
 
-                newBackBtn.addEventListener('click', () => {
-                    elements.achievementsModal.style.display = 'none';
-                    elements.menuModal.style.display = 'flex'; // Return to Main Menu
-                });
-            }
-        });
-    }
-
-    // --- CHALLENGE MENU NAVIGATION: EVENT BADGES ---
+    // 1. EVENT BADGES (Challenge Menu -> Event Rewards)
     if (elements.btnViewEventBadges) {
         elements.btnViewEventBadges.addEventListener('click', () => {
             elements.challengeMenuModal.style.display = 'none'; // Close Hub
-            elements.achievementsModal.style.display = 'flex'; // Open List
+            elements.achievementsModal.style.display = 'flex';  // Open List
             
-            // Show Event Badges
-            openAchievementsModal('challenge'); 
+            // Call the Specific Function for Events
+            openEventBadgesModal(); 
             
-            // DYNAMIC BACK BUTTON: Go back to Challenge Hub
+            // DYNAMIC BACK BUTTON: Returns to Challenge Hub
             if (elements.achievementListBackBtn) {
+                // Clone node to strip old listeners
                 const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
                 elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
                 elements.achievementListBackBtn = newBackBtn; 
 
                 newBackBtn.addEventListener('click', () => {
                     elements.achievementsModal.style.display = 'none';
-                    elements.challengeMenuModal.style.display = 'flex'; // Return to Challenge Hub
+                    elements.challengeMenuModal.style.display = 'flex'; // <--- Go back to Challenge Hub
                 });
             }
         });
     }
 
-    // --- CHALLENGE MENU LOGIC ---
-    if (elements.communityChallengeBtn) {
-        elements.communityChallengeBtn.addEventListener('click', () => {
-            elements.menuModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
-        });
-    }
-
-    // 1. Current Challenges
+    // 2. Current Challenges
     if (elements.btnCurrentChallenges) {
         elements.btnCurrentChallenges.addEventListener('click', () => {
             elements.challengeMenuModal.style.display = 'none';
@@ -417,7 +444,7 @@ export function attachEventListeners() {
         });
     }
 
-    // 2. Past Challenges
+    // 3. Past Challenges
     elements.btnPastChallenges.addEventListener('click', () => {
         elements.challengeMenuModal.style.display = 'none';
         elements.pastChallengesModal.style.display = 'flex';
@@ -434,7 +461,7 @@ export function attachEventListeners() {
         });
     }
 
-    // 3. History Tabs
+    // 4. History Tabs
     elements.tabCompleted.addEventListener('click', () => {
         elements.tabCompleted.classList.add('active');
         elements.tabUncompleted.classList.remove('active');
@@ -447,7 +474,7 @@ export function attachEventListeners() {
         loadPastChallenges('uncompleted');
     });
 
-    // 4. Admin Panel
+    // 5. Admin Panel
     if (elements.btnAdminPanel) {
         elements.btnAdminPanel.addEventListener('click', async () => {
             elements.challengeMenuModal.style.display = 'none';
@@ -477,7 +504,7 @@ export function attachEventListeners() {
 
     // Generic Close Listeners
     addAllModalCloseListeners();
-}
+} //end event listern**************
 
 function addAllModalCloseListeners() {
     const allModals = Object.values(elements).filter(el => el && el.classList && el.classList.contains('modal-overlay'));
