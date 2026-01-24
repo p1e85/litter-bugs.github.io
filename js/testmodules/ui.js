@@ -223,7 +223,7 @@ export function attachEventListeners() {
     if (elements.btnAchievements) {
         elements.btnAchievements.addEventListener('click', () => {
             elements.menuModal.style.display = 'none';
-            elements.achievementsModal.style.display = 'flex';
+            elements.achievementsModal.style.display = 'flex'; 
             
             // Just open it. No arguments.
             openAchievementsModal(); 
