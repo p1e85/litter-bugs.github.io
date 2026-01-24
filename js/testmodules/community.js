@@ -714,46 +714,65 @@ export async function toggleRouteLike(routeId) {
 }
 
 // --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
+import { state, allBadges } from './config.js'; 
+import { db, doc, getDoc } from './firebase.js';
 
 export async function openAchievementsModal() {
-    const grid = document.getElementById('achievementsGrid');
-    grid.innerHTML = 'Loading...';
+    // We target the existing list container in your HTML
+    const grid = document.getElementById('achievementsList');
+    const title = document.getElementById('achievementsTitle');
+
+    if (title) title.innerText = "🏆 All Achievements";
+    
+    if (!grid) return;
+
+    grid.innerHTML = '<p>Loading...</p>';
 
     if (!state.currentUser) {
-        alert("Please log in to see your achievements.");
+        grid.innerHTML = "<p>Please log in to see your achievements.</p>";
         return;
     }
 
     try {
-        // 1. Get User's Earned Badges
+        // 1. Get User's Earned Badges from PUBLIC PROFILES (The fix!)
         const profileRef = doc(db, "publicProfiles", state.currentUser.uid);
         const profileSnap = await getDoc(profileRef);
+        
+        // Grab the badges object, or empty object if none exist
         const userBadges = profileSnap.exists() ? (profileSnap.data().badges || {}) : {};
+
+        console.log("🏆 Loaded Badges from PublicProfile:", userBadges); // Debug log
 
         // 2. Clear Grid
         grid.innerHTML = '';
 
         // 3. Loop through ALL possible badges (from config.js)
-        // We assume allBadges is an object like { badgeID: {name, icon, description}... }
-        for (const [badgeId, badgeInfo] of Object.entries(allBadges)) {
-            const hasBadge = userBadges[badgeId] === true;
+        Object.entries(allBadges).forEach(([badgeId, badgeInfo]) => {
+            
+            // Check if user has it. We use !! to handle strictly true OR object data
+            const hasBadge = !!userBadges[badgeId];
             
             const card = document.createElement('div');
+            // We use the class names from your snippet to match your CSS expectations
             card.className = `achievement-card ${hasBadge ? 'unlocked' : 'locked'}`;
+            
+            // Add tooltips
             card.title = hasBadge ? `EARNED: ${badgeInfo.description}` : `LOCKED: ${badgeInfo.description}`;
             
+            // Render: Icon + Name
+            // Note: Locked items get handled by CSS opacity/grayscale
             card.innerHTML = `
-                <span class="achievement-icon">${badgeInfo.icon}</span>
-                <span class="achievement-name">${badgeInfo.name}</span>
+                <div class="achievement-icon">${badgeInfo.icon}</div>
+                <div class="achievement-name">${badgeInfo.name}</div>
             `;
             
-            // Optional: Click to see details
+            // Optional: Click to see details (From your snippet)
             card.addEventListener('click', () => {
                 alert(`${badgeInfo.name}\n\n${badgeInfo.description}\n\nStatus: ${hasBadge ? "✅ Earned" : "🔒 Locked"}`);
             });
 
             grid.appendChild(card);
-        }
+        });
 
     } catch (error) {
         console.error("Error loading achievements:", error);
