@@ -721,60 +721,54 @@ export async function openAchievementsModal() {
     
     if (!list) return;
 
-    if (title) title.innerText = "🏆 My Collection";
-    list.innerHTML = "<p>Loading your stats...</p>";
+    if (title) title.innerText = "🏆 Achievements";
+    list.innerHTML = "<p>Loading...</p>";
 
-    // 1. Fetch User Data (Just like My Stats)
+    // 1. Fetch User Data
     let userBadges = {};
     if (state.currentUser) {
         try {
             const userDoc = await getDoc(doc(db, "users", state.currentUser.uid));
             if (userDoc.exists()) {
-                const data = userDoc.data();
-                // We prioritize the 'badges' field, just like the Leaderboard does
-                userBadges = data.badges || {};
+                userBadges = userDoc.data().badges || {};
             }
-        } catch (e) {
-            console.error("Error fetching badges", e);
-        }
+        } catch (e) { console.error("Error fetching badges", e); }
     }
 
     list.innerHTML = ""; 
-    const badgeKeys = Object.keys(userBadges);
+    let count = 0;
 
-    // 2. Render EXACTLY what is in the Database
-    if (badgeKeys.length > 0) {
-        badgeKeys.forEach(key => {
-            const badge = userBadges[key];
-
-            // Fallbacks in case DB data is missing a field
-            const name = badge.name || "Unknown Badge";
-            const desc = badge.description || "Earned!";
-            const icon = badge.icon || "🏅";
-            const color = badge.color || "#4A7C59";
+    // 2. Render Loop (Show ALL Badges)
+    if (allBadges) {
+        Object.entries(allBadges).forEach(([key, config]) => {
+            // Check if user has this badge
+            // We verify by Key OR by Name (fuzzy match) just in case
+            const userHasIt = userBadges[key] || Object.values(userBadges).some(b => b.name === config.name);
+            
+            count++;
 
             const badgeEl = document.createElement('div');
-            badgeEl.className = 'achievement-item unlocked'; // Always unlocked because we own it
+            // This class controls the Gray vs Color look in CSS
+            badgeEl.className = `achievement-item ${userHasIt ? 'unlocked' : 'locked'}`;
             
+            // Background Color: Only applied inline if unlocked. 
+            // If locked, CSS !important overrides it to Gray.
+            const bgStyle = userHasIt ? config.color : '#ccc'; 
+
             badgeEl.innerHTML = `
-                <div class="badge-icon" style="background:${color}; font-size: 2em; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin: 0 auto; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-                    ${icon}
-                </div>
-                <div style="margin-top: 10px;">
-                    <strong>${name}</strong>
-                    <p style="font-size: 0.8em; color: #666;">${desc}</p>
+                <div class="badge-icon" style="background:${bgStyle};">
+                    ${config.icon} </div>
+                <div>
+                    <strong>${config.name}</strong>
+                    <p style="font-size: 0.75em; color: #666; margin:0;">${config.description}</p>
                 </div>
             `;
             list.appendChild(badgeEl);
         });
-    } else {
-        // 3. Empty State
-        list.innerHTML = `
-            <div style="text-align:center; padding: 20px; color:#666;">
-                <h3>No Badges Yet</h3>
-                <p>Start tracking cleanups to earn your first badge!</p>
-            </div>
-        `;
+    }
+
+    if (count === 0) {
+        list.innerHTML = "<p>No badges configured.</p>";
     }
 }
 
