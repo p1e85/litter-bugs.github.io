@@ -740,3 +740,52 @@ async function loadPublicChallenges() {
         listContainer.innerHTML = "<p style='color:red'>Error loading quests.</p>";
     }
 }
+
+// --- CHALLENGE PARTICIPATION ---
+
+// 1. Join a Challenge
+export async function joinChallenge(challengeId, challengeTitle, userId) {
+    try {
+        const userRef = doc(db, "users", userId);
+        
+        // We store active quests in a map field called 'active_quests'
+        // Format: { [challengeId]: { progress: 0, joined_at: date } }
+        const updateData = {};
+        updateData[`active_quests.${challengeId}`] = {
+            title: challengeTitle,
+            progress: 0.0,
+            status: 'active',
+            joined_at: new Date()
+        };
+
+        await updateDoc(userRef, updateData);
+        return true;
+    } catch (e) {
+        console.error("Error joining challenge:", e);
+        // If the map doesn't exist yet, setDoc with merge fixes it
+        const userRef = doc(db, "users", userId);
+        const setObj = { active_quests: {} };
+        setObj.active_quests[challengeId] = {
+            title: challengeTitle,
+            progress: 0.0,
+            status: 'active',
+            joined_at: new Date()
+        };
+        await setDoc(userRef, setObj, { merge: true });
+        return true;
+    }
+}
+
+// 2. Get User's Active Quests (To update the UI buttons)
+export async function getUserQuests(userId) {
+    try {
+        const userSnap = await getDoc(doc(db, "users", userId));
+        if (userSnap.exists() && userSnap.data().active_quests) {
+            return userSnap.data().active_quests;
+        }
+        return {}; // Return empty object if none found
+    } catch (e) {
+        console.error("Error fetching user quests:", e);
+        return {};
+    }
+}
