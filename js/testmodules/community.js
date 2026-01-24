@@ -715,38 +715,22 @@ export async function toggleRouteLike(routeId) {
 
 // --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
 
-export async function openAchievementsModal(viewType = 'standard') {
+export async function openAchievementsModal(viewType) {
     const list = document.getElementById('achievementsList');
     const title = document.getElementById('achievementsTitle');
     
     if (!list) return;
 
-    // --- 1. DEFINITIONS (The "Database" of badges) ---
-    // We define standard achievements here to ensure they ALWAYS show up, 
-    // even if config.js is missing them.
-    const standardAchievements = {
-        "first_mile": { name: "First Steps", description: "Walked 1 mile cleaning up.", icon: "👟", color: "#4A7C59" },
-        "high_five": { name: "High Five", description: "Collected 50 items.", icon: "✋", color: "#4A7C59" },
-        "trash_titan": { name: "Trash Titan", description: "Collected 1,000 items.", icon: "🏋️", color: "#DC143C" },
-        "night_owl": { name: "Night Owl", description: "Cleaned up after 8 PM.", icon: "🦉", color: "#483D8B" },
-        "early_bird": { name: "Early Bird", description: "Cleaned up before 8 AM.", icon: "🌅", color: "#FF4500" },
-        "shutterbug": { name: "Shutterbug", description: "Saved a cleanup photo.", icon: "📸", color: "#00CED1" }
-    };
-
-    // Combine with whatever is in config.js (which likely has your Weekend Warrior badge)
-    // If allBadges is undefined, we default to an empty object to prevent crashes.
-    const allDefinitions = { ...standardAchievements, ...(allBadges || {}) };
-
-    // --- 2. SETUP UI ---
+    // 1. Set Title based on which button was clicked
     if (viewType === 'challenge') {
-        if(title) title.innerText = "⚔️ Event Badges";
+        if(title) title.innerText = "⚔️ Event Badges (Earned)";
     } else {
         if(title) title.innerText = "🏆 Career Milestones";
     }
 
     list.innerHTML = "<p>Loading...</p>";
 
-    // --- 3. FETCH USER PROGRESS ---
+    // 2. Fetch User Badges
     let userBadges = {};
     if (state.currentUser) {
         try {
@@ -754,36 +738,40 @@ export async function openAchievementsModal(viewType = 'standard') {
             if (userDoc.exists()) {
                 userBadges = userDoc.data().badges || {};
             }
-        } catch (e) { console.error("Error fetching user badges:", e); }
+        } catch (e) {
+            console.error("Error fetching badges", e);
+        }
     }
 
-    list.innerHTML = ""; 
+    list.innerHTML = "";
     let count = 0;
 
-    // --- 4. RENDER LOOP ---
-    Object.entries(allDefinitions).forEach(([key, config]) => {
-        const badgeData = userBadges[key]; 
+    // 3. Loop through the config (The logic that worked before)
+    // We use 'allBadges' directly from config.js
+    Object.entries(allBadges).forEach(([key, config]) => {
+        const badgeData = userBadges[key]; // Do we own it?
         const isUnlocked = !!badgeData;
 
-        // IDENTIFY TYPE
-        // It is a 'Challenge Badge' if:
-        // 1. The ID contains 'warrior' (Your test badge)
-        // 2. OR the user data says source: 'challenge'
+        // --- FILTERING ---
+        // Identify if it's a Challenge Badge (has 'warrior' in ID or source='challenge')
         const isChallengeBadge = key.includes('warrior') || (badgeData && badgeData.source === 'challenge');
 
         let shouldShow = false;
 
         if (viewType === 'challenge') {
-            // === EVENT BADGES TAB ===
-            // Show ONLY if it's a Challenge Badge AND it is Unlocked
-            if (isChallengeBadge && isUnlocked) shouldShow = true;
+            // CHALLENGE MENU: Only show if it is a Challenge Badge AND Unlocked
+            if (isChallengeBadge && isUnlocked) {
+                shouldShow = true;
+            }
         } else {
-            // === ACHIEVEMENTS TAB ===
-            // Show ONLY if it's a Standard Achievement (Milestone)
-            // We show these even if locked (grayed out) so people know what to aim for.
-            if (!isChallengeBadge) shouldShow = true;
+            // MAIN MENU: Show if it is a Milestone (NOT a challenge badge)
+            // Show both locked and unlocked so users see their goals.
+            if (!isChallengeBadge) {
+                shouldShow = true;
+            }
         }
 
+        // --- RENDER ---
         if (shouldShow) {
             count++;
             const badgeEl = document.createElement('div');
@@ -806,16 +794,12 @@ export async function openAchievementsModal(viewType = 'standard') {
         }
     });
 
-    // --- 5. EMPTY STATES ---
+    // 4. Empty State
     if (count === 0) {
         if (viewType === 'challenge') {
-            list.innerHTML = `
-                <div style="text-align:center; padding: 20px; color:#888;">
-                    <p>No event badges earned yet.</p>
-                    <small>Complete a Quest to earn one!</small>
-                </div>`;
+            list.innerHTML = "<div style='text-align:center; padding:20px; color:#888;'><p>No event badges earned yet.</p></div>";
         } else {
-            list.innerHTML = "<p style='padding:20px; color:#999;'>No milestones found.</p>";
+            list.innerHTML = "<p style='padding:20px; color:#999;'>No milestones yet.</p>";
         }
     }
 }
