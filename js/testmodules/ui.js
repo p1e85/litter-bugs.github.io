@@ -20,7 +20,8 @@ import {
     openCurrentChallenges,
     openPastChallenges,
     getAdminChallenges,
-    deleteChallenge
+    deleteChallenge,
+    createNewChallenge
 } from './community.js';
 
 // --- DOM Element Selection ---
