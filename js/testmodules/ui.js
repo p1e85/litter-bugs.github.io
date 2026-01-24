@@ -743,12 +743,10 @@ async function loadPublicChallenges() {
 
     try {
         const community = await import('./community.js');
-        const state = await import('./config.js').then(m => m.state); // Get current user
+        const state = await import('./config.js').then(m => m.state); 
 
-        // 1. Fetch All Available Challenges
+        // 1. Fetch Data
         const challenges = await community.getAdminChallenges();
-        
-        // 2. Fetch User's Current Progress
         let myQuests = {};
         if (state.currentUser) {
             myQuests = await community.getUserQuests(state.currentUser.uid);
@@ -757,61 +755,87 @@ async function loadPublicChallenges() {
         listContainer.innerHTML = ""; 
 
         if (challenges.length === 0) {
-            listContainer.innerHTML = "<p>No active challenges right now.</p>";
+            listContainer.innerHTML = "<p>No active challenges.</p>";
             return;
         }
+
+        // 2. Sort: Active first, Completed last
+        challenges.sort((a, b) => {
+            const statA = myQuests[a.id] ? myQuests[a.id].status : 'new';
+            const statB = myQuests[b.id] ? myQuests[b.id].status : 'new';
+            if (statA === 'completed' && statB !== 'completed') return 1; // Move completed to bottom
+            if (statA !== 'completed' && statB === 'completed') return -1;
+            return 0;
+        });
 
         challenges.forEach(chal => {
             const card = document.createElement('div');
             card.className = "hub-card"; 
             card.style.marginBottom = "15px";
             card.style.textAlign = "left";
-            card.style.display = "block"; 
+            card.style.display = "flex"; 
+            card.style.justifyContent = "space-between";
+            card.style.alignItems = "center";
 
-            // Calculate days left
+            // Metadata
             const expireDate = new Date(chal.expires_at.seconds * 1000);
             const diffDays = Math.ceil((expireDate - new Date()) / (1000 * 60 * 60 * 24)); 
             
-            // CHECK: Is the user already doing this?
-            const isJoined = myQuests.hasOwnProperty(chal.id);
-            const userProgress = isJoined ? myQuests[chal.id].progress : 0;
+            // Check Status
+            const questData = myQuests[chal.id];
+            const isJoined = !!questData;
+            const isCompleted = questData && questData.status === 'completed';
+            const userProgress = isJoined ? questData.progress : 0;
 
-            // DYNAMIC BUTTON HTML
-            let buttonHtml = `<button class="modal-button primary start-btn" data-id="${chal.id}" data-title="${chal.title}" style="width: auto; padding: 5px 15px;">Start</button>`;
-            
-            if (isJoined) {
+            // --- 🎨 VISUAL STYLES ---
+            let statusColor = "#333";
+            let buttonHtml = "";
+
+            if (isCompleted) {
+                // CASE 1: COMPLETED (Gold Style)
+                card.style.border = "2px solid #FFD700"; // Gold Border
+                card.style.backgroundColor = "#fff9db"; // Light Yellow BG
                 buttonHtml = `
                     <div style="text-align: right;">
-                        <span style="display:block; font-size:0.8em; color:#4A7C59; font-weight:bold;">✅ Joined</span>
-                        <small style="color:#666;">${userProgress} / ${chal.goal_miles} mi</small>
+                        <span style="font-size:1.2em;">🏆</span>
+                        <span style="display:block; font-size:0.8em; color:#B8860B; font-weight:bold;">COMPLETED</span>
                     </div>
                 `;
+            } else if (isJoined) {
+                // CASE 2: ACTIVE (Green Style)
+                card.style.border = "1px solid #4A7C59"; 
+                buttonHtml = `
+                    <div style="text-align: right;">
+                        <span style="display:block; font-size:0.8em; color:#4A7C59; font-weight:bold;">✅ Active</span>
+                        <small style="color:#666;">${userProgress.toFixed(1)} / ${chal.goal_miles} mi</small>
+                    </div>
+                `;
+            } else {
+                // CASE 3: NEW (Standard Style)
+                buttonHtml = `<button class="modal-button primary start-btn" data-id="${chal.id}">Start</button>`;
             }
 
+            // HTML Content
             card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
-                        <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${chal.description}</p>
-                        <div style="font-size: 0.85em; font-weight: bold; color: #333;">
-                            🎯 Goal: ${chal.goal_miles} Miles • ⏳ ${diffDays} days left
-                        </div>
+                <div>
+                    <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
+                    <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${chal.description}</p>
+                    <div style="font-size: 0.85em; font-weight: bold; color: ${statusColor};">
+                        🎯 Goal: ${chal.goal_miles} Miles <br>
+                        ⏳ Ends in: ${diffDays} days
                     </div>
-                    ${buttonHtml}
                 </div>
+                ${buttonHtml}
             `;
             
-            // Add Click Listener ONLY if not joined yet
+            // Listener for Start Button
             if (!isJoined) {
                 const btn = card.querySelector('.start-btn');
                 btn.addEventListener('click', async () => {
                     if (!state.currentUser) { alert("Please login first!"); return; }
-                    
                     btn.innerText = "Joining...";
                     await community.joinChallenge(chal.id, chal.title, state.currentUser.uid);
-                    
-                    // Refresh the list to show the new "Joined" status
-                    loadPublicChallenges();
+                    loadPublicChallenges(); // Refresh
                 });
             }
 
@@ -820,6 +844,6 @@ async function loadPublicChallenges() {
 
     } catch (e) {
         console.error("Error loading challenges:", e);
-        listContainer.innerHTML = "<p style='color:red'>Error loading quests.</p>";
+        listContainer.innerHTML = "<p>Error loading content.</p>";
     }
 }
