@@ -715,11 +715,14 @@ export async function toggleRouteLike(routeId) {
 
 // --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
 
-// --- THE ORIGINAL SIMPLE FUNCTION ---
 export async function openAchievementsModal() {
     const list = document.getElementById('achievementsList');
+    const title = document.getElementById('achievementsTitle'); // Ensure your HTML has this ID
     
     if (!list) return;
+
+    // Reset Title
+    if (title) title.innerText = "🏆 Achievements";
 
     list.innerHTML = "<p>Loading...</p>";
 
@@ -730,7 +733,7 @@ export async function openAchievementsModal() {
             const userDoc = await getDoc(doc(db, "users", state.currentUser.uid));
             if (userDoc.exists()) {
                 userBadges = userDoc.data().badges || {};
-                console.log("My Earned Badges:", userBadges); // Debugging
+                console.log("User Data Loaded:", userBadges); // 👈 Check console for this!
             }
         } catch (e) {
             console.error("Error fetching badges", e);
@@ -740,16 +743,15 @@ export async function openAchievementsModal() {
     list.innerHTML = ""; 
     let count = 0;
 
-    // 2. Loop through ALL Badges in Config
-    // This displays everything defined in config.js
+    // 2. Render Loop (Based on Config)
     if (allBadges) {
         Object.entries(allBadges).forEach(([key, config]) => {
-            const badgeData = userBadges[key]; // Check if user has it
-            const isUnlocked = !!badgeData;    // True if badgeData exists
+            const badgeData = userBadges[key]; // Does user have this key?
+            const isUnlocked = !!badgeData;
 
             count++;
 
-            // Create the HTML
+            // Create HTML
             const badgeEl = document.createElement('div');
             badgeEl.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
             
@@ -770,9 +772,8 @@ export async function openAchievementsModal() {
         });
     }
 
-    // 3. Empty State
     if (count === 0) {
-        list.innerHTML = "<p style='padding:20px; color:#999;'>No badges configured.</p>";
+        list.innerHTML = "<p>No badges found in configuration.</p>";
     }
 }
 
