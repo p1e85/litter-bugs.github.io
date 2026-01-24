@@ -738,29 +738,39 @@ export async function openAchievementsModal() {
     list.innerHTML = ""; 
     let count = 0;
 
-    // 2. Render Loop (Show ALL Badges)
+    // 2. Render Loop (Show ALL Badges from Config)
     if (allBadges) {
-        Object.entries(allBadges).forEach(([key, config]) => {
-            // Check if user has this badge
-            // We verify by Key OR by Name (fuzzy match) just in case
-            const userHasIt = userBadges[key] || Object.values(userBadges).some(b => b.name === config.name);
+        Object.entries(allBadges).forEach(([configKey, config]) => {
             
+            // --- SMARTER MATCHING ---
+            // 1. Check if the IDs match exactly (e.g. 'first_mile' === 'first_mile')
+            let isUnlocked = !!userBadges[configKey];
+
+            // 2. If ID match failed, check if we own a badge with the SAME NAME.
+            // This fixes the issue where DB keys might differ from Config keys.
+            if (!isUnlocked) {
+                isUnlocked = Object.values(userBadges).some(userBadge => 
+                    userBadge.name === config.name
+                );
+            }
+            // ------------------------
+
             count++;
 
             const badgeEl = document.createElement('div');
-            // This class controls the Gray vs Color look in CSS
-            badgeEl.className = `achievement-item ${userHasIt ? 'unlocked' : 'locked'}`;
+            // CSS handles the Gray vs Color based on this class
+            badgeEl.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
             
-            // Background Color: Only applied inline if unlocked. 
-            // If locked, CSS !important overrides it to Gray.
-            const bgStyle = userHasIt ? config.color : '#ccc'; 
+            // Background: Config color if unlocked, forced Gray by CSS if locked.
+            const bgStyle = config.color; 
 
             badgeEl.innerHTML = `
                 <div class="badge-icon" style="background:${bgStyle};">
-                    ${config.icon} </div>
+                    ${config.icon}
+                </div>
                 <div>
                     <strong>${config.name}</strong>
-                    <p style="font-size: 0.75em; color: #666; margin:0;">${config.description}</p>
+                    <p style="font-size: 0.75em; margin:0;">${config.description}</p>
                 </div>
             `;
             list.appendChild(badgeEl);
