@@ -1,27 +1,17 @@
+// 1. TOP LEVEL IMPORTS (Required)
+import { db, collection, query, orderBy, limit, getDocs } from './firebase.js'; // Moved from middle of file
 import { state } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
-import { fetchAndDisplayAllEvents } from './community.js'; 
-import {
-    toggleCommunityView,
-    publishRoute,
-    populatePublishedRoutesList,
-    loadProfileForEditing,
-    saveProfile,
-    fetchAndDisplayLeaderboard,
-    fetchAndDisplayMyStats,
-    showPublicProfile,
-    handleMeetupSubmit,
-    validateMeetupForm,
-    toggleRouteLike,
-    openAchievementsModal,
-    openCurrentChallenges,
-    openPastChallenges,
-    getAdminChallenges,
-    deleteChallenge,
-    createNewChallenge
+import { 
+    toggleCommunityView, publishRoute, populatePublishedRoutesList, 
+    loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, 
+    fetchAndDisplayMyStats, showPublicProfile, handleMeetupSubmit, 
+    validateMeetupForm, toggleRouteLike, openAchievementsModal, 
+    // We import these logic helpers, but we handle the UI display in this file now
+    getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents 
 } from './community.js';
 
 // --- DOM Element Selection ---
@@ -39,6 +29,7 @@ const elements = {
     adminChalExpire: document.getElementById('adminChalExpire'),
     adminChallengeList: document.getElementById('adminChallengeList'),
     
+    // General Modals
     termsModal: document.getElementById('termsModal'),
     authModal: document.getElementById('authModal'),
     dataModal: document.getElementById('dataModal'),
@@ -51,18 +42,18 @@ const elements = {
     safetyModal: document.getElementById('safetyModal'),
     summaryModal: document.getElementById('summaryModal'),
     leaderboardModal: document.getElementById('leaderboardModal'),
-    achievementModal: document.getElementById('achievementModal'),
     meetupModal: document.getElementById('meetupModal'),
     viewMeetupsModal: document.getElementById('viewMeetupsModal'),
     menuModal: document.getElementById('menuModal'),
-    communityChallengeBtn: document.getElementById('communityChallengeBtn'),
-    challengeModal: document.getElementById('challengeModal'),
-    addChallengeBtn: document.getElementById('addChallengeBtn'),
-    currentChallengesTab: document.getElementById('currentChallengesTab'),
-    pastChallengesTab: document.getElementById('pastChallengesTab'),
-    hubModal: document.getElementById('hubModal'),
-    feedModal: document.getElementById('feedModal'),
-    feedContainer: document.getElementById('feedContainer'),
+    eventsModal: document.getElementById('eventsModal'),
+    achievementsModal: document.getElementById('achievementsModal'),
+    
+    // Challenge System
+    challengeMenuModal: document.getElementById('challengeMenuModal'),
+    activeChallengesModal: document.getElementById('activeChallengesModal'),
+    pastChallengesModal: document.getElementById('pastChallengesModal'),
+    
+    // Buttons
     agreeBtn: document.getElementById('agreeBtn'),
     skipBtn: document.getElementById('skipBtn'),
     findMeBtn: document.getElementById('findMeBtn'),
@@ -91,10 +82,17 @@ const elements = {
     shareBtn: document.getElementById('shareBtn'),
     menuBtn: document.getElementById('menuBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
+    
+    // Hub
+    hubModal: document.getElementById('hubModal'),
     hubBtn: document.getElementById('hubBtn'),
     hubChallengesBtn: document.getElementById('hubChallengesBtn'),
     hubEventsBtn: document.getElementById('hubEventsBtn'),
     hubFeedBtn: document.getElementById('hubFeedBtn'),
+    feedModal: document.getElementById('feedModal'),
+    feedContainer: document.getElementById('feedContainer'),
+    
+    // Inputs
     cameraInput: document.getElementById('cameraInput'),
     termsCheckbox: document.getElementById('termsCheckbox'),
     ageCheckbox: document.getElementById('ageCheckbox'),
@@ -104,19 +102,17 @@ const elements = {
     safetyCheckbox: document.getElementById('safetyCheckbox'),
     meetupTitleInput: document.getElementById('meetupTitleInput'),
     meetupDescriptionInput: document.getElementById('meetupDescriptionInput'),
+    meetupDateInput: document.getElementById('meetupDateInput'),
     viewTermsLink: document.getElementById('viewTermsLink'),
+    
+    // Lists & Containers
     leaderboardTabs: document.querySelectorAll('.leaderboard-tab'),
     leaderboardList: document.getElementById('leaderboardList'),
-    eventsModal: document.getElementById('eventsModal'),
-    meetupDateInput: document.getElementById('meetupDateInput'),
-    challengeMenuModal: document.getElementById('challengeMenuModal'),
-    achievementsModal: document.getElementById('achievementsModal'),
-    currentChallengesModal: document.getElementById('currentChallengesModal'),
-    pastChallengesModal: document.getElementById('pastChallengesModal'),
-    activeChallengesModal: document.getElementById('activeChallengesModal'),
     publicChallengeList: document.getElementById('publicChallengeList'),
+    pastChallengesContent: document.getElementById('pastChallengesContent'),
     
-    // New Buttons
+    // Challenge Nav Buttons
+    communityChallengeBtn: document.getElementById('communityChallengeBtn'), // Legacy name
     btnViewAchievements: document.getElementById('btnViewAchievements'),
     btnCurrentChallenges: document.getElementById('btnCurrentChallenges'),
     btnPastChallenges: document.getElementById('btnPastChallenges'),
@@ -124,6 +120,9 @@ const elements = {
     // Tabs
     tabCompleted: document.getElementById('tabCompleted'),
     tabUncompleted: document.getElementById('tabUncompleted'),
+    
+    // Back Button (Specific for history)
+    btnBackToMenu: document.querySelector('#pastChallengesModal .ok-btn') 
 };
 
 /**
@@ -142,12 +141,10 @@ export function initializeUI() {
         elements.termsModal.style.display = 'flex';
     }
 
-    // --- NEW: Set Dynamic Date ---
     const dateElement = document.getElementById('dynamicDateDay');
-        if (dateElement) {
-            dateElement.textContent = new Date().getDate(); // Sets the number to today (e.g., 22)
-        }
-    
+    if (dateElement) {
+        dateElement.textContent = new Date().getDate(); 
+    }
 }
 
 function attachEventListeners() {
@@ -179,34 +176,7 @@ function attachEventListeners() {
     elements.ageCheckbox.addEventListener('change', validateSignUpForm);
     elements.deleteAccountBtn.addEventListener('click', handleAccountDeletion);
 
-    if (elements.addChallengeBtn) {
-        elements.addChallengeBtn.addEventListener('click', () => {
-            alert('Add New Challenge modal will go here.'); 
-        });
-    }
-    if (elements.communityChallengeBtn) {
-        elements.communityChallengeBtn.addEventListener('click', () => {
-            elements.challengeModal.style.display = 'flex';
-            elements.menuModal.style.display = 'none';
-        });
-    }
-    if (elements.currentChallengesTab) {
-        elements.currentChallengesTab.addEventListener('click', () => {
-            document.getElementById('currentChallengesContent').style.display = 'block';
-            document.getElementById('pastChallengesContent').style.display = 'none';
-            elements.currentChallengesTab.classList.add('active');
-            elements.pastChallengesTab.classList.remove('active');
-        });
-    }
-    if (elements.pastChallengesTab) {
-        elements.pastChallengesTab.addEventListener('click', () => {
-            document.getElementById('currentChallengesContent').style.display = 'none';
-            document.getElementById('pastChallengesContent').style.display = 'block';
-            elements.currentChallengesTab.classList.remove('active');
-            elements.pastChallengesTab.classList.add('active');
-        });
-    }
-
+    // --- MAP & TRACKING ---
     elements.findMeBtn.addEventListener('click', findMe);
     elements.trackBtn.addEventListener('click', toggleTracking);
     elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
@@ -229,6 +199,8 @@ function attachEventListeners() {
         document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none';
         document.getElementById('cleanupPhotoPreview').src = '#';
     });
+
+    // --- DATA & SAVING ---
     elements.dataBtn.addEventListener('click', () => {
         const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
         elements.menuModal.style.display = 'none';
@@ -256,6 +228,8 @@ function attachEventListeners() {
         populatePublishedRoutesList();
         elements.publishedRoutesModal.style.display = 'flex';
     });
+
+    // --- PROFILE ---
     elements.editProfileBtn.addEventListener('click', () => {
         if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
         elements.menuModal.style.display = 'none'; 
@@ -263,6 +237,8 @@ function attachEventListeners() {
         elements.profileModal.style.display = 'flex';
     });
     elements.saveProfileBtn.addEventListener('click', saveProfile);
+
+    // --- LEADERBOARD ---
     elements.leaderboardBtn.addEventListener('click', () => {
         elements.leaderboardModal.style.display = 'flex';
         document.getElementById('leaderboardList').style.display = 'block';
@@ -293,6 +269,7 @@ function attachEventListeners() {
         }
     });
 
+    // --- CLEANUP PHOTOS (Preview Logic) ---
     const addCleanupPhotoBtn = document.getElementById('addCleanupPhotoBtn');
     const cleanupCameraInput = document.getElementById('cleanupCameraInput');
     const photoPreviewContainer = document.getElementById('cleanupPhotoPreviewContainer');
@@ -303,21 +280,12 @@ function attachEventListeners() {
             cleanupCameraInput.click(); 
         });
     }
-
     if (cleanupCameraInput) {
         cleanupCameraInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
-                const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280 };
-                let compressedFile;
-                try {
-                    compressedFile = await imageCompression(file, options);
-                } catch (error) {
-                    console.error("Compression error:", error);
-                    compressedFile = file; 
-                }
-                state.cleanupPhoto = compressedFile; 
-                const objectURL = URL.createObjectURL(compressedFile);
+                state.cleanupPhoto = file; 
+                const objectURL = URL.createObjectURL(file);
                 photoPreview.src = objectURL;
                 photoPreviewContainer.style.display = 'flex';
                 event.target.value = '';
@@ -329,42 +297,41 @@ function attachEventListeners() {
         });
     }
 
+    // --- MEETUPS & EVENTS ---
     elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
     elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
     elements.meetupDescriptionInput.addEventListener('input', validateMeetupForm);
     elements.createMeetupBtn.addEventListener('click', handleMeetupSubmit);
     elements.shareBtn.addEventListener('click', shareCleanupResults);
+    elements.meetupDateInput.addEventListener('change', validateMeetupForm);
+
     addAllModalCloseListeners();
 
+    // --- HUB NAVIGATION ---
     elements.hubBtn.addEventListener('click', () => {
         elements.menuModal.style.display = 'none';
         elements.hubModal.style.display = 'flex';
     });
-
     if (elements.hubChallengesBtn) {
         elements.hubChallengesBtn.addEventListener('click', () => {
-            elements.hubModal.style.display = 'none'; // Close the Hub
-            elements.challengeMenuModal.style.display = 'flex'; // Open the new menu
+            elements.hubModal.style.display = 'none'; 
+            elements.challengeMenuModal.style.display = 'flex'; 
         });
     }
-
     elements.hubEventsBtn.addEventListener('click', () => {
         elements.hubModal.style.display = 'none';
         elements.eventsModal.style.display = 'flex';
         fetchAndDisplayAllEvents();
-        //alert('Events feature coming soon!'); 
     });
-
     elements.hubFeedBtn.addEventListener('click', () => {
         elements.hubModal.style.display = 'none';
         elements.feedModal.style.display = 'flex';
         loadActivityFeed();
     });
 
-    // Add listener for the new date input validation
-elements.meetupDateInput.addEventListener('change', validateMeetupForm);
-
-    // 1. Open Main Menu (Replace the old 'communityChallengeBtn' listener)
+    // --- CHALLENGE MENU LOGIC ---
+    
+    // 1. Open Challenge Menu (From Main Menu)
     if (elements.communityChallengeBtn) {
         elements.communityChallengeBtn.addEventListener('click', () => {
             elements.menuModal.style.display = 'none';
@@ -372,67 +339,65 @@ elements.meetupDateInput.addEventListener('change', validateMeetupForm);
         });
     }
 
-    // 2. Menu Buttons
+    // 2. Open Achievements
     elements.btnViewAchievements.addEventListener('click', () => {
         elements.challengeMenuModal.style.display = 'none';
         elements.achievementsModal.style.display = 'flex';
         openAchievementsModal();
     });
 
-// "Current Challenges" Button
+    // 3. Current Challenges
     if (elements.btnCurrentChallenges) {
         elements.btnCurrentChallenges.addEventListener('click', () => {
-            // 1. Close the menu
             elements.challengeMenuModal.style.display = 'none';
-            // 2. Open the list modal
             elements.activeChallengesModal.style.display = 'flex';
-            // 3. Load the data
             loadPublicChallenges();
         });
     }
 
+    // 4. Past Challenges (History)
     elements.btnPastChallenges.addEventListener('click', () => {
         elements.challengeMenuModal.style.display = 'none';
         elements.pastChallengesModal.style.display = 'flex';
         // Default to completed tab
         elements.tabCompleted.classList.add('active');
         elements.tabUncompleted.classList.remove('active');
-        openPastChallenges('completed');
+        loadPastChallenges('completed'); 
     });
 
-    // 3. Past Challenges Tabs
+    // 5. History Tabs
     elements.tabCompleted.addEventListener('click', () => {
         elements.tabCompleted.classList.add('active');
         elements.tabUncompleted.classList.remove('active');
-        openPastChallenges('completed');
+        loadPastChallenges('completed');
     });
 
     elements.tabUncompleted.addEventListener('click', () => {
         elements.tabUncompleted.classList.add('active');
         elements.tabCompleted.classList.remove('active');
-        openPastChallenges('uncompleted');
+        loadPastChallenges('uncompleted');
     });
 
-    // 4. Back Buttons (Re-open the Main Menu instead of closing everything)
-    // Find the 'ok-btn' inside these specific modals and override them if needed, 
-    // or just let them close. A better UX is to have a "Back" button go to menu.
-    
-    // (This logic assumes standard close behavior, but you can customize to go back to menu)
+    // 6. Back Button in History (Takes you back to Challenge Menu)
+    if (elements.btnBackToMenu) {
+        elements.btnBackToMenu.addEventListener('click', () => {
+            elements.pastChallengesModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
 
-    // Admin Button (In Challenge Menu)
+    // 7. Admin Panel (Hidden)
     if (elements.btnAdminPanel) {
         elements.btnAdminPanel.addEventListener('click', async () => {
             elements.challengeMenuModal.style.display = 'none';
             elements.adminChallengeModal.style.display = 'flex';
-            
-            // 👇 Load the list immediately
             await loadAdminChallengeList(); 
         });
     }
 
-    // Save Challenge Button
+    // 8. Admin Save Button
     if (elements.btnSaveChallenge) {
-        elements.btnSaveChallenge.addEventListener('click', () => {
+        elements.btnSaveChallenge.addEventListener('click', async () => {
             const title = elements.adminChalTitle.value;
             const desc = elements.adminChalDesc.value;
             const goal = elements.adminChalGoal.value;
@@ -444,8 +409,10 @@ elements.meetupDateInput.addEventListener('change', validateMeetupForm);
                 return;
             }
 
-            // Import this function from community.js first!
-            createNewChallenge(title, desc, goal, badge, expire);
+            // Call imported function from community.js
+            await createNewChallenge(title, desc, goal, badge, expire);
+            alert("Challenge Created!");
+            loadAdminChallengeList(); // Refresh list
         });
     }
 
@@ -530,7 +497,7 @@ function validateSignUpForm() {
     }
 }
 
-import { db, collection, query, orderBy, limit, getDocs } from './firebase.js';
+// --- ACTIVITY FEED (Moved imports to top) ---
 
 async function loadActivityFeed() {
     const container = elements.feedContainer;
@@ -553,22 +520,15 @@ async function loadActivityFeed() {
 
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-
-            // FILTER: Skip old legacy routes
-            if (typeof data.distance === 'undefined' && typeof data.distanceMiles === 'undefined') {
-                return; 
-            }
+            if (typeof data.distance === 'undefined' && typeof data.distanceMiles === 'undefined') return; 
 
             const date = data.timestamp?.toDate().toLocaleDateString() || "Recently";
             const photoUrl = data.cleanupPhotoURL || 'https://placehold.co/400x300?text=No+Photo';
-            
-            // --- LIKE LOGIC ---
             const likeCount = data.likeCount || 0;
             const likedBy = data.likedBy || [];
             const isLiked = state.currentUser && likedBy.includes(state.currentUser.uid);
             const likeBtnClass = isLiked ? 'like-btn active' : 'like-btn';
             
-            // Generate the Card HTML
             const card = document.createElement('div');
             card.className = 'feed-card';
             card.innerHTML = `
@@ -586,37 +546,24 @@ async function loadActivityFeed() {
                         <span>📏 <strong>${data.distanceMiles || '0.00 mi'}</strong></span>
                     </div>
                     <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
-                    
                     <div class="feed-actions">
                          <button class="${likeBtnClass}">
-                            👍 <span class="like-count">${likeCount}</span>
+                           👍 <span class="like-count">${likeCount}</span>
                          </button>
                     </div>
                 </div>
             `;
             container.appendChild(card);
 
-            // --- ATTACH LISTENER (FIXED SELECTOR) ---
-            // We use .like-btn class directly instead of ID to avoid syntax errors
             const likeBtn = card.querySelector('.like-btn');
-            
             likeBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                
-                // Debugging log
-                console.log(`Toggling like for route: ${doc.id}`);
-                
                 const result = await toggleRouteLike(doc.id);
-                
                 if (result) {
-                    console.log("New like count:", result.likeCount);
                     likeBtn.querySelector('.like-count').textContent = result.likeCount;
                     likeBtn.classList.toggle('active', result.isLiked);
-                } else {
-                    console.error("Like failed. Check console for 'Missing Permissions' error.");
                 }
             });
-
         });
     } catch (error) {
         console.error("Error loading feed:", error);
@@ -624,39 +571,30 @@ async function loadActivityFeed() {
     }
 }
 
-// Function to reveal admin tools
-export function checkAdminPermissions(userProfile) {
-    console.log("🔍 Checking Admin Permissions...");
-    console.log("👤 Profile Data:", userProfile); // This will show us the raw data from Firebase
+// --- ADMIN PERMISSIONS ---
 
+export function checkAdminPermissions(userProfile) {
     if (userProfile && userProfile.role === 'admin') {
-        console.log("✅ SUCCESS: User is Admin! Unhiding button.");
-        if (elements.btnAdminPanel) {
-            elements.btnAdminPanel.style.display = 'flex';
-        } else {
-            console.error("❌ ERROR: Button #btnAdminPanel not found in HTML.");
-        }
+        if (elements.btnAdminPanel) elements.btnAdminPanel.style.display = 'flex';
     } else {
-        console.warn("⛔ ACCESS DENIED: User is NOT admin (or role is missing).");
+        if (elements.btnAdminPanel) elements.btnAdminPanel.style.display = 'none';
     }
 }
 
 async function loadAdminChallengeList() {
     if (!elements.adminChallengeList) return;
-    
     elements.adminChallengeList.innerHTML = "<p>Loading...</p>";
     
-    // Fetch data
-    const challenges = await import('./community.js').then(m => m.getAdminChallenges());
+    // We imported getAdminChallenges at the top now!
+    const challenges = await getAdminChallenges();
 
-    elements.adminChallengeList.innerHTML = ""; // Clear loading text
+    elements.adminChallengeList.innerHTML = ""; 
 
     if (challenges.length === 0) {
         elements.adminChallengeList.innerHTML = "<p>No active challenges found.</p>";
         return;
     }
 
-    // Render each challenge
     challenges.forEach(chal => {
         const item = document.createElement('div');
         item.style.borderBottom = "1px solid #eee";
@@ -673,83 +611,29 @@ async function loadAdminChallengeList() {
             <button class="delete-btn" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">🗑️</button>
         `;
 
-        // Add Delete Click Listener
         const delBtn = item.querySelector('.delete-btn');
         delBtn.addEventListener('click', async () => {
-            // Import dynamically to avoid circular dependency issues, or use the top-level import
-            const community = await import('./community.js');
-            await community.deleteChallenge(chal.id);
-            loadAdminChallengeList(); // Refresh list after delete
+            if(confirm("Delete this challenge?")) {
+                await deleteChallenge(chal.id);
+                loadAdminChallengeList(); 
+            }
         });
-
         elements.adminChallengeList.appendChild(item);
     });
 }
 
-// --- CHALLENGE PARTICIPATION ---
-
-// 1. Join a Challenge
-export async function joinChallenge(challengeId, challengeTitle, userId) {
-    try {
-        const userRef = doc(db, "users", userId);
-        
-        // We store active quests in a map field called 'active_quests'
-        // Format: { [challengeId]: { progress: 0, joined_at: date } }
-        const updateData = {};
-        updateData[`active_quests.${challengeId}`] = {
-            title: challengeTitle,
-            progress: 0.0,
-            status: 'active',
-            joined_at: new Date()
-        };
-
-        await updateDoc(userRef, updateData);
-        return true;
-    } catch (e) {
-        console.error("Error joining challenge:", e);
-        // If the map doesn't exist yet, setDoc with merge fixes it
-        const userRef = doc(db, "users", userId);
-        const setObj = { active_quests: {} };
-        setObj.active_quests[challengeId] = {
-            title: challengeTitle,
-            progress: 0.0,
-            status: 'active',
-            joined_at: new Date()
-        };
-        await setDoc(userRef, setObj, { merge: true });
-        return true;
-    }
-}
-
-// 2. Get User's Active Quests (To update the UI buttons)
-export async function getUserQuests(userId) {
-    try {
-        const userSnap = await getDoc(doc(db, "users", userId));
-        if (userSnap.exists() && userSnap.data().active_quests) {
-            return userSnap.data().active_quests;
-        }
-        return {}; // Return empty object if none found
-    } catch (e) {
-        console.error("Error fetching user quests:", e);
-        return {};
-    }
-}
+// --- PUBLIC CHALLENGE DISPLAY (Active) ---
 
 async function loadPublicChallenges() {
     const listContainer = elements.publicChallengeList;
     if (!listContainer) return;
-
     listContainer.innerHTML = "<p>Loading quests...</p>";
 
     try {
-        const community = await import('./community.js');
-        const state = await import('./config.js').then(m => m.state); 
-
-        // 1. Fetch Data
-        const challenges = await community.getAdminChallenges();
+        const challenges = await getAdminChallenges();
         let myQuests = {};
         if (state.currentUser) {
-            myQuests = await community.getUserQuests(state.currentUser.uid);
+            myQuests = await getUserQuests(state.currentUser.uid);
         }
 
         listContainer.innerHTML = ""; 
@@ -759,11 +643,11 @@ async function loadPublicChallenges() {
             return;
         }
 
-        // 2. Sort: Active first, Completed last
+        // Sort: Active first, Completed last
         challenges.sort((a, b) => {
             const statA = myQuests[a.id] ? myQuests[a.id].status : 'new';
             const statB = myQuests[b.id] ? myQuests[b.id].status : 'new';
-            if (statA === 'completed' && statB !== 'completed') return 1; // Move completed to bottom
+            if (statA === 'completed' && statB !== 'completed') return 1;
             if (statA !== 'completed' && statB === 'completed') return -1;
             return 0;
         });
@@ -777,45 +661,36 @@ async function loadPublicChallenges() {
             card.style.justifyContent = "space-between";
             card.style.alignItems = "center";
 
-            // Metadata
             const expireDate = new Date(chal.expires_at.seconds * 1000);
             const diffDays = Math.ceil((expireDate - new Date()) / (1000 * 60 * 60 * 24)); 
             
-            // Check Status
             const questData = myQuests[chal.id];
             const isJoined = !!questData;
             const isCompleted = questData && questData.status === 'completed';
             const userProgress = isJoined ? questData.progress : 0;
 
-            // --- 🎨 VISUAL STYLES ---
             let statusColor = "#333";
             let buttonHtml = "";
 
             if (isCompleted) {
-                // CASE 1: COMPLETED (Gold Style)
-                card.style.border = "2px solid #FFD700"; // Gold Border
-                card.style.backgroundColor = "#fff9db"; // Light Yellow BG
+                card.style.border = "2px solid #FFD700"; 
+                card.style.backgroundColor = "#fff9db"; 
                 buttonHtml = `
                     <div style="text-align: right;">
                         <span style="font-size:1.2em;">🏆</span>
                         <span style="display:block; font-size:0.8em; color:#B8860B; font-weight:bold;">COMPLETED</span>
-                    </div>
-                `;
+                    </div>`;
             } else if (isJoined) {
-                // CASE 2: ACTIVE (Green Style)
                 card.style.border = "1px solid #4A7C59"; 
                 buttonHtml = `
                     <div style="text-align: right;">
                         <span style="display:block; font-size:0.8em; color:#4A7C59; font-weight:bold;">✅ Active</span>
                         <small style="color:#666;">${userProgress.toFixed(1)} / ${chal.goal_miles} mi</small>
-                    </div>
-                `;
+                    </div>`;
             } else {
-                // CASE 3: NEW (Standard Style)
                 buttonHtml = `<button class="modal-button primary start-btn" data-id="${chal.id}">Start</button>`;
             }
 
-            // HTML Content
             card.innerHTML = `
                 <div>
                     <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
@@ -828,22 +703,104 @@ async function loadPublicChallenges() {
                 ${buttonHtml}
             `;
             
-            // Listener for Start Button
             if (!isJoined) {
                 const btn = card.querySelector('.start-btn');
                 btn.addEventListener('click', async () => {
                     if (!state.currentUser) { alert("Please login first!"); return; }
                     btn.innerText = "Joining...";
-                    await community.joinChallenge(chal.id, chal.title, state.currentUser.uid);
+                    await joinChallenge(chal.id, chal.title, state.currentUser.uid);
                     loadPublicChallenges(); // Refresh
                 });
             }
-
             listContainer.appendChild(card);
         });
-
     } catch (e) {
         console.error("Error loading challenges:", e);
+        listContainer.innerHTML = "<p>Error loading content.</p>";
+    }
+}
+
+// --- PAST CHALLENGES (History Logic) ---
+
+async function loadPastChallenges(filterType) {
+    const listContainer = elements.pastChallengesContent;
+    if (!listContainer) return;
+
+    listContainer.innerHTML = "<p>Loading history...</p>";
+
+    try {
+        if (!state.currentUser) {
+            listContainer.innerHTML = "<p>Please login to see history.</p>";
+            return;
+        }
+
+        const myQuests = await getUserQuests(state.currentUser.uid);
+        const questIds = Object.keys(myQuests);
+
+        if (questIds.length === 0) {
+            listContainer.innerHTML = "<p>No challenge history found.</p>";
+            return;
+        }
+
+        const allChallenges = await getAdminChallenges();
+        
+        listContainer.innerHTML = ""; 
+        let count = 0;
+
+        for (const [chalId, userProgress] of Object.entries(myQuests)) {
+            const originalData = allChallenges.find(c => c.id === chalId) || {};
+            const title = originalData.title || userProgress.title || "Unknown Quest";
+            const goal = originalData.goal_miles || "??";
+            
+            const isCompleted = userProgress.status === 'completed';
+            const isExpired = userProgress.status === 'expired'; 
+            
+            let showIt = false;
+            if (filterType === 'completed' && isCompleted) showIt = true;
+            if (filterType === 'uncompleted' && !isCompleted) showIt = true;
+
+            if (showIt) {
+                count++;
+                const card = document.createElement('div');
+                card.className = "hub-card";
+                card.style.marginBottom = "10px";
+                card.style.textAlign = "left";
+                
+                const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#ccc" : "#4A7C59");
+                const statusText = isCompleted ? "🏆 COMPLETED" : (isExpired ? "⌛ EXPIRED" : "🏃 IN PROGRESS");
+                const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#999" : "#4A7C59");
+
+                let dateStr = "";
+                if (userProgress.completed_at) {
+                    dateStr = `Done: ${new Date(userProgress.completed_at.seconds * 1000).toLocaleDateString()}`;
+                } else if (userProgress.joined_at) {
+                    dateStr = `Joined: ${new Date(userProgress.joined_at.seconds * 1000).toLocaleDateString()}`;
+                }
+
+                card.style.borderLeft = `5px solid ${borderColor}`;
+                
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h4 style="margin:0;">${title}</h4>
+                            <small style="color:#666;">${dateStr}</small>
+                        </div>
+                        <div style="text-align:right;">
+                            <strong style="color:${statusColor}; display:block;">${statusText}</strong>
+                            <span style="font-size:0.9em;">${userProgress.progress.toFixed(1)} / ${goal} mi</span>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            }
+        }
+
+        if (count === 0) {
+            listContainer.innerHTML = `<p style="color:#888;">No ${filterType} challenges found.</p>`;
+        }
+
+    } catch (e) {
+        console.error("Error loading past challenges:", e);
         listContainer.innerHTML = "<p>Error loading content.</p>";
     }
 }
