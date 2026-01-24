@@ -61,24 +61,7 @@ export const allBadges = {
     initiate: { name: 'Initiate', icon: '🌱', description: 'Published your first route to the community.' },
     activist: { name: 'Activist', icon: '🌍', description: 'Published 10 routes to the community.' },
     guardian: { name: 'Guardian', icon: '🛡️', description: 'Published 50 routes to the community.' },
-    community_pillar: { name: 'Community Pillar', icon: '🏛️', description: 'Published 100 routes. You are a legend!' },
-
-    
-    // 👇 The ID you used in the Admin Panel
-    "warrior_2026": {
-        name: "Weekend Warrior",
-        description: "Completed the Weekend Cleanup Challenge",
-        icon: "⚔️", // You can use an emoji OR a file path like 'assets/badges/sword.png'
-        color: "#FFD700" // Gold background for the icon
-    },
-    
-    // Add more here if you create other quests!
-    "trash_titan": {
-        name: "Trash Titan",
-        description: "Hauled a massive amount of litter.",
-        icon: "🏋️",
-        color: "#ff4444"
-    },
+    community_pillar: { name: 'Community Pillar', icon: '🏛️', description: 'Published 100 routes. You are a legend!' }
     
 
 };
