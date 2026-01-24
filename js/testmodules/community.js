@@ -874,3 +874,89 @@ export async function getUserQuests(userId) {
         return {};
     }
 }
+
+// --- CHALLENGE TRACKING ---
+
+export async function updateChallengeProgress(userId, distanceMiles) {
+    const userRef = doc(db, "users", userId);
+    
+    try {
+        // 1. Get the user's current quests
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) return;
+        
+        const data = userSnap.data();
+        const activeQuests = data.active_quests || {};
+        const currentBadges = data.badges || {};
+        let updatesMade = false;
+        let earnedBadges = [];
+
+        // 2. Loop through each quest they have joined
+        for (const [chalId, quest] of Object.entries(activeQuests)) {
+            
+            // Skip if already finished
+            if (quest.status === 'completed') continue;
+
+            // Fetch the original challenge rules to check expiration/goal
+            // (We fetch this to ensure we have the authoritative Goal and Expiration)
+            const chalRef = doc(db, "active_challenges", chalId);
+            const chalSnap = await getDoc(chalRef);
+            
+            if (!chalSnap.exists()) {
+                // Challenge was deleted by Admin? Ignore it.
+                continue; 
+            }
+
+            const rules = chalSnap.data();
+            const now = new Date();
+            const expiresAt = new Date(rules.expires_at.seconds * 1000);
+
+            // Check Expiration
+            if (now > expiresAt) {
+                console.log(`Quest ${quest.title} has expired.`);
+                // Optional: Mark as 'expired' so it stops tracking
+                activeQuests[chalId].status = 'expired';
+                updatesMade = true;
+                continue;
+            }
+
+            // 3. ADD DISTANCE
+            const oldProgress = quest.progress || 0;
+            const newProgress = oldProgress + distanceMiles;
+            
+            activeQuests[chalId].progress = parseFloat(newProgress.toFixed(2));
+            updatesMade = true;
+
+            // 4. CHECK COMPLETION
+            if (newProgress >= rules.goal_miles) {
+                // 🎉 VICTORY!
+                activeQuests[chalId].status = 'completed';
+                activeQuests[chalId].completed_at = new Date();
+                
+                // Award Badge
+                if (rules.badge_id) {
+                    currentBadges[rules.badge_id] = {
+                        earned_at: new Date(),
+                        source: 'challenge'
+                    };
+                    earnedBadges.push(rules.badge_id);
+                }
+            }
+        }
+
+        // 5. Save everything back to the database
+        if (updatesMade) {
+            await updateDoc(userRef, {
+                active_quests: activeQuests,
+                badges: currentBadges
+            });
+            
+            // 6. Return the new badges so the UI can show a popup
+            return earnedBadges;
+        }
+
+    } catch (e) {
+        console.error("Error updating challenge progress:", e);
+    }
+    return [];
+}
