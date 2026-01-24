@@ -47,6 +47,9 @@ const elements = {
     menuModal: document.getElementById('menuModal'),
     eventsModal: document.getElementById('eventsModal'),
     achievementsModal: document.getElementById('achievementsModal'),
+    achievementsList: document.getElementById('achievementsList'),
+    achievementListBackBtn: document.getElementById('achievementListBackBtn'),
+    achievementsTitle: document.getElementById('achievementsTitle'),
     
     // Challenge System Modals
     challengeMenuModal: document.getElementById('challengeMenuModal'),
