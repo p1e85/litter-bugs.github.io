@@ -762,6 +762,7 @@ export async function openAchievementsModal() {
             card.innerHTML = `
                 <div class="achievement-icon">${badgeInfo.icon}</div>
                 <div class="achievement-name">${badgeInfo.name}</div>
+                <div class="achievement-desc">${badgeInfo.description}</div>
             `;
             
             // Optional: Click to see details (From your snippet)
