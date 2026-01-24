@@ -1,5 +1,5 @@
 // 1. TOP LEVEL IMPORTS (Required)
-import { db, collection, query, orderBy, limit, getDocs } from './firebase.js'; // Moved from middle of file
+import { db, collection, query, orderBy, limit, getDocs } from './firebase.js'; 
 import { state } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion } from './auth.js';
@@ -10,7 +10,7 @@ import {
     loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, 
     fetchAndDisplayMyStats, showPublicProfile, handleMeetupSubmit, 
     validateMeetupForm, toggleRouteLike, openAchievementsModal, 
-    // We import these logic helpers, but we handle the UI display in this file now
+    // Logic Helpers
     getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents 
 } from './community.js';
 
@@ -48,7 +48,7 @@ const elements = {
     eventsModal: document.getElementById('eventsModal'),
     achievementsModal: document.getElementById('achievementsModal'),
     
-    // Challenge System
+    // Challenge System Modals
     challengeMenuModal: document.getElementById('challengeMenuModal'),
     activeChallengesModal: document.getElementById('activeChallengesModal'),
     pastChallengesModal: document.getElementById('pastChallengesModal'),
@@ -83,7 +83,7 @@ const elements = {
     menuBtn: document.getElementById('menuBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
     
-    // Hub
+    // Hub Navigation
     hubModal: document.getElementById('hubModal'),
     hubBtn: document.getElementById('hubBtn'),
     hubChallengesBtn: document.getElementById('hubChallengesBtn'),
@@ -117,12 +117,13 @@ const elements = {
     btnCurrentChallenges: document.getElementById('btnCurrentChallenges'),
     btnPastChallenges: document.getElementById('btnPastChallenges'),
     
+    // Back Buttons (Specific Navigation)
+    btnBackToMenu: document.querySelector('#pastChallengesModal .ok-btn'), // History Back
+    btnBackFromCurrent: document.getElementById('btnBackFromCurrent'), // Current Back
+    
     // Tabs
     tabCompleted: document.getElementById('tabCompleted'),
     tabUncompleted: document.getElementById('tabUncompleted'),
-    
-    // Back Button (Specific for history)
-    btnBackToMenu: document.querySelector('#pastChallengesModal .ok-btn') 
 };
 
 /**
@@ -329,7 +330,7 @@ function attachEventListeners() {
         loadActivityFeed();
     });
 
-    // --- CHALLENGE MENU LOGIC ---
+    // --- CHALLENGE MENU NAVIGATION ---
     
     // 1. Open Challenge Menu (From Main Menu)
     if (elements.communityChallengeBtn) {
@@ -339,12 +340,21 @@ function attachEventListeners() {
         });
     }
 
-    // 2. Open Achievements
+    // 2. Open Achievements (And Fix Back Button)
     elements.btnViewAchievements.addEventListener('click', () => {
         elements.challengeMenuModal.style.display = 'none';
         elements.achievementsModal.style.display = 'flex';
         openAchievementsModal();
     });
+    
+    // Fix: Back button from Achievements returns to Hub
+    if (elements.achievementOkBtn) {
+        elements.achievementOkBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Stop generic close
+            elements.achievementsModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
 
     // 3. Current Challenges
     if (elements.btnCurrentChallenges) {
@@ -352,6 +362,15 @@ function attachEventListeners() {
             elements.challengeMenuModal.style.display = 'none';
             elements.activeChallengesModal.style.display = 'flex';
             loadPublicChallenges();
+        });
+    }
+    
+    // Fix: Back button from Current Challenges returns to Hub
+    if (elements.btnBackFromCurrent) {
+        elements.btnBackFromCurrent.addEventListener('click', (e) => {
+            e.stopPropagation();
+            elements.activeChallengesModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
         });
     }
 
