@@ -715,48 +715,64 @@ export async function toggleRouteLike(routeId) {
 
 // --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
 
-// --- 1. OPEN ACHIEVEMENTS (Main Menu) ---
+// --- THE ORIGINAL SIMPLE FUNCTION ---
 export async function openAchievementsModal() {
     const list = document.getElementById('achievementsList');
-    const title = document.getElementById('achievementsTitle');
     
     if (!list) return;
 
-    // Fixed Title
-    if(title) title.innerText = "🏆 Career Milestones";
-    
     list.innerHTML = "<p>Loading...</p>";
 
-    // Fetch User Progress
+    // 1. Fetch User Data
     let userBadges = {};
     if (state.currentUser) {
         try {
             const userDoc = await getDoc(doc(db, "users", state.currentUser.uid));
-            if (userDoc.exists()) userBadges = userDoc.data().badges || {};
-        } catch (e) { console.error(e); }
+            if (userDoc.exists()) {
+                userBadges = userDoc.data().badges || {};
+                console.log("My Earned Badges:", userBadges); // Debugging
+            }
+        } catch (e) {
+            console.error("Error fetching badges", e);
+        }
     }
 
     list.innerHTML = ""; 
     let count = 0;
 
-    // Logic: Iterate through the CONFIG list (allBadges)
-    // We want to show EVERYTHING in the config, even if locked.
-    Object.entries(allBadges).forEach(([key, config]) => {
-        const badgeData = userBadges[key]; 
-        const isUnlocked = !!badgeData;
+    // 2. Loop through ALL Badges in Config
+    // This displays everything defined in config.js
+    if (allBadges) {
+        Object.entries(allBadges).forEach(([key, config]) => {
+            const badgeData = userBadges[key]; // Check if user has it
+            const isUnlocked = !!badgeData;    // True if badgeData exists
 
-        // FILTER: Skip if it is a Challenge Badge
-        const isChallengeBadge = key.includes('warrior') || (config.source === 'challenge');
-
-        if (!isChallengeBadge) {
             count++;
-            const badgeEl = createBadgeElement(config, isUnlocked);
-            list.appendChild(badgeEl);
-        }
-    });
 
+            // Create the HTML
+            const badgeEl = document.createElement('div');
+            badgeEl.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+            
+            const bg = isUnlocked ? config.color : '#eee';
+            const icon = isUnlocked ? config.icon : '🔒';
+            const opacity = isUnlocked ? '1' : '0.5';
+
+            badgeEl.innerHTML = `
+                <div class="badge-icon" style="background:${bg}; opacity:${opacity}; font-size: 2em; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin: 0 auto;">
+                    ${icon}
+                </div>
+                <div style="margin-top: 10px;">
+                    <strong>${config.name}</strong>
+                    <p style="font-size: 0.8em; color: #666;">${config.description}</p>
+                </div>
+            `;
+            list.appendChild(badgeEl);
+        });
+    }
+
+    // 3. Empty State
     if (count === 0) {
-        list.innerHTML = "<p style='padding:20px; color:#999;'>No milestones configured.</p>";
+        list.innerHTML = "<p style='padding:20px; color:#999;'>No badges configured.</p>";
     }
 }
 
