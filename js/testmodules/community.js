@@ -717,23 +717,22 @@ export async function toggleRouteLike(routeId) {
 
 export async function openAchievementsModal() {
     const list = document.getElementById('achievementsList');
-    const title = document.getElementById('achievementsTitle'); // Ensure your HTML has this ID
+    const title = document.getElementById('achievementsTitle');
     
     if (!list) return;
 
-    // Reset Title
-    if (title) title.innerText = "🏆 Achievements";
+    if (title) title.innerText = "🏆 My Collection";
+    list.innerHTML = "<p>Loading your stats...</p>";
 
-    list.innerHTML = "<p>Loading...</p>";
-
-    // 1. Fetch User Data
+    // 1. Fetch User Data (Just like My Stats)
     let userBadges = {};
     if (state.currentUser) {
         try {
             const userDoc = await getDoc(doc(db, "users", state.currentUser.uid));
             if (userDoc.exists()) {
-                userBadges = userDoc.data().badges || {};
-                console.log("User Data Loaded:", userBadges); // 👈 Check console for this!
+                const data = userDoc.data();
+                // We prioritize the 'badges' field, just like the Leaderboard does
+                userBadges = data.badges || {};
             }
         } catch (e) {
             console.error("Error fetching badges", e);
@@ -741,39 +740,41 @@ export async function openAchievementsModal() {
     }
 
     list.innerHTML = ""; 
-    let count = 0;
+    const badgeKeys = Object.keys(userBadges);
 
-    // 2. Render Loop (Based on Config)
-    if (allBadges) {
-        Object.entries(allBadges).forEach(([key, config]) => {
-            const badgeData = userBadges[key]; // Does user have this key?
-            const isUnlocked = !!badgeData;
+    // 2. Render EXACTLY what is in the Database
+    if (badgeKeys.length > 0) {
+        badgeKeys.forEach(key => {
+            const badge = userBadges[key];
 
-            count++;
+            // Fallbacks in case DB data is missing a field
+            const name = badge.name || "Unknown Badge";
+            const desc = badge.description || "Earned!";
+            const icon = badge.icon || "🏅";
+            const color = badge.color || "#4A7C59";
 
-            // Create HTML
             const badgeEl = document.createElement('div');
-            badgeEl.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+            badgeEl.className = 'achievement-item unlocked'; // Always unlocked because we own it
             
-            const bg = isUnlocked ? config.color : '#eee';
-            const icon = isUnlocked ? config.icon : '🔒';
-            const opacity = isUnlocked ? '1' : '0.5';
-
             badgeEl.innerHTML = `
-                <div class="badge-icon" style="background:${bg}; opacity:${opacity}; font-size: 2em; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin: 0 auto;">
+                <div class="badge-icon" style="background:${color}; font-size: 2em; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin: 0 auto; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
                     ${icon}
                 </div>
                 <div style="margin-top: 10px;">
-                    <strong>${config.name}</strong>
-                    <p style="font-size: 0.8em; color: #666;">${config.description}</p>
+                    <strong>${name}</strong>
+                    <p style="font-size: 0.8em; color: #666;">${desc}</p>
                 </div>
             `;
             list.appendChild(badgeEl);
         });
-    }
-
-    if (count === 0) {
-        list.innerHTML = "<p>No badges found in configuration.</p>";
+    } else {
+        // 3. Empty State
+        list.innerHTML = `
+            <div style="text-align:center; padding: 20px; color:#666;">
+                <h3>No Badges Yet</h3>
+                <p>Start tracking cleanups to earn your first badge!</p>
+            </div>
+        `;
     }
 }
 
