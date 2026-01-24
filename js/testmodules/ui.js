@@ -686,61 +686,6 @@ async function loadAdminChallengeList() {
     });
 }
 
-async function loadPublicChallenges() {
-    const listContainer = elements.publicChallengeList;
-    if (!listContainer) return;
-
-    listContainer.innerHTML = "<p>Loading quests...</p>";
-
-    try {
-        // Reuse the fetch function from community.js
-        const community = await import('./community.js');
-        const challenges = await community.getAdminChallenges(); // Fetches all active quests
-
-        listContainer.innerHTML = ""; // Clear loading text
-
-        if (challenges.length === 0) {
-            listContainer.innerHTML = "<p>No active challenges right now. Check back later!</p>";
-            return;
-        }
-
-        // Render the Cards
-        challenges.forEach(chal => {
-            const card = document.createElement('div');
-            card.className = "hub-card"; // Reusing your nice card style
-            card.style.marginBottom = "15px";
-            card.style.textAlign = "left";
-            card.style.display = "block"; // Reset grid behavior for list
-
-            // Calculate days remaining
-            const expireDate = new Date(chal.expires_at.seconds * 1000);
-            const today = new Date();
-            const diffTime = Math.abs(expireDate - today);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-
-            card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
-                        <p style="font-size: 0.9em; color: #666; margin-top: 5px;">${chal.description}</p>
-                        <div style="margin-top: 8px; font-size: 0.85em; font-weight: bold; color: #333;">
-                            🎯 Goal: ${chal.goal_miles} Miles <br>
-                            ⏳ Ends in: ${diffDays} days
-                        </div>
-                    </div>
-                    <button class="modal-button primary" style="width: auto; padding: 5px 15px; font-size: 0.8em;">Start</button>
-                </div>
-            `;
-            
-            listContainer.appendChild(card);
-        });
-
-    } catch (e) {
-        console.error("Error loading challenges:", e);
-        listContainer.innerHTML = "<p style='color:red'>Error loading quests.</p>";
-    }
-}
-
 // --- CHALLENGE PARTICIPATION ---
 
 // 1. Join a Challenge
