@@ -46,16 +46,14 @@ const elements = {
     viewMeetupsModal: document.getElementById('viewMeetupsModal'),
     menuModal: document.getElementById('menuModal'),
     eventsModal: document.getElementById('eventsModal'),
-    achievementsModal: document.getElementById('achievementsModal'),
-    achievementsList: document.getElementById('achievementsList'),
-    achievementListBackBtn: document.getElementById('achievementListBackBtn'),
-    achievementsTitle: document.getElementById('achievementsTitle'),
     
     // Challenge System Modals
     challengeMenuModal: document.getElementById('challengeMenuModal'),
     activeChallengesModal: document.getElementById('activeChallengesModal'),
     pastChallengesModal: document.getElementById('pastChallengesModal'),
-    
+    achievementsModal: document.getElementById('achievementsModal'), // The List Modal
+    achievementModal: document.getElementById('achievementModal'), // The Popup Modal
+
     // Buttons
     agreeBtn: document.getElementById('agreeBtn'),
     skipBtn: document.getElementById('skipBtn'),
@@ -85,9 +83,6 @@ const elements = {
     shareBtn: document.getElementById('shareBtn'),
     menuBtn: document.getElementById('menuBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
-    btnViewEventBadges: document.getElementById('btnViewEventBadges'),
-    btnAchievements: document.getElementById('btnAchievements'),
-    btnToggleBadgeView: document.getElementById('btnToggleBadgeView'),
     
     // Hub Navigation
     hubModal: document.getElementById('hubModal'),
@@ -116,14 +111,17 @@ const elements = {
     leaderboardList: document.getElementById('leaderboardList'),
     publicChallengeList: document.getElementById('publicChallengeList'),
     pastChallengesContent: document.getElementById('pastChallengesContent'),
+    achievementsList: document.getElementById('achievementsList'),
+    achievementsTitle: document.getElementById('achievementsTitle'),
     
-    // Challenge Nav Buttons
-    communityChallengeBtn: document.getElementById('communityChallengeBtn'), // Legacy name
-    btnViewAchievements: document.getElementById('btnViewAchievements'),
+    // Specific Navigation Buttons
+    communityChallengeBtn: document.getElementById('communityChallengeBtn'), 
+    btnAchievements: document.getElementById('btnAchievements'), // Main Menu Button
+    btnViewEventBadges: document.getElementById('btnViewEventBadges'), // Challenge Hub Button
+    achievementListBackBtn: document.getElementById('achievementListBackBtn'), // Dynamic Back Button
+    
     btnCurrentChallenges: document.getElementById('btnCurrentChallenges'),
     btnPastChallenges: document.getElementById('btnPastChallenges'),
-    
-    // Back Buttons (Specific Navigation)
     btnBackToMenu: document.querySelector('#pastChallengesModal .ok-btn'), // History Back
     btnBackFromCurrent: document.getElementById('btnBackFromCurrent'), // Current Back
     
@@ -156,7 +154,7 @@ export function initializeUI() {
 
 export function attachEventListeners() {
     
-    // --- AUTHENTICATION ---
+    // --- AUTH ---
     if (elements.loginBtn) {
         elements.loginBtn.addEventListener('click', () => {
             const email = prompt("Enter email:");
@@ -170,17 +168,14 @@ export function attachEventListeners() {
     }
     
     elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
-    
     elements.agreeBtn.addEventListener('click', () => {
         elements.termsModal.style.display = 'none';
         sessionStorage.setItem('termsAccepted', 'true');
         document.getElementById('userStatus').style.display = 'flex';
         if (!state.currentUser) elements.authModal.style.display = 'flex';
     });
-
     elements.loginSignupBtn.addEventListener('click', () => elements.authModal.style.display = 'flex');
     elements.skipBtn.addEventListener('click', () => elements.authModal.style.display = 'none');
-    
     elements.authModal.addEventListener('click', (e) => {
         if (e.target.id === 'switchAuthModeLink') {
             e.preventDefault();
@@ -188,13 +183,11 @@ export function attachEventListeners() {
             updateAuthModalUI();
         }
     });
-
     elements.authActionBtn.addEventListener('click', async (event) => { 
         event.preventDefault();
         if (state.isSignUpMode) await handleSignUp();
         else await handleLogIn();
     });
-
     elements.emailInput.addEventListener('input', validateSignUpForm);
     elements.passwordInput.addEventListener('input', validateSignUpForm);
     elements.usernameInput.addEventListener('input', validateSignUpForm);
@@ -204,80 +197,40 @@ export function attachEventListeners() {
     // --- MAP & TRACKING ---
     elements.findMeBtn.addEventListener('click', findMe);
     elements.trackBtn.addEventListener('click', toggleTracking);
-    
     elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
     elements.cameraInput.addEventListener('change', handlePhoto);
-    
     elements.changeStyleBtn.addEventListener('click', changeMapStyle);
-    
-    // --- MAIN MENU NAVIGATION ---
-    elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
-
-    // 1. Community Hub (Challenges)
-    if (elements.communityChallengeBtn) {
-        elements.communityChallengeBtn.addEventListener('click', () => {
-            elements.menuModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
-        });
-    }
-
-    // 2. Achievements (NEW: On Main Menu)
-    if (elements.btnAchievements) {
-        elements.btnAchievements.addEventListener('click', () => {
-            elements.menuModal.style.display = 'none'; 
-            elements.achievementsModal.style.display = 'flex'; 
-            
-            // Default to 'standard' (Milestones)
-            // Make sure openAchievementsModal is imported!
-            openAchievementsModal('standard'); 
-            
-            // Reset the toggle button text state
-            if(elements.btnToggleBadgeView) {
-                elements.btnToggleBadgeView.textContent = "⚔️ View Event Badges";
-                elements.btnToggleBadgeView.dataset.mode = "standard";
-            }
-        });
-    }
-
-    // 3. Community Map View
     elements.communityBtn.addEventListener('click', toggleCommunityView);
-    
-    // 4. Info / Settings
+    elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
     elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
     elements.viewTermsLink.addEventListener('click', (e) => {
         e.preventDefault();
         elements.infoModal.style.display = 'none';
         elements.termsModal.style.display = 'flex';
     });
-
-    // --- DATA & SAVING ---
     elements.safetyModalOkBtn.addEventListener('click', () => {
         elements.safetyModal.style.display = 'none';
         startTracking();
     });
-
     elements.summaryOkBtn.addEventListener('click', () => { 
         elements.summaryModal.style.display = 'none';
         document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none';
         document.getElementById('cleanupPhotoPreview').src = '#';
     });
 
+    // --- DATA ---
     elements.dataBtn.addEventListener('click', () => {
         const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
         elements.menuModal.style.display = 'none';
         elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
         elements.dataModal.style.display = 'flex';
     });
-
     elements.saveBtn.addEventListener('click', saveSession);
-    
     elements.loadBtn.addEventListener('click', () => {
         elements.dataModal.style.display = 'none';
         loadSession();
     });
-    
     elements.exportBtn.addEventListener('click', exportGeoJSON);
-    
     elements.centerOnRouteBtn.addEventListener('click', () => {
         if (elements.centerOnRouteBtn.classList.contains('disabled')) {
             alert("Please load a route first to use this feature.");
@@ -286,9 +239,7 @@ export function attachEventListeners() {
             elements.dataModal.style.display = 'none';
         }
     });
-
     elements.publishBtn.addEventListener('click', publishRoute);
-    
     elements.managePublicationsBtn.addEventListener('click', () => {
         if (!state.currentUser) { alert("You must be logged in to manage your publications."); return; }
         elements.dataModal.style.display = 'none';
@@ -314,7 +265,6 @@ export function attachEventListeners() {
         document.querySelector('.leaderboard-tab[data-metric="totalPins"]').classList.add('active');
         fetchAndDisplayLeaderboard('totalPins');
     });
-
     elements.leaderboardTabs.forEach(tab => {
         tab.addEventListener('click', () => {
             elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
@@ -326,7 +276,6 @@ export function attachEventListeners() {
             else { fetchAndDisplayLeaderboard(tab.dataset.metric); }
         });
     });
-
     elements.leaderboardList.addEventListener('click', (e) => {
         if (e.target && e.target.classList.contains('leaderboard-profile-link')) {
             e.preventDefault();
@@ -396,36 +345,59 @@ export function attachEventListeners() {
         loadActivityFeed();
     });
 
-    // --- ACHIEVEMENT MODAL LOGIC (New) ---
-
-    // 1. Toggle Button (Milestones <-> Events)
-    if (elements.btnToggleBadgeView) {
-        elements.btnToggleBadgeView.addEventListener('click', () => {
-            const currentMode = elements.btnToggleBadgeView.dataset.mode;
+    // --- MAIN MENU NAVIGATION: ACHIEVEMENTS (Milestones) ---
+    if (elements.btnAchievements) {
+        elements.btnAchievements.addEventListener('click', () => {
+            elements.menuModal.style.display = 'none'; // Close Menu
+            elements.achievementsModal.style.display = 'flex'; // Open List
             
-            if (currentMode === 'standard') {
-                // Switch to Events
-                openAchievementsModal('challenge');
-                elements.btnToggleBadgeView.textContent = "🏆 View Milestones";
-                elements.btnToggleBadgeView.dataset.mode = "challenge";
-            } else {
-                // Switch to Milestones
-                openAchievementsModal('standard');
-                elements.btnToggleBadgeView.textContent = "⚔️ View Event Badges";
-                elements.btnToggleBadgeView.dataset.mode = "standard";
+            // Default to 'standard' (Milestones)
+            openAchievementsModal('standard'); 
+            
+            // DYNAMIC BACK BUTTON: Go back to Main Menu
+            if (elements.achievementListBackBtn) {
+                const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
+                elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
+                elements.achievementListBackBtn = newBackBtn; 
+
+                newBackBtn.addEventListener('click', () => {
+                    elements.achievementsModal.style.display = 'none';
+                    elements.menuModal.style.display = 'flex'; // Return to Main Menu
+                });
             }
         });
     }
 
-    // 2. Achievements Back Button (To Main Menu)
-    if (elements.achievementListBackBtn) {
-        elements.achievementListBackBtn.addEventListener('click', () => {
-            elements.achievementsModal.style.display = 'none';
-            elements.menuModal.style.display = 'flex'; // Go back to Main Menu
+    // --- CHALLENGE MENU NAVIGATION: EVENT BADGES ---
+    if (elements.btnViewEventBadges) {
+        elements.btnViewEventBadges.addEventListener('click', () => {
+            elements.challengeMenuModal.style.display = 'none'; // Close Hub
+            elements.achievementsModal.style.display = 'flex'; // Open List
+            
+            // Show Event Badges
+            openAchievementsModal('challenge'); 
+            
+            // DYNAMIC BACK BUTTON: Go back to Challenge Hub
+            if (elements.achievementListBackBtn) {
+                const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
+                elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
+                elements.achievementListBackBtn = newBackBtn; 
+
+                newBackBtn.addEventListener('click', () => {
+                    elements.achievementsModal.style.display = 'none';
+                    elements.challengeMenuModal.style.display = 'flex'; // Return to Challenge Hub
+                });
+            }
         });
     }
 
     // --- CHALLENGE MENU LOGIC ---
+    if (elements.communityChallengeBtn) {
+        elements.communityChallengeBtn.addEventListener('click', () => {
+            elements.menuModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
 
     // 1. Current Challenges
     if (elements.btnCurrentChallenges) {
@@ -505,7 +477,7 @@ export function attachEventListeners() {
 
     // Generic Close Listeners
     addAllModalCloseListeners();
-} // end of listeners*********************
+}
 
 function addAllModalCloseListeners() {
     const allModals = Object.values(elements).filter(el => el && el.classList && el.classList.contains('modal-overlay'));
@@ -514,10 +486,7 @@ function addAllModalCloseListeners() {
         if (closeBtn) {
             closeBtn.addEventListener('click', () => modal.style.display = 'none');
         }
-        const okBtn = modal.querySelector('.ok-btn');
-        if (okBtn) {
-            okBtn.addEventListener('click', () => modal.style.display = 'none');
-        }
+        // NOTE: We don't auto-close on generic .ok-btn anymore because we have specific logic for them now
     });
     window.addEventListener('click', (event) => {
         if (event.target.classList.contains('modal-overlay')) {
@@ -586,8 +555,7 @@ function validateSignUpForm() {
     }
 }
 
-// --- ACTIVITY FEED (Moved imports to top) ---
-
+// --- ACTIVITY FEED (User View) ---
 async function loadActivityFeed() {
     const container = elements.feedContainer;
     container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
@@ -661,7 +629,6 @@ async function loadActivityFeed() {
 }
 
 // --- ADMIN PERMISSIONS ---
-
 export function checkAdminPermissions(userProfile) {
     if (userProfile && userProfile.role === 'admin') {
         if (elements.btnAdminPanel) elements.btnAdminPanel.style.display = 'flex';
@@ -674,7 +641,6 @@ async function loadAdminChallengeList() {
     if (!elements.adminChallengeList) return;
     elements.adminChallengeList.innerHTML = "<p>Loading...</p>";
     
-    // We imported getAdminChallenges at the top now!
     const challenges = await getAdminChallenges();
 
     elements.adminChallengeList.innerHTML = ""; 
@@ -712,7 +678,6 @@ async function loadAdminChallengeList() {
 }
 
 // --- PUBLIC CHALLENGE DISPLAY (Active) ---
-
 async function loadPublicChallenges() {
     const listContainer = elements.publicChallengeList;
     if (!listContainer) return;
@@ -810,7 +775,6 @@ async function loadPublicChallenges() {
 }
 
 // --- PAST CHALLENGES (History Logic) ---
-
 async function loadPastChallenges(filterType) {
     const listContainer = elements.pastChallengesContent;
     if (!listContainer) return;
