@@ -715,10 +715,6 @@ export async function toggleRouteLike(routeId) {
 
 // --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
 
-// Ensure this import is at the top of community.js
-import { db, doc, getDoc } from './firebase.js'; 
-import { state, allBadges as configBadges } from './config.js'; // Try to import, alias it
-
 export async function openAchievementsModal(viewType = 'standard') {
     const list = document.getElementById('achievementsList');
     const title = document.getElementById('achievementsTitle');
