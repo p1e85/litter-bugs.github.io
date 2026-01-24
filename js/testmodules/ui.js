@@ -86,6 +86,8 @@ const elements = {
     menuBtn: document.getElementById('menuBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
     btnViewEventBadges: document.getElementById('btnViewEventBadges'),
+    btnAchievements: document.getElementById('btnAchievements'),
+    btnToggleBadgeView: document.getElementById('btnToggleBadgeView'),
     
     // Hub Navigation
     hubModal: document.getElementById('hubModal'),
@@ -152,16 +154,33 @@ export function initializeUI() {
     }
 }
 
-function attachEventListeners() {
+export function attachEventListeners() {
+    
+    // --- AUTHENTICATION ---
+    if (elements.loginBtn) {
+        elements.loginBtn.addEventListener('click', () => {
+            const email = prompt("Enter email:");
+            const password = prompt("Enter password:");
+            if (email && password) loginUser(email, password);
+        });
+    }
+
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', handleLogOut);
+    }
+    
     elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
+    
     elements.agreeBtn.addEventListener('click', () => {
         elements.termsModal.style.display = 'none';
         sessionStorage.setItem('termsAccepted', 'true');
         document.getElementById('userStatus').style.display = 'flex';
         if (!state.currentUser) elements.authModal.style.display = 'flex';
     });
+
     elements.loginSignupBtn.addEventListener('click', () => elements.authModal.style.display = 'flex');
     elements.skipBtn.addEventListener('click', () => elements.authModal.style.display = 'none');
+    
     elements.authModal.addEventListener('click', (e) => {
         if (e.target.id === 'switchAuthModeLink') {
             e.preventDefault();
@@ -169,12 +188,13 @@ function attachEventListeners() {
             updateAuthModalUI();
         }
     });
+
     elements.authActionBtn.addEventListener('click', async (event) => { 
         event.preventDefault();
         if (state.isSignUpMode) await handleSignUp();
         else await handleLogIn();
     });
-    elements.logoutBtn.addEventListener('click', handleLogOut);
+
     elements.emailInput.addEventListener('input', validateSignUpForm);
     elements.passwordInput.addEventListener('input', validateSignUpForm);
     elements.usernameInput.addEventListener('input', validateSignUpForm);
@@ -184,40 +204,80 @@ function attachEventListeners() {
     // --- MAP & TRACKING ---
     elements.findMeBtn.addEventListener('click', findMe);
     elements.trackBtn.addEventListener('click', toggleTracking);
+    
     elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
     elements.cameraInput.addEventListener('change', handlePhoto);
+    
     elements.changeStyleBtn.addEventListener('click', changeMapStyle);
-    elements.communityBtn.addEventListener('click', toggleCommunityView);
+    
+    // --- MAIN MENU NAVIGATION ---
     elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
+
+    // 1. Community Hub (Challenges)
+    if (elements.communityChallengeBtn) {
+        elements.communityChallengeBtn.addEventListener('click', () => {
+            elements.menuModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+
+    // 2. Achievements (NEW: On Main Menu)
+    if (elements.btnAchievements) {
+        elements.btnAchievements.addEventListener('click', () => {
+            elements.menuModal.style.display = 'none'; 
+            elements.achievementsModal.style.display = 'flex'; 
+            
+            // Default to 'standard' (Milestones)
+            // Make sure openAchievementsModal is imported!
+            openAchievementsModal('standard'); 
+            
+            // Reset the toggle button text state
+            if(elements.btnToggleBadgeView) {
+                elements.btnToggleBadgeView.textContent = "⚔️ View Event Badges";
+                elements.btnToggleBadgeView.dataset.mode = "standard";
+            }
+        });
+    }
+
+    // 3. Community Map View
+    elements.communityBtn.addEventListener('click', toggleCommunityView);
+    
+    // 4. Info / Settings
     elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
     elements.viewTermsLink.addEventListener('click', (e) => {
         e.preventDefault();
         elements.infoModal.style.display = 'none';
         elements.termsModal.style.display = 'flex';
     });
+
+    // --- DATA & SAVING ---
     elements.safetyModalOkBtn.addEventListener('click', () => {
         elements.safetyModal.style.display = 'none';
         startTracking();
     });
+
     elements.summaryOkBtn.addEventListener('click', () => { 
         elements.summaryModal.style.display = 'none';
         document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none';
         document.getElementById('cleanupPhotoPreview').src = '#';
     });
 
-    // --- DATA & SAVING ---
     elements.dataBtn.addEventListener('click', () => {
         const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
         elements.menuModal.style.display = 'none';
         elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
         elements.dataModal.style.display = 'flex';
     });
+
     elements.saveBtn.addEventListener('click', saveSession);
+    
     elements.loadBtn.addEventListener('click', () => {
         elements.dataModal.style.display = 'none';
         loadSession();
     });
+    
     elements.exportBtn.addEventListener('click', exportGeoJSON);
+    
     elements.centerOnRouteBtn.addEventListener('click', () => {
         if (elements.centerOnRouteBtn.classList.contains('disabled')) {
             alert("Please load a route first to use this feature.");
@@ -226,7 +286,9 @@ function attachEventListeners() {
             elements.dataModal.style.display = 'none';
         }
     });
+
     elements.publishBtn.addEventListener('click', publishRoute);
+    
     elements.managePublicationsBtn.addEventListener('click', () => {
         if (!state.currentUser) { alert("You must be logged in to manage your publications."); return; }
         elements.dataModal.style.display = 'none';
@@ -252,6 +314,7 @@ function attachEventListeners() {
         document.querySelector('.leaderboard-tab[data-metric="totalPins"]').classList.add('active');
         fetchAndDisplayLeaderboard('totalPins');
     });
+
     elements.leaderboardTabs.forEach(tab => {
         tab.addEventListener('click', () => {
             elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
@@ -263,6 +326,7 @@ function attachEventListeners() {
             else { fetchAndDisplayLeaderboard(tab.dataset.metric); }
         });
     });
+
     elements.leaderboardList.addEventListener('click', (e) => {
         if (e.target && e.target.classList.contains('leaderboard-profile-link')) {
             e.preventDefault();
@@ -274,7 +338,7 @@ function attachEventListeners() {
         }
     });
 
-    // --- CLEANUP PHOTOS (Preview Logic) ---
+    // --- CLEANUP PHOTOS ---
     const addCleanupPhotoBtn = document.getElementById('addCleanupPhotoBtn');
     const cleanupCameraInput = document.getElementById('cleanupCameraInput');
     const photoPreviewContainer = document.getElementById('cleanupPhotoPreviewContainer');
@@ -302,7 +366,7 @@ function attachEventListeners() {
         });
     }
 
-    // --- MEETUPS & EVENTS ---
+    // --- MEETUPS ---
     elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
     elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
     elements.meetupDescriptionInput.addEventListener('input', validateMeetupForm);
@@ -310,9 +374,7 @@ function attachEventListeners() {
     elements.shareBtn.addEventListener('click', shareCleanupResults);
     elements.meetupDateInput.addEventListener('change', validateMeetupForm);
 
-    addAllModalCloseListeners();
-
-    // --- HUB NAVIGATION ---
+    // --- HUB NAVIGATION (Feed/Events) ---
     elements.hubBtn.addEventListener('click', () => {
         elements.menuModal.style.display = 'none';
         elements.hubModal.style.display = 'flex';
@@ -334,48 +396,38 @@ function attachEventListeners() {
         loadActivityFeed();
     });
 
-    // --- CHALLENGE MENU NAVIGATION ---
-    
-    // 1. Open Challenge Menu (From Main Menu)
-    if (elements.communityChallengeBtn) {
-        elements.communityChallengeBtn.addEventListener('click', () => {
-            elements.menuModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
+    // --- ACHIEVEMENT MODAL LOGIC (New) ---
+
+    // 1. Toggle Button (Milestones <-> Events)
+    if (elements.btnToggleBadgeView) {
+        elements.btnToggleBadgeView.addEventListener('click', () => {
+            const currentMode = elements.btnToggleBadgeView.dataset.mode;
+            
+            if (currentMode === 'standard') {
+                // Switch to Events
+                openAchievementsModal('challenge');
+                elements.btnToggleBadgeView.textContent = "🏆 View Milestones";
+                elements.btnToggleBadgeView.dataset.mode = "challenge";
+            } else {
+                // Switch to Milestones
+                openAchievementsModal('standard');
+                elements.btnToggleBadgeView.textContent = "⚔️ View Event Badges";
+                elements.btnToggleBadgeView.dataset.mode = "standard";
+            }
         });
     }
 
-// --- 1. View Milestones (Standard) ---
-    if (elements.btnViewAchievements) {
-        elements.btnViewAchievements.addEventListener('click', () => {
-            elements.challengeMenuModal.style.display = 'none';
-            elements.achievementsModal.style.display = 'flex';
-            
-            // Pass 'standard' to show normal achievements
-            openAchievementsModal('standard'); 
-        });
-    }
-
-    // --- 2. View Event Badges (New Button) ---
-    if (elements.btnViewEventBadges) {
-        elements.btnViewEventBadges.addEventListener('click', () => {
-            elements.challengeMenuModal.style.display = 'none';
-            elements.achievementsModal.style.display = 'flex';
-            
-            // Pass 'challenge' to show only event badges
-            openAchievementsModal('challenge'); 
-        });
-    }
-    
-    // Fix: Back button from Achievements returns to Hub
-    if (elements.achievementOkBtn) {
-        elements.achievementOkBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Stop generic close
+    // 2. Achievements Back Button (To Main Menu)
+    if (elements.achievementListBackBtn) {
+        elements.achievementListBackBtn.addEventListener('click', () => {
             elements.achievementsModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
+            elements.menuModal.style.display = 'flex'; // Go back to Main Menu
         });
     }
 
-    // 3. Current Challenges
+    // --- CHALLENGE MENU LOGIC ---
+
+    // 1. Current Challenges
     if (elements.btnCurrentChallenges) {
         elements.btnCurrentChallenges.addEventListener('click', () => {
             elements.challengeMenuModal.style.display = 'none';
@@ -384,7 +436,7 @@ function attachEventListeners() {
         });
     }
     
-    // Fix: Back button from Current Challenges returns to Hub
+    // Back from Current -> Hub
     if (elements.btnBackFromCurrent) {
         elements.btnBackFromCurrent.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -393,17 +445,24 @@ function attachEventListeners() {
         });
     }
 
-    // 4. Past Challenges (History)
+    // 2. Past Challenges
     elements.btnPastChallenges.addEventListener('click', () => {
         elements.challengeMenuModal.style.display = 'none';
         elements.pastChallengesModal.style.display = 'flex';
-        // Default to completed tab
         elements.tabCompleted.classList.add('active');
         elements.tabUncompleted.classList.remove('active');
         loadPastChallenges('completed'); 
     });
 
-    // 5. History Tabs
+    // Back from History -> Hub
+    if (elements.btnBackToMenu) {
+        elements.btnBackToMenu.addEventListener('click', () => {
+            elements.pastChallengesModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+
+    // 3. History Tabs
     elements.tabCompleted.addEventListener('click', () => {
         elements.tabCompleted.classList.add('active');
         elements.tabUncompleted.classList.remove('active');
@@ -416,15 +475,7 @@ function attachEventListeners() {
         loadPastChallenges('uncompleted');
     });
 
-    // 6. Back Button in History (Takes you back to Challenge Menu)
-    if (elements.btnBackToMenu) {
-        elements.btnBackToMenu.addEventListener('click', () => {
-            elements.pastChallengesModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
-        });
-    }
-
-    // 7. Admin Panel (Hidden)
+    // 4. Admin Panel
     if (elements.btnAdminPanel) {
         elements.btnAdminPanel.addEventListener('click', async () => {
             elements.challengeMenuModal.style.display = 'none';
@@ -433,7 +484,6 @@ function attachEventListeners() {
         });
     }
 
-    // 8. Admin Save Button
     if (elements.btnSaveChallenge) {
         elements.btnSaveChallenge.addEventListener('click', async () => {
             const title = elements.adminChalTitle.value;
@@ -447,14 +497,15 @@ function attachEventListeners() {
                 return;
             }
 
-            // Call imported function from community.js
             await createNewChallenge(title, desc, goal, badge, expire);
             alert("Challenge Created!");
-            loadAdminChallengeList(); // Refresh list
+            loadAdminChallengeList(); 
         });
     }
 
-} // end of listeners
+    // Generic Close Listeners
+    addAllModalCloseListeners();
+} // end of listeners*********************
 
 function addAllModalCloseListeners() {
     const allModals = Object.values(elements).filter(el => el && el.classList && el.classList.contains('modal-overlay'));
