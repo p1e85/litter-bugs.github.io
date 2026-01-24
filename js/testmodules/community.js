@@ -715,49 +715,86 @@ export async function toggleRouteLike(routeId) {
 
 // --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
 
-export async function openAchievementsModal() {
-    const grid = document.getElementById('achievementsGrid');
-    grid.innerHTML = 'Loading...';
+export async function openAchievementsModal(viewType = 'standard') {
+    const list = document.getElementById('achievementsList'); // Ensure your modal has this ID for the list container
+    const title = document.querySelector('#achievementsModal h3'); // The header
+    
+    if (!list) return;
 
-    if (!state.currentUser) {
-        alert("Please log in to see your achievements.");
-        return;
+    list.innerHTML = "<p>Loading...</p>";
+
+    // 1. Set Title based on which button was clicked
+    if (viewType === 'challenge') {
+        if(title) title.innerText = "⚔️ Event Badges";
+    } else {
+        if(title) title.innerText = "🏆 Career Milestones";
     }
 
-    try {
-        // 1. Get User's Earned Badges
-        const profileRef = doc(db, "publicProfiles", state.currentUser.uid);
-        const profileSnap = await getDoc(profileRef);
-        const userBadges = profileSnap.exists() ? (profileSnap.data().badges || {}) : {};
+    // 2. Fetch User Badges
+    let userBadges = {};
+    if (state.currentUser) {
+        try {
+            const userDoc = await getDoc(doc(db, "users", state.currentUser.uid));
+            if (userDoc.exists()) userBadges = userDoc.data().badges || {};
+        } catch (e) {
+            console.error("Error fetching badges", e);
+        }
+    }
 
-        // 2. Clear Grid
-        grid.innerHTML = '';
+    list.innerHTML = "";
+    
+    // 3. Filter and Render
+    let count = 0;
+    
+    Object.entries(allBadges).forEach(([key, config]) => {
+        const badgeData = userBadges[key]; // The data stored in user profile
+        const isUnlocked = !!badgeData;
 
-        // 3. Loop through ALL possible badges (from config.js)
-        // We assume allBadges is an object like { badgeID: {name, icon, description}... }
-        for (const [badgeId, badgeInfo] of Object.entries(allBadges)) {
-            const hasBadge = userBadges[badgeId] === true;
-            
-            const card = document.createElement('div');
-            card.className = `achievement-card ${hasBadge ? 'unlocked' : 'locked'}`;
-            card.title = hasBadge ? `EARNED: ${badgeInfo.description}` : `LOCKED: ${badgeInfo.description}`;
-            
-            card.innerHTML = `
-                <span class="achievement-icon">${badgeInfo.icon}</span>
-                <span class="achievement-name">${badgeInfo.name}</span>
-            `;
-            
-            // Optional: Click to see details
-            card.addEventListener('click', () => {
-                alert(`${badgeInfo.name}\n\n${badgeInfo.description}\n\nStatus: ${hasBadge ? "✅ Earned" : "🔒 Locked"}`);
-            });
+        // --- FILTERING LOGIC ---
+        // How do we know if it's a challenge badge?
+        // 1. It has source: 'challenge' in DB
+        // 2. OR the ID contains 'warrior' (legacy check)
+        const isChallengeBadge = (badgeData && badgeData.source === 'challenge') || key.includes('warrior');
 
-            grid.appendChild(card);
+        let shouldShow = false;
+
+        if (viewType === 'challenge') {
+            // Only show if it IS a challenge badge
+            if (isChallengeBadge) shouldShow = true;
+        } else {
+            // Standard View: Show if it is NOT a challenge badge
+            if (!isChallengeBadge) shouldShow = true;
         }
 
-    } catch (error) {
-        console.error("Error loading achievements:", error);
-        grid.innerHTML = '<p>Error loading data.</p>';
+        if (shouldShow) {
+            count++;
+            const badgeEl = document.createElement('div');
+            badgeEl.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+            
+            const bg = isUnlocked ? config.color : '#eee';
+            const icon = isUnlocked ? config.icon : '🔒';
+            const opacity = isUnlocked ? '1' : '0.5';
+
+            badgeEl.innerHTML = `
+                <div class="badge-icon" style="background:${bg}; opacity:${opacity}; font-size: 2em; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin: 0 auto;">
+                    ${icon}
+                </div>
+                <div style="margin-top: 10px;">
+                    <strong>${config.name}</strong>
+                    <p style="font-size: 0.8em; color: #666;">${config.description}</p>
+                </div>
+            `;
+            list.appendChild(badgeEl);
+        }
+    });
+
+    // 4. Empty State
+    if (count === 0) {
+        if (viewType === 'challenge') {
+            list.innerHTML = "<p style='color:#999; padding:20px;'>No event badges earned yet.<br>Check 'Current Challenges' to earn some!</p>";
+        } else {
+            list.innerHTML = "<p style='color:#999; padding:20px;'>No milestones yet.</p>";
+        }
     }
 }
 
