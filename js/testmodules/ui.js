@@ -508,7 +508,7 @@ export function attachEventListeners() {
             elements.eventsModal.style.display = 'none';
             
             // Open the Main Menu
-            elements.menuModal.style.display = 'flex';
+            elements.hubModal.style.display = 'flex';
         });
     }
 
