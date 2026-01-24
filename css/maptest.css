@@ -557,3 +557,37 @@ button.close-btn:hover { color: var(--color-text-dark); }
     font-weight: bold;
     color: #333;
 }
+
+/* Update the Card to handle variable height content */
+.achievement-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px; /* subtle border radius */
+    /* background: #fafafa; Optional: faint background for the card itself */
+}
+
+/* Existing Name Style */
+.achievement-name {
+    font-weight: bold;
+    font-size: 0.9em;
+    margin-top: 5px;
+    color: #333;
+}
+
+/* NEW: Description Style */
+.achievement-desc {
+    font-size: 0.75em; /* Smaller text */
+    color: #666;       /* Gray color */
+    margin-top: 4px;
+    line-height: 1.2;
+    max-width: 90%;    /* Keep it from hitting the edges */
+}
+
+/* Locked State adjustments */
+.achievement-card.locked .achievement-desc {
+    color: #999; /* Even lighter gray for locked items */
+}
