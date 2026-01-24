@@ -591,3 +591,32 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .achievement-card.locked .achievement-desc {
     color: #999; /* Even lighter gray for locked items */
 }
+
+/* --- STYLISH BACK BUTTONS --- */
+.modal-button.secondary {
+    background-color: transparent; /* See-through background */
+    border: 2px solid #4A7C59;     /* Theme colored border */
+    color: #4A7C59;                /* Theme colored text */
+    font-weight: 700;
+    transition: all 0.2s ease;     /* Smooth animation */
+    
+    /* Flexbox to center the icon and text */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Space between arrow and text */
+}
+
+/* Hover Effect: Fills with color */
+.modal-button.secondary:hover {
+    background-color: #4A7C59;
+    color: white;
+    transform: translateY(-2px);   /* Moves up slightly */
+    box-shadow: 0 4px 12px rgba(74, 124, 89, 0.3); /* Soft shadow */
+    cursor: pointer;
+}
+
+/* Active/Click Effect */
+.modal-button.secondary:active {
+    transform: translateY(0);
+}
