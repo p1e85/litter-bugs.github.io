@@ -219,25 +219,25 @@ export function attachEventListeners() {
         });
     }
 
-    // 2. ACHIEVEMENTS (Main Menu -> Milestones)
+// MAIN MENU BUTTON
     if (elements.btnAchievements) {
         elements.btnAchievements.addEventListener('click', () => {
-            elements.menuModal.style.display = 'none';     // Close Main Menu
-            elements.achievementsModal.style.display = 'flex'; // Open List
+            elements.menuModal.style.display = 'none';
+            elements.achievementsModal.style.display = 'flex';
             
-            // Call the Specific Function for Milestones
+            // Just open it. No arguments.
             openAchievementsModal(); 
             
-            // DYNAMIC BACK BUTTON: Returns to Main Menu
+            // Basic Back Button (Return to Main Menu)
             if (elements.achievementListBackBtn) {
-                // Clone node to strip old listeners
+                 // Simple reset to avoid duplicate listeners
                 const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
                 elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
-                elements.achievementListBackBtn = newBackBtn; 
+                elements.achievementListBackBtn = newBackBtn;
 
                 newBackBtn.addEventListener('click', () => {
                     elements.achievementsModal.style.display = 'none';
-                    elements.menuModal.style.display = 'flex'; // <--- Go back to Main Menu
+                    elements.menuModal.style.display = 'flex';
                 });
             }
         });
