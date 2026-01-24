@@ -124,7 +124,7 @@ const elements = {
     btnPastChallenges: document.getElementById('btnPastChallenges'),
     btnBackToMenu: document.querySelector('#pastChallengesModal .ok-btn'), // History Back
     btnBackFromCurrent: document.getElementById('btnBackFromCurrent'), // Current Back
-    btnchallengeMenuBack: document.getElentById('btnchallengeMenuBack'),
+    btnchallengeMenuBack: document.getElementById('btnchallengeMenuBack'),
     
     // Tabs
     tabCompleted: document.getElementById('tabCompleted'),
