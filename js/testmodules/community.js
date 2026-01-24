@@ -577,7 +577,7 @@ export async function handleMeetupSubmit() {
 
 // --- NEW: Fetch All Upcoming Events ---
 export async function fetchAndDisplayAllEvents() {
-    const eventsList = document.getElementById('allEventsList');
+    const eventsList = document.getElementById('eventsList');
     if (!eventsList) return;
     eventsList.innerHTML = '<li>Loading upcoming events...</li>';
 
