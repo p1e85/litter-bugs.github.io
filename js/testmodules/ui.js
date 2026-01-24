@@ -611,10 +611,17 @@ async function loadActivityFeed() {
 
 // Function to reveal admin tools
 export function checkAdminPermissions(userProfile) {
+    console.log("🔍 Checking Admin Permissions...");
+    console.log("👤 Profile Data:", userProfile); // This will show us the raw data from Firebase
+
     if (userProfile && userProfile.role === 'admin') {
-        console.log("👮 Admin Logged In: Enabling Tools");
+        console.log("✅ SUCCESS: User is Admin! Unhiding button.");
         if (elements.btnAdminPanel) {
-            elements.btnAdminPanel.style.display = 'flex'; // Reveal the button
+            elements.btnAdminPanel.style.display = 'flex';
+        } else {
+            console.error("❌ ERROR: Button #btnAdminPanel not found in HTML.");
         }
+    } else {
+        console.warn("⛔ ACCESS DENIED: User is NOT admin (or role is missing).");
     }
 }
