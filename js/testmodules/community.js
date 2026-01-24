@@ -721,31 +721,32 @@ export async function openAchievementsModal(viewType = 'standard') {
     
     if (!list) return;
 
-    // --- 1. SAFETY BACKUP: Define Badges Here ---
-    // If config.js fails, this list saves the day.
-    const fallbackBadges = {
+    // --- 1. DEFINITIONS (The "Database" of badges) ---
+    // We define standard achievements here to ensure they ALWAYS show up, 
+    // even if config.js is missing them.
+    const standardAchievements = {
         "first_mile": { name: "First Steps", description: "Walked 1 mile cleaning up.", icon: "👟", color: "#4A7C59" },
         "high_five": { name: "High Five", description: "Collected 50 items.", icon: "✋", color: "#4A7C59" },
         "trash_titan": { name: "Trash Titan", description: "Collected 1,000 items.", icon: "🏋️", color: "#DC143C" },
         "night_owl": { name: "Night Owl", description: "Cleaned up after 8 PM.", icon: "🦉", color: "#483D8B" },
         "early_bird": { name: "Early Bird", description: "Cleaned up before 8 AM.", icon: "🌅", color: "#FF4500" },
-        // Add your Challenge Badge ID here to test it
-        "warrior_2026": { name: "Weekend Warrior", description: "Completed the Challenge!", icon: "⚔️", color: "#FFD700" }
+        "shutterbug": { name: "Shutterbug", description: "Saved a cleanup photo.", icon: "📸", color: "#00CED1" }
     };
 
-    // Use imported badges if available, otherwise use fallback
-    const badgeDefinitions = (configBadges && Object.keys(configBadges).length > 0) ? configBadges : fallbackBadges;
-    
-    // --- 2. Setup Title ---
+    // Combine with whatever is in config.js (which likely has your Weekend Warrior badge)
+    // If allBadges is undefined, we default to an empty object to prevent crashes.
+    const allDefinitions = { ...standardAchievements, ...(allBadges || {}) };
+
+    // --- 2. SETUP UI ---
     if (viewType === 'challenge') {
-        if(title) title.innerText = "⚔️ Event Badges (Earned)";
+        if(title) title.innerText = "⚔️ Event Badges";
     } else {
         if(title) title.innerText = "🏆 Career Milestones";
     }
 
     list.innerHTML = "<p>Loading...</p>";
 
-    // --- 3. Fetch User Progress ---
+    // --- 3. FETCH USER PROGRESS ---
     let userBadges = {};
     if (state.currentUser) {
         try {
@@ -759,22 +760,27 @@ export async function openAchievementsModal(viewType = 'standard') {
     list.innerHTML = ""; 
     let count = 0;
 
-    // --- 4. Render The List ---
-    // Use badgeDefinitions (which is guaranteed to exist now)
-    Object.entries(badgeDefinitions).forEach(([key, config]) => {
+    // --- 4. RENDER LOOP ---
+    Object.entries(allDefinitions).forEach(([key, config]) => {
         const badgeData = userBadges[key]; 
         const isUnlocked = !!badgeData;
 
-        // FILTER LOGIC
-        const isChallengeBadge = (badgeData && badgeData.source === 'challenge') || key.includes('warrior') || key.includes('event');
+        // IDENTIFY TYPE
+        // It is a 'Challenge Badge' if:
+        // 1. The ID contains 'warrior' (Your test badge)
+        // 2. OR the user data says source: 'challenge'
+        const isChallengeBadge = key.includes('warrior') || (badgeData && badgeData.source === 'challenge');
 
         let shouldShow = false;
 
         if (viewType === 'challenge') {
-            // EVENTS: Must be unlocked to see it
+            // === EVENT BADGES TAB ===
+            // Show ONLY if it's a Challenge Badge AND it is Unlocked
             if (isChallengeBadge && isUnlocked) shouldShow = true;
         } else {
-            // MILESTONES: Show even if locked (so user knows what to aim for)
+            // === ACHIEVEMENTS TAB ===
+            // Show ONLY if it's a Standard Achievement (Milestone)
+            // We show these even if locked (grayed out) so people know what to aim for.
             if (!isChallengeBadge) shouldShow = true;
         }
 
@@ -800,12 +806,15 @@ export async function openAchievementsModal(viewType = 'standard') {
         }
     });
 
-    // --- 5. Empty State ---
+    // --- 5. EMPTY STATES ---
     if (count === 0) {
         if (viewType === 'challenge') {
-            list.innerHTML = "<p style='padding:20px; color:#999;'>No event badges earned yet.</p>";
+            list.innerHTML = `
+                <div style="text-align:center; padding: 20px; color:#888;">
+                    <p>No event badges earned yet.</p>
+                    <small>Complete a Quest to earn one!</small>
+                </div>`;
         } else {
-            // If this shows, it means fallbackBadges failed or logic is broken
             list.innerHTML = "<p style='padding:20px; color:#999;'>No milestones found.</p>";
         }
     }
