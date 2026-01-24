@@ -236,7 +236,7 @@ export async function publishRoute() {
         const newBadges = badgesAfter.filter(badge => !badgesBefore.includes(badge));
 
         if (newBadges.length > 0) {
-            showAchievementPopup(newBadges[0]);
+            showPopup(newBadges[0]);
         } else {
             alert("Success! Your route has been published.");
         }
@@ -338,7 +338,7 @@ export async function showPublicProfile(userId) {
             const profileData = docSnap.data();
             const publicProfileModal = document.getElementById('publicProfileModal');
             const profileSupportBtn = document.getElementById('profileSupportBtn');
-            const profileAchievementsContainer = document.getElementById('profileAchievements');
+            const profilesContainer = document.getElementById('profiles');
             const profileStatsContainer = document.getElementById('profileStats');
 
             document.getElementById('profileUsername').textContent = profileData.username || 'Anonymous User';
@@ -360,7 +360,7 @@ export async function showPublicProfile(userId) {
                     <div class="profile-stat-label">Routes Completed</div>
                 </div>`;
 
-            profileAchievementsContainer.innerHTML = '';
+            profilesContainer.innerHTML = '';
             const userBadges = profileData.badges || {};
             let earnedBadgesCount = 0;
             for (const badgeKey in allBadges) {
@@ -371,11 +371,11 @@ export async function showPublicProfile(userId) {
                     badgeElement.className = 'badge-item';
                     badgeElement.textContent = badgeInfo.icon;
                     badgeElement.title = `${badgeInfo.name}: ${badgeInfo.description}`;
-                    profileAchievementsContainer.appendChild(badgeElement);
+                    profilesContainer.appendChild(badgeElement);
                 }
             }
             if (earnedBadgesCount === 0) {
-                profileAchievementsContainer.innerHTML = '<p class="no-badges-message">This user hasn\'t earned any badges yet.</p>';
+                profilesContainer.innerHTML = '<p class="no-badges-message">This user hasn\'t earned any badges yet.</p>';
             }
 
             if (profileData.buyMeACoffeeLink) {
@@ -447,7 +447,7 @@ export async function fetchAndDisplayMyStats() {
                 <div class="stat-card"><div class="my-stats-value">${distanceMiles}</div><div class="my-stats-label">Miles Cleaned</div></div>
                 <div class="stat-card"><div class="my-stats-value">${profileData.totalRoutes || 0}</div><div class="my-stats-label">Routes Completed</div></div>
             </div>
-            <h4>My Achievements</h4><div class="my-stats-badges"><div class="badge-container">`;
+            <h4>My s</h4><div class="my-stats-badges"><div class="badge-container">`;
         const userBadges = profileData.badges || {};
         let earnedBadgesCount = 0;
         for (const badgeKey in allBadges) {
@@ -465,14 +465,14 @@ export async function fetchAndDisplayMyStats() {
         myStatsContainer.innerHTML = '<p class="login-prompt">Could not load your stats.</p>';
     }
 }
-function showAchievementPopup(badgeKey) {
+function showPopup(badgeKey) {
     const badge = allBadges[badgeKey];
     if (!badge) return;
-    const achievementModal = document.getElementById('achievementModal');
-    achievementModal.querySelector('.achievement-icon').textContent = badge.icon;
-    document.getElementById('achievementName').textContent = badge.name;
-    document.getElementById('achievementDescription').textContent = badge.description;
-    achievementModal.style.display = 'flex';
+    const Modal = document.getElementById('Modal');
+    Modal.querySelector('.-icon').textContent = badge.icon;
+    document.getElementById('Name').textContent = badge.name;
+    document.getElementById('Description').textContent = badge.description;
+    Modal.style.display = 'flex';
 }
 
 // --- Meetups ---
@@ -716,69 +716,48 @@ export async function toggleRouteLike(routeId) {
 // --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
 
 export async function openAchievementsModal() {
-    const list = document.getElementById('achievementsList');
-    const title = document.getElementById('achievementsTitle');
-    
-    if (!list) return;
+    const grid = document.getElementById('achievementsGrid');
+    grid.innerHTML = 'Loading...';
 
-    if (title) title.innerText = "🏆 Achievements";
-    list.innerHTML = "<p>Loading...</p>";
-
-    // 1. Fetch User Data
-    let userBadges = {};
-    if (state.currentUser) {
-        try {
-            const userDoc = await getDoc(doc(db, "users", state.currentUser.uid));
-            if (userDoc.exists()) {
-                userBadges = userDoc.data().badges || {};
-            }
-        } catch (e) { console.error("Error fetching badges", e); }
+    if (!state.currentUser) {
+        alert("Please log in to see your achievements.");
+        return;
     }
 
-    list.innerHTML = ""; 
-    let count = 0;
+    try {
+        // 1. Get User's Earned Badges
+        const profileRef = doc(db, "publicProfiles", state.currentUser.uid);
+        const profileSnap = await getDoc(profileRef);
+        const userBadges = profileSnap.exists() ? (profileSnap.data().badges || {}) : {};
 
-    // 2. Render Loop (Show ALL Badges from Config)
-    if (allBadges) {
-        Object.entries(allBadges).forEach(([configKey, config]) => {
+        // 2. Clear Grid
+        grid.innerHTML = '';
+
+        // 3. Loop through ALL possible badges (from config.js)
+        // We assume allBadges is an object like { badgeID: {name, icon, description}... }
+        for (const [badgeId, badgeInfo] of Object.entries(allBadges)) {
+            const hasBadge = userBadges[badgeId] === true;
             
-            // --- SMARTER MATCHING ---
-            // 1. Check if the IDs match exactly (e.g. 'first_mile' === 'first_mile')
-            let isUnlocked = !!userBadges[configKey];
-
-            // 2. If ID match failed, check if we own a badge with the SAME NAME.
-            // This fixes the issue where DB keys might differ from Config keys.
-            if (!isUnlocked) {
-                isUnlocked = Object.values(userBadges).some(userBadge => 
-                    userBadge.name === config.name
-                );
-            }
-            // ------------------------
-
-            count++;
-
-            const badgeEl = document.createElement('div');
-            // CSS handles the Gray vs Color based on this class
-            badgeEl.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+            const card = document.createElement('div');
+            card.className = `achievement-card ${hasBadge ? 'unlocked' : 'locked'}`;
+            card.title = hasBadge ? `EARNED: ${badgeInfo.description}` : `LOCKED: ${badgeInfo.description}`;
             
-            // Background: Config color if unlocked, forced Gray by CSS if locked.
-            const bgStyle = config.color; 
-
-            badgeEl.innerHTML = `
-                <div class="badge-icon" style="background:${bgStyle};">
-                    ${config.icon}
-                </div>
-                <div>
-                    <strong>${config.name}</strong>
-                    <p style="font-size: 0.75em; margin:0;">${config.description}</p>
-                </div>
+            card.innerHTML = `
+                <span class="achievement-icon">${badgeInfo.icon}</span>
+                <span class="achievement-name">${badgeInfo.name}</span>
             `;
-            list.appendChild(badgeEl);
-        });
-    }
+            
+            // Optional: Click to see details
+            card.addEventListener('click', () => {
+                alert(`${badgeInfo.name}\n\n${badgeInfo.description}\n\nStatus: ${hasBadge ? "✅ Earned" : "🔒 Locked"}`);
+            });
 
-    if (count === 0) {
-        list.innerHTML = "<p>No badges configured.</p>";
+            grid.appendChild(card);
+        }
+
+    } catch (error) {
+        console.error("Error loading achievements:", error);
+        grid.innerHTML = '<p>Error loading data.</p>';
     }
 }
 
