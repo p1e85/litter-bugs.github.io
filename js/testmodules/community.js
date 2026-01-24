@@ -715,93 +715,135 @@ export async function toggleRouteLike(routeId) {
 
 // --- CHALLENGES & ACHIEVEMENTS SYSTEM ---
 
-export async function openAchievementsModal(viewType) {
+// --- 1. OPEN ACHIEVEMENTS (Main Menu) ---
+export async function openAchievementsModal() {
     const list = document.getElementById('achievementsList');
     const title = document.getElementById('achievementsTitle');
     
     if (!list) return;
 
-    // 1. Set Title based on which button was clicked
-    if (viewType === 'challenge') {
-        if(title) title.innerText = "⚔️ Event Badges (Earned)";
-    } else {
-        if(title) title.innerText = "🏆 Career Milestones";
-    }
-
+    // Fixed Title
+    if(title) title.innerText = "🏆 Career Milestones";
+    
     list.innerHTML = "<p>Loading...</p>";
 
-    // 2. Fetch User Badges
+    // Fetch User Progress
     let userBadges = {};
     if (state.currentUser) {
         try {
             const userDoc = await getDoc(doc(db, "users", state.currentUser.uid));
-            if (userDoc.exists()) {
-                userBadges = userDoc.data().badges || {};
-            }
-        } catch (e) {
-            console.error("Error fetching badges", e);
-        }
+            if (userDoc.exists()) userBadges = userDoc.data().badges || {};
+        } catch (e) { console.error(e); }
     }
 
-    list.innerHTML = "";
+    list.innerHTML = ""; 
     let count = 0;
 
-    // 3. Loop through the config (The logic that worked before)
-    // We use 'allBadges' directly from config.js
+    // Logic: Iterate through the CONFIG list (allBadges)
+    // We want to show EVERYTHING in the config, even if locked.
     Object.entries(allBadges).forEach(([key, config]) => {
-        const badgeData = userBadges[key]; // Do we own it?
+        const badgeData = userBadges[key]; 
         const isUnlocked = !!badgeData;
 
-        // --- FILTERING ---
-        // Identify if it's a Challenge Badge (has 'warrior' in ID or source='challenge')
-        const isChallengeBadge = key.includes('warrior') || (badgeData && badgeData.source === 'challenge');
+        // FILTER: Skip if it is a Challenge Badge
+        const isChallengeBadge = key.includes('warrior') || (config.source === 'challenge');
 
-        let shouldShow = false;
-
-        if (viewType === 'challenge') {
-            // CHALLENGE MENU: Only show if it is a Challenge Badge AND Unlocked
-            if (isChallengeBadge && isUnlocked) {
-                shouldShow = true;
-            }
-        } else {
-            // MAIN MENU: Show if it is a Milestone (NOT a challenge badge)
-            // Show both locked and unlocked so users see their goals.
-            if (!isChallengeBadge) {
-                shouldShow = true;
-            }
-        }
-
-        // --- RENDER ---
-        if (shouldShow) {
+        if (!isChallengeBadge) {
             count++;
-            const badgeEl = document.createElement('div');
-            badgeEl.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
-            
-            const bg = isUnlocked ? config.color : '#eee';
-            const icon = isUnlocked ? config.icon : '🔒';
-            const opacity = isUnlocked ? '1' : '0.5';
-
-            badgeEl.innerHTML = `
-                <div class="badge-icon" style="background:${bg}; opacity:${opacity}; font-size: 2em; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin: 0 auto;">
-                    ${icon}
-                </div>
-                <div style="margin-top: 10px;">
-                    <strong>${config.name}</strong>
-                    <p style="font-size: 0.8em; color: #666;">${config.description}</p>
-                </div>
-            `;
+            const badgeEl = createBadgeElement(config, isUnlocked);
             list.appendChild(badgeEl);
         }
     });
 
-    // 4. Empty State
     if (count === 0) {
-        if (viewType === 'challenge') {
-            list.innerHTML = "<div style='text-align:center; padding:20px; color:#888;'><p>No event badges earned yet.</p></div>";
-        } else {
-            list.innerHTML = "<p style='padding:20px; color:#999;'>No milestones yet.</p>";
-        }
+        list.innerHTML = "<p style='padding:20px; color:#999;'>No milestones configured.</p>";
     }
+}
+
+// --- 2. OPEN EVENT BADGES (Challenge Menu) ---
+export async function openEventBadgesModal() {
+    const list = document.getElementById('achievementsList');
+    const title = document.getElementById('achievementsTitle');
+    
+    if (!list) return;
+
+    // Fixed Title
+    if(title) title.innerText = "⚔️ Event Badges (Earned)";
+    
+    list.innerHTML = "<p>Loading...</p>";
+
+    // Fetch User Progress
+    let userBadges = {};
+    if (state.currentUser) {
+        try {
+            const userDoc = await getDoc(doc(db, "users", state.currentUser.uid));
+            if (userDoc.exists()) userBadges = userDoc.data().badges || {};
+        } catch (e) { console.error(e); }
+    }
+
+    list.innerHTML = ""; 
+    let count = 0;
+
+    // Logic: Look at USER INVENTORY first
+    // We only want to show things the user actually has.
+    // We also check config to see if there are any we missed, but usually events are rare.
+    
+    // Merge Config + Inventory to ensure we catch everything
+    let displayList = { ...allBadges };
+    Object.keys(userBadges).forEach(k => {
+        if(!displayList[k]) displayList[k] = userBadges[k]; // Add orphans
+    });
+
+    Object.entries(displayList).forEach(([key, config]) => {
+        const badgeData = userBadges[key];
+        const isUnlocked = !!badgeData;
+
+        // FILTER: Must be Challenge Badge AND Must be Unlocked
+        const isChallengeBadge = key.includes('warrior') || (config.source === 'challenge') || (badgeData && badgeData.source === 'challenge');
+
+        if (isChallengeBadge && isUnlocked) {
+            count++;
+            // For orphans, ensure we have defaults
+            const safeConfig = {
+                name: config.name || badgeData.name || "Event Badge",
+                description: config.description || badgeData.description || "Legacy Reward",
+                icon: config.icon || badgeData.icon || "🛡️",
+                color: config.color || badgeData.color || "#FFD700"
+            };
+            
+            const badgeEl = createBadgeElement(safeConfig, true);
+            list.appendChild(badgeEl);
+        }
+    });
+
+    if (count === 0) {
+        list.innerHTML = `
+            <div style="text-align:center; padding: 20px; color:#888;">
+                <p>No event badges earned yet.</p>
+                <small>Complete a Quest to earn one!</small>
+            </div>`;
+    }
+}
+
+// --- Helper to draw the HTML (Reduces duplicate code) ---
+function createBadgeElement(config, isUnlocked) {
+    const badgeEl = document.createElement('div');
+    badgeEl.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+    
+    const bg = isUnlocked ? config.color : '#eee';
+    const icon = isUnlocked ? config.icon : '🔒';
+    const opacity = isUnlocked ? '1' : '0.5';
+
+    badgeEl.innerHTML = `
+        <div class="badge-icon" style="background:${bg}; opacity:${opacity}; font-size: 2em; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin: 0 auto;">
+            ${icon}
+        </div>
+        <div style="margin-top: 10px;">
+            <strong>${config.name}</strong>
+            <p style="font-size: 0.8em; color: #666;">${config.description}</p>
+        </div>
+    `;
+    return badgeEl;
 }
 
 export function openCurrentChallenges() {
