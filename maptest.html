@@ -67,6 +67,7 @@
             <button id="infoBtn" class="modal-button btn-secondary">ℹ️ Info & Terms</button>
             <button id="editProfileBtn" class="modal-button btn-secondary edit-profile">👤 Edit My Profile</button>
             <button id="hubBtn" class="modal-button btn-secondary">🏙️ Community Hub</button>
+            <button id="btnAchievements" class="modal-button secondary">🏆 My Achievements</button>
             <a href="https://www.littertroopers.com" target="_blank" class="modal-button btn-secondary">🌐 Visit Website</a>
             <a href="https://www.paypal.com/donate/?hosted_button_id=8HAXRDMMHHKQU" target="_blank" class="modal-button btn-support">☕ Support</a>
             <hr>
@@ -271,14 +272,19 @@
         </div>
     </div>
 
-    <div id="achievementsModal" class="modal-overlay">
+<div id="achievementsModal" class="modal-overlay">
     <div class="modal-content">
-        <h3 id="achievementsTitle">Achievements</h3>
+        <h3 id="achievementsTitle">🏆 Career Milestones</h3>
         
         <div id="achievementsList" class="achievements-grid" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
             </div>
 
-        <button id="achievementListBackBtn" class="modal-button ok-btn" style="margin-top: 15px;">Back to Menu</button>
+        <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee;">
+            <button id="btnToggleBadgeView" class="modal-button secondary" style="width: 100%; margin-bottom: 10px;">
+                ⚔️ View Event Badges
+            </button>
+            <button id="achievementListBackBtn" class="modal-button ok-btn">Close</button>
+        </div>
     </div>
 </div>
     
@@ -376,10 +382,7 @@
         <p>Complete challenges to earn badges and climb the leaderboard!</p>
         
         <div class="menu-buttons-vertical">
-            <button id="btnAdminPanel" class="modal-button" style="display: none; background-color: #dc3545; color: white; border-color: #dc3545;">
-        🛠️ Admin: Create Challenge
-    </button>
-            <button id="btnViewAchievements" class="modal-button primary">🏆 Achievement List</button>
+            <button id="btnAdminPanel" class="modal-button" style="display: none; background-color: #dc3545; color: white; border-color: #dc3545;">🛠️ Admin: Create Challenge</button>
             <button id="btnViewEventBadges" class="modal-button secondary">⚔️ View Event Badges</button>
             <button id="btnCurrentChallenges" class="modal-button primary">⚡ Current Challenges</button>
             <button id="btnPastChallenges" class="modal-button secondary">📜 Past Challenges</button>
