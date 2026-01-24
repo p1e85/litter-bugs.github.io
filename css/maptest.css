@@ -497,3 +497,63 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .achievement-item.locked strong {
     color: #999;
 }
+
+/* Container (Grid) */
+#achievementsList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    padding: 15px;
+    justify-items: center;
+}
+
+/* Individual Card */
+.achievement-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.achievement-card:active {
+    transform: scale(0.95);
+}
+
+/* Icon Styling */
+.achievement-icon {
+    font-size: 3em;
+    margin-bottom: 5px;
+    /* Optional: Circle background if you want it */
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    border-radius: 50%;
+}
+
+/* STATUS: LOCKED */
+.achievement-card.locked .achievement-icon {
+    filter: grayscale(100%);
+    opacity: 0.4;
+}
+
+.achievement-card.locked .achievement-name {
+    color: #999;
+}
+
+/* STATUS: UNLOCKED */
+.achievement-card.unlocked .achievement-icon {
+    background: #fff; /* Or specific colors if passed dynamically */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transform: scale(1.05);
+}
+
+.achievement-card.unlocked .achievement-name {
+    font-weight: bold;
+    color: #333;
+}
