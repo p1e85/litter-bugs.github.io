@@ -124,6 +124,7 @@ const elements = {
     btnPastChallenges: document.getElementById('btnPastChallenges'),
     btnBackToMenu: document.querySelector('#pastChallengesModal .ok-btn'), // History Back
     btnBackFromCurrent: document.getElementById('btnBackFromCurrent'), // Current Back
+    btnchallengeMenuBack: document.getElentById('btnchallengeMenuBack'),
     
     // Tabs
     tabCompleted: document.getElementById('tabCompleted'),
@@ -436,6 +437,14 @@ export function attachEventListeners() {
     // Back from Current -> Hub
     if (elements.btnBackFromCurrent) {
         elements.btnBackFromCurrent.addEventListener('click', (e) => {
+            e.stopPropagation();
+            elements.activeChallengesModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+
+        if (elements.btnchallengeMenuBack) {
+        elements.btnchallengeMenuBack.addEventListener('click', (e) => {
             e.stopPropagation();
             elements.activeChallengesModal.style.display = 'none';
             elements.challengeMenuModal.style.display = 'flex';
