@@ -18,7 +18,9 @@ import {
     toggleRouteLike,
     openAchievementsModal,
     openCurrentChallenges,
-    openPastChallenges
+    openPastChallenges,
+    getAdminChallenges,
+    deleteChallenge
 } from './community.js';
 
 // --- DOM Element Selection ---
@@ -34,6 +36,7 @@ const elements = {
     adminChalGoal: document.getElementById('adminChalGoal'),
     adminChalBadge: document.getElementById('adminChalBadge'),
     adminChalExpire: document.getElementById('adminChalExpire'),
+    adminChallengeList: document.getElementById('adminChallengeList'),
     
     termsModal: document.getElementById('termsModal'),
     authModal: document.getElementById('authModal'),
@@ -409,9 +412,12 @@ elements.meetupDateInput.addEventListener('change', validateMeetupForm);
 
     // Admin Button (In Challenge Menu)
     if (elements.btnAdminPanel) {
-        elements.btnAdminPanel.addEventListener('click', () => {
+        elements.btnAdminPanel.addEventListener('click', async () => {
             elements.challengeMenuModal.style.display = 'none';
             elements.adminChallengeModal.style.display = 'flex';
+            
+            // 👇 Load the list immediately
+            await loadAdminChallengeList(); 
         });
     }
 
@@ -624,4 +630,49 @@ export function checkAdminPermissions(userProfile) {
     } else {
         console.warn("⛔ ACCESS DENIED: User is NOT admin (or role is missing).");
     }
+}
+
+async function loadAdminChallengeList() {
+    if (!elements.adminChallengeList) return;
+    
+    elements.adminChallengeList.innerHTML = "<p>Loading...</p>";
+    
+    // Fetch data
+    const challenges = await import('./community.js').then(m => m.getAdminChallenges());
+
+    elements.adminChallengeList.innerHTML = ""; // Clear loading text
+
+    if (challenges.length === 0) {
+        elements.adminChallengeList.innerHTML = "<p>No active challenges found.</p>";
+        return;
+    }
+
+    // Render each challenge
+    challenges.forEach(chal => {
+        const item = document.createElement('div');
+        item.style.borderBottom = "1px solid #eee";
+        item.style.padding = "10px";
+        item.style.display = "flex";
+        item.style.justifyContent = "space-between";
+        item.style.alignItems = "center";
+
+        item.innerHTML = `
+            <div>
+                <strong>${chal.title}</strong><br>
+                <small>${chal.goal_miles} Miles • Exp: ${new Date(chal.expires_at.seconds * 1000).toLocaleDateString()}</small>
+            </div>
+            <button class="delete-btn" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">🗑️</button>
+        `;
+
+        // Add Delete Click Listener
+        const delBtn = item.querySelector('.delete-btn');
+        delBtn.addEventListener('click', async () => {
+            // Import dynamically to avoid circular dependency issues, or use the top-level import
+            const community = await import('./community.js');
+            await community.deleteChallenge(chal.id);
+            loadAdminChallengeList(); // Refresh list after delete
+        });
+
+        elements.adminChallengeList.appendChild(item);
+    });
 }
