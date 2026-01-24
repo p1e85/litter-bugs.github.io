@@ -82,6 +82,7 @@ const elements = {
     shareBtn: document.getElementById('shareBtn'),
     menuBtn: document.getElementById('menuBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
+    btnViewEventBadges: document.getElementById('btnViewEventBadges'),
     
     // Hub Navigation
     hubModal: document.getElementById('hubModal'),
@@ -340,12 +341,27 @@ function attachEventListeners() {
         });
     }
 
-    // 2. Open Achievements (And Fix Back Button)
-    elements.btnViewAchievements.addEventListener('click', () => {
-        elements.challengeMenuModal.style.display = 'none';
-        elements.achievementsModal.style.display = 'flex';
-        openAchievementsModal();
-    });
+// --- 1. View Milestones (Standard) ---
+    if (elements.btnViewAchievements) {
+        elements.btnViewAchievements.addEventListener('click', () => {
+            elements.challengeMenuModal.style.display = 'none';
+            elements.achievementsModal.style.display = 'flex';
+            
+            // Pass 'standard' to show normal achievements
+            openAchievementsModal('standard'); 
+        });
+    }
+
+    // --- 2. View Event Badges (New Button) ---
+    if (elements.btnViewEventBadges) {
+        elements.btnViewEventBadges.addEventListener('click', () => {
+            elements.challengeMenuModal.style.display = 'none';
+            elements.achievementsModal.style.display = 'flex';
+            
+            // Pass 'challenge' to show only event badges
+            openAchievementsModal('challenge'); 
+        });
+    }
     
     // Fix: Back button from Achievements returns to Hub
     if (elements.achievementOkBtn) {
