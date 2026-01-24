@@ -789,3 +789,92 @@ export async function getUserQuests(userId) {
         return {};
     }
 }
+
+async function loadPublicChallenges() {
+    const listContainer = elements.publicChallengeList;
+    if (!listContainer) return;
+
+    listContainer.innerHTML = "<p>Loading quests...</p>";
+
+    try {
+        const community = await import('./community.js');
+        const state = await import('./config.js').then(m => m.state); // Get current user
+
+        // 1. Fetch All Available Challenges
+        const challenges = await community.getAdminChallenges();
+        
+        // 2. Fetch User's Current Progress
+        let myQuests = {};
+        if (state.currentUser) {
+            myQuests = await community.getUserQuests(state.currentUser.uid);
+        }
+
+        listContainer.innerHTML = ""; 
+
+        if (challenges.length === 0) {
+            listContainer.innerHTML = "<p>No active challenges right now.</p>";
+            return;
+        }
+
+        challenges.forEach(chal => {
+            const card = document.createElement('div');
+            card.className = "hub-card"; 
+            card.style.marginBottom = "15px";
+            card.style.textAlign = "left";
+            card.style.display = "block"; 
+
+            // Calculate days left
+            const expireDate = new Date(chal.expires_at.seconds * 1000);
+            const diffDays = Math.ceil((expireDate - new Date()) / (1000 * 60 * 60 * 24)); 
+            
+            // CHECK: Is the user already doing this?
+            const isJoined = myQuests.hasOwnProperty(chal.id);
+            const userProgress = isJoined ? myQuests[chal.id].progress : 0;
+
+            // DYNAMIC BUTTON HTML
+            let buttonHtml = `<button class="modal-button primary start-btn" data-id="${chal.id}" data-title="${chal.title}" style="width: auto; padding: 5px 15px;">Start</button>`;
+            
+            if (isJoined) {
+                buttonHtml = `
+                    <div style="text-align: right;">
+                        <span style="display:block; font-size:0.8em; color:#4A7C59; font-weight:bold;">✅ Joined</span>
+                        <small style="color:#666;">${userProgress} / ${chal.goal_miles} mi</small>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
+                        <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${chal.description}</p>
+                        <div style="font-size: 0.85em; font-weight: bold; color: #333;">
+                            🎯 Goal: ${chal.goal_miles} Miles • ⏳ ${diffDays} days left
+                        </div>
+                    </div>
+                    ${buttonHtml}
+                </div>
+            `;
+            
+            // Add Click Listener ONLY if not joined yet
+            if (!isJoined) {
+                const btn = card.querySelector('.start-btn');
+                btn.addEventListener('click', async () => {
+                    if (!state.currentUser) { alert("Please login first!"); return; }
+                    
+                    btn.innerText = "Joining...";
+                    await community.joinChallenge(chal.id, chal.title, state.currentUser.uid);
+                    
+                    // Refresh the list to show the new "Joined" status
+                    loadPublicChallenges();
+                });
+            }
+
+            listContainer.appendChild(card);
+        });
+
+    } catch (e) {
+        console.error("Error loading challenges:", e);
+        listContainer.innerHTML = "<p style='color:red'>Error loading quests.</p>";
+    }
+}
