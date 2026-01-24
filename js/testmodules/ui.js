@@ -225,12 +225,10 @@ export function attachEventListeners() {
             elements.menuModal.style.display = 'none';
             elements.achievementsModal.style.display = 'flex';
             
-            // Just call it. Simple.
-            openAchievementsModal(); 
+            openAchievementsModal(); // Calls the code above
             
-            // Simple Back Button Logic
+            // Back Button logic...
             if (elements.achievementListBackBtn) {
-                // Remove old listeners by cloning
                 const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
                 elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
                 elements.achievementListBackBtn = newBackBtn; 
