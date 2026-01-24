@@ -18,11 +18,14 @@ export async function saveSession() {
         sessionName,
         timestamp: new Date(),
         pins: convertPinsForFirestore(state.photoPins),
-        route: convertRouteForFirestore(state.routeCoordinates)
+        route: convertRouteForFirestore(state.routeCoordinates),
+        // We add these so they show up in your history later!
+        distance: state.currentSession.distance || 0,
+        duration: state.currentSession.duration || 0
     };
 
     // --- Handle Cleanup Photo ---
-    let cleanupPhotoInfo = {}; // Will hold URL or data
+    let cleanupPhotoInfo = {}; 
     if (state.cleanupPhoto instanceof File) {
         if (state.currentUser) {
             // Logged-in: Upload to Storage
@@ -30,14 +33,14 @@ export async function saveSession() {
                 const timestamp = Date.now();
                 const storageRef = ref(storage, `cleanupPhotos/${state.currentUser.uid}/${timestamp}-${state.cleanupPhoto.name}`);
                 const snapshot = await uploadBytes(storageRef, state.cleanupPhoto);
-                cleanupPhotoInfo.cleanupPhotoURL = await getDownloadURL(snapshot.ref); // Get URL
+                cleanupPhotoInfo.cleanupPhotoURL = await getDownloadURL(snapshot.ref);
                 console.log("Cleanup photo uploaded:", cleanupPhotoInfo.cleanupPhotoURL);
             } catch (error) {
                 console.error("Error uploading cleanup photo:", error);
                 alert("Could not save the cleanup photo, but session data will be saved.");
             }
         } else {
-            // Guest: Convert to Base64 data URL
+            // Guest: Convert to Base64
             try {
                 cleanupPhotoInfo.cleanupPhotoData = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -45,10 +48,8 @@ export async function saveSession() {
                     reader.onerror = e => reject(e);
                     reader.readAsDataURL(state.cleanupPhoto);
                 });
-                console.log("Cleanup photo saved locally as data URL.");
             } catch (error) {
-                console.error("Error converting cleanup photo to data URL:", error);
-                alert("Could not save the cleanup photo locally, but session data will be saved.");
+                console.error("Error converting cleanup photo:", error);
             }
         }
     }
@@ -56,24 +57,61 @@ export async function saveSession() {
 
 
     // --- Save Session (Guest or Logged-in) ---
-    const sessionDataToSave = { ...sessionDataBase, ...cleanupPhotoInfo }; // Combine base data + photo info
+    const sessionDataToSave = { ...sessionDataBase, ...cleanupPhotoInfo };
 
     if (!state.currentUser) {
         // Guest: Save to Local Storage
         const guestSessions = JSON.parse(localStorage.getItem('guestSessions')) || [];
         guestSessions.push(sessionDataToSave);
         localStorage.setItem('guestSessions', JSON.stringify(guestSessions));
+        
         alert(`Session "${sessionName}" saved locally.`);
         dataModal.style.display = 'none';
-        state.cleanupPhoto = null; // Clear photo after saving
+        state.cleanupPhoto = null; 
+        
+        // IMPORTANT: Clear the map after saving
+        if (typeof clearCurrentSession === 'function') clearCurrentSession();
         return;
+
     } else {
         // Logged-in: Save to Firestore
         try {
             await addDoc(collection(db, "users", state.currentUser.uid, "privateSessions"), sessionDataToSave);
+            
+            // ✅ START CHALLENGE TRACKER
+            // This runs immediately after the save is successful
+            try {
+                const rawDistance = state.currentSession.distance || 0;
+                // Convert meters to miles (1609.34 meters = 1 mile)
+                const distanceMiles = rawDistance / 1609.34; 
+
+                // Only track if distance is significant (> 0.05 miles)
+                if (distanceMiles > 0.05) {
+                    console.log(`Tracking Challenge Progress: ${distanceMiles.toFixed(2)} miles`);
+                    
+                    // Import dynamically to avoid conflicts
+                    const community = await import('./community.js');
+                    
+                    // Send progress to the Challenge Engine
+                    const newBadges = await community.updateChallengeProgress(state.currentUser.uid, distanceMiles);
+                    
+                    // Did they win?
+                    if (newBadges && newBadges.length > 0) {
+                        alert(`🎉 QUEST COMPLETE!\nYou earned ${newBadges.length} new badge(s)! Check your profile.`);
+                    }
+                }
+            } catch (err) {
+                console.error("Tracking update failed:", err);
+            }
+            // 🛑 END CHALLENGE TRACKER
+
             alert(`Session "${sessionName}" saved to your account!`);
             dataModal.style.display = 'none';
-            state.cleanupPhoto = null; // Clear photo after saving
+            state.cleanupPhoto = null; 
+            
+            // IMPORTANT: Clear the map after saving
+            if (typeof clearCurrentSession === 'function') clearCurrentSession();
+
         } catch (error) {
             console.error("Error saving session to Firestore:", error);
             alert("Could not save session.");
