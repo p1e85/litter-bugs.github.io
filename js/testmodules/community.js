@@ -1,4 +1,4 @@
-import { db, serverTimestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL } from './firebase.js';
+import { db, serverTimestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL } from './firebase.js';
 import { state, allBadges, profanityList } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
 import { clearCurrentSession } from './data.js';
@@ -825,4 +825,52 @@ export async function getAdminChallenges() {
     const q = query(collection(db, "active_challenges"), orderBy("created_at", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+// --- CHALLENGE PARTICIPATION ---
+
+// 1. Join a Challenge
+export async function joinChallenge(challengeId, challengeTitle, userId) {
+    try {
+        const userRef = doc(db, "users", userId);
+        
+        // We store active quests in a map field called 'active_quests'
+        const updateData = {};
+        updateData[`active_quests.${challengeId}`] = {
+            title: challengeTitle,
+            progress: 0.0,
+            status: 'active',
+            joined_at: new Date()
+        };
+
+        await updateDoc(userRef, updateData);
+        return true;
+    } catch (e) {
+        console.error("Error joining challenge:", e);
+        // If the map doesn't exist yet, setDoc with merge fixes it
+        const userRef = doc(db, "users", userId);
+        const setObj = { active_quests: {} };
+        setObj.active_quests[challengeId] = {
+            title: challengeTitle,
+            progress: 0.0,
+            status: 'active',
+            joined_at: new Date()
+        };
+        await setDoc(userRef, setObj, { merge: true });
+        return true;
+    }
+}
+
+// 2. Get User's Active Quests
+export async function getUserQuests(userId) {
+    try {
+        const userSnap = await getDoc(doc(db, "users", userId));
+        if (userSnap.exists() && userSnap.data().active_quests) {
+            return userSnap.data().active_quests;
+        }
+        return {}; // Return empty object if none found
+    } catch (e) {
+        console.error("Error fetching user quests:", e);
+        return {};
+    }
 }
