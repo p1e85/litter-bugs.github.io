@@ -83,6 +83,7 @@ const elements = {
     shareBtn: document.getElementById('shareBtn'),
     menuBtn: document.getElementById('menuBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
+    btnPastChallengesBack: document.getElementById('btnPastChallengesBack'),
     
     // Hub Navigation
     hubModal: document.getElementById('hubModal'),
@@ -523,9 +524,16 @@ export function attachEventListeners() {
         });
     }
 
+    if (elements.btnPastChallengesBack) {
+        elements.btnPastChallengesBack.addEventListener('click', () => {
+            elements.pastChallengesModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+
     // Generic Close Listeners
     addAllModalCloseListeners();
-} //end event listern**************
+} //********************end event listern**************
 
 function addAllModalCloseListeners() {
     const allModals = Object.values(elements).filter(el => el && el.classList && el.classList.contains('modal-overlay'));
