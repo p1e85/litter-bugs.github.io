@@ -1,5 +1,5 @@
 import { state, mapStyles, ZOOM_THRESHOLD } from './config.js';
-import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners, showPublicProfile } from './community.js';
+import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners} from './community.js';
 import { pinCategories } from './config.js';
 import { showPublicProfile } from './ui.js';
 
