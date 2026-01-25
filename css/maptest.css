@@ -620,3 +620,39 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .modal-button.secondary:active {
     transform: translateY(0);
 }
+
+/* --- COMPACT & FIX HOVER --- */
+.hub-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    
+    /* FIX: Make it smaller/compact */
+    padding: 12px; 
+    margin-bottom: 12px;
+    
+    /* FIX: Prepare for stacking */
+    position: relative; 
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* FIX: The Magic Z-Index */
+.hub-card:hover {
+    transform: scale(1.03); /* Grow slightly */
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+    
+    /* THIS IS THE FIX: Forces it on top of everything else */
+    z-index: 100; 
+}
+
+/* Make the text inside tighter so the card isn't so tall */
+.hub-card h4 {
+    margin: 0 0 5px 0;
+    font-size: 1.1em;
+}
+
+.hub-card p {
+    margin: 0 0 8px 0;
+    font-size: 0.9em;
+    line-height: 1.3;
+}
