@@ -656,3 +656,29 @@ button.close-btn:hover { color: var(--color-text-dark); }
     width: auto; /* Button doesn't stretch full width */
     margin: 0;
 }
+
+/* --- FIX: SPLIT LAYOUTS --- */
+
+/* 1. MAIN HUB GRID (The Square Buttons) */
+/* Forces Icon & Text to stack and center */
+.hub-grid .hub-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 140px; /* Ensures consistent height */
+}
+
+/* 2. CHALLENGE LISTS (The Rectangular Rows) */
+/* Forces Text & Button to sit side-by-side */
+#publicChallengeList .hub-card, 
+#pastChallengesContent .hub-card, 
+#adminChallengeList .hub-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    gap: 15px; /* Space between text and button */
+}
