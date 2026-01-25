@@ -512,8 +512,7 @@ if (elements.btnSaveChallenge) {
             }
 
             // Pass all arguments to the function
-            await createNewChallenge(title, desc, type, goal, timeLimit, badge, expire);
-            
+            await createNewChallenge(title, desc, type, goal, timeLimit, badge, expire);            
             alert("Challenge Created!");
             // Clear inputs (Optional)
             elements.adminChalTitle.value = '';
