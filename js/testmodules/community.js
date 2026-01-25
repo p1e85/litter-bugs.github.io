@@ -625,48 +625,52 @@ function getDistanceInMiles(lat1, lon1, lat2, lon2) {
 }
 
 // --- 2. THE MAIN DISPLAY FUNCTION ---
-// js/testmodules/community.js
-
-// js/testmodules/community.js
-
-// js/testmodules/community.js
 
 export async function fetchAndDisplayAllEvents() {
     const eventsList = document.getElementById('eventsList');
     if (!eventsList) return;
-    
-    // Initial Loading State
     eventsList.innerHTML = '<li><div style="text-align:center; padding:20px;">📡 Locating events near you...</div></li>';
 
-    // --- STATE VARIABLES ---
-    let dbLimit = 25;       // Start by fetching 25 from DB
-    let visibleCount = 4;   // Start by showing 4 on screen
+    let dbLimit = 25;       
+    let visibleCount = 4;   
     let userPos = null;
+    let isAdmin = false;
 
-    // --- 1. GET USER LOCATION (Once) ---
+    // --- 1. GET USER LOCATION & ADMIN STATUS ---
     try {
-        const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-        });
-        userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    } catch (err) { console.log("Location error:", err); }
+        // Parallel fetch: Get Location AND Check Admin Role
+        const [posResult, profileSnap] = await Promise.all([
+            new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+            }).catch(e => null), // Catch error so it doesn't break the whole app
+            
+            state.currentUser ? getDoc(doc(db, "publicProfiles", state.currentUser.uid)) : Promise.resolve(null)
+        ]);
 
+        if (posResult) {
+            userPos = { lat: posResult.coords.latitude, lng: posResult.coords.longitude };
+        }
+        
+        // Check if user is Admin
+        if (profileSnap && profileSnap.exists() && profileSnap.data().role === 'admin') {
+            isAdmin = true;
+            console.log("⚡️ GOD MODE ACTIVE: You are an Admin.");
+        }
+
+    } catch (err) { console.log("Init error:", err); }
 
     // --- 2. MAIN DATA LOADER ---
     const loadAndRender = async () => {
         try {
-            // Update button text to show we are working
             const existingBtn = document.getElementById('loadMoreEventsBtn');
             if(existingBtn) existingBtn.querySelector('button').innerText = "Loading...";
 
             const today = new Date();
-            
-            // Query with the dynamic 'dbLimit'
             const q = query(
                 collection(db, "meetups"), 
                 where("eventDate", ">=", today),
                 orderBy("eventDate", "asc"), 
-                limit(dbLimit) // <--- This grows by 25 when needed
+                limit(dbLimit)
             );
 
             const querySnapshot = await getDocs(q);
@@ -676,7 +680,6 @@ export async function fetchAndDisplayAllEvents() {
                 return;
             }
 
-            // Process & Sort
             let allEvents = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
@@ -696,10 +699,7 @@ export async function fetchAndDisplayAllEvents() {
             }
 
             // --- RENDER LOGIC ---
-            // We clear the list and re-render the 'visibleCount' amount
-            // (This ensures the sort order stays correct if we fetched new data)
             eventsList.innerHTML = ''; 
-
             const eventsToShow = allEvents.slice(0, visibleCount);
 
             eventsToShow.forEach(event => {
@@ -715,6 +715,10 @@ export async function fetchAndDisplayAllEvents() {
                      distanceBadge = `<span style="background:#f5f5f5; color:#888; padding:3px 8px; border-radius:12px; font-size:0.75em;">🌎 Global</span>`;
                 }
 
+                // CHECK PERMISSIONS (Owner OR Admin)
+                const isOwner = state.currentUser && state.currentUser.uid === event.organizerId;
+                const canDelete = isOwner || isAdmin;
+
                 const li = document.createElement('li');
                 li.className = "event-card"; 
                 li.style.borderBottom = "1px solid #eee";
@@ -723,13 +727,17 @@ export async function fetchAndDisplayAllEvents() {
                 li.style.background = "white";
                 li.style.borderRadius = "8px";
                 li.style.cursor = "pointer";
+                li.style.position = "relative";
 
                 li.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:start;">
                         <div style="width:100%;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                                 <strong style="font-size:1.1em; color:#333;">${event.title}</strong>
-                                ${distanceBadge}
+                                <div>
+                                    ${distanceBadge}
+                                    ${canDelete ? `<button class="delete-event-btn" data-id="${event.id}" style="background:#ffebee; color:#c62828; border:none; border-radius:4px; padding:2px 6px; font-size:0.8em; margin-left:5px; cursor:pointer;">🗑️ Delete</button>` : ''}
+                                </div>
                             </div>
                             <div style="color: #4A7C59; font-weight: 600; font-size: 0.9em; margin-bottom: 5px;">
                                 📅 ${dateStr} @ ${timeStr}
@@ -743,6 +751,7 @@ export async function fetchAndDisplayAllEvents() {
                     </div>
                 `;
 
+                // Card Click: Fly to map
                 li.addEventListener('click', () => {
                     if (event.coordinates) {
                         document.getElementById('eventsModal').style.display = 'none';
@@ -757,15 +766,25 @@ export async function fetchAndDisplayAllEvents() {
                     }
                 });
 
+                // Delete Click: Handle separately (stop bubbling)
+                if (canDelete) {
+                    const delBtn = li.querySelector('.delete-event-btn');
+                    delBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation(); // Don't trigger the map flyTo
+                        if (confirm(`⚠️ GOD MODE: Delete "${event.title}" permanently?`)) {
+                            await deleteDoc(doc(db, "meetups", event.id));
+                            alert("Event deleted.");
+                            loadAndRender(); // Refresh list
+                        }
+                    });
+                }
+
                 eventsList.appendChild(li);
             });
 
-            // --- SMART BUTTON LOGIC ---
-            // 1. Are there more events in the CURRENT fetch we haven't shown?
-            // 2. OR, did we hit the limit (25) and there might be more in the DB?
-            
+            // Button Logic
             const hasMoreLocal = visibleCount < allEvents.length;
-            const mightHaveMoreDB = allEvents.length === dbLimit; // If we got exactly 25, there's likely more.
+            const mightHaveMoreDB = allEvents.length === dbLimit;
 
             if (hasMoreLocal || mightHaveMoreDB) {
                 const btnContainer = document.createElement('div');
@@ -778,21 +797,12 @@ export async function fetchAndDisplayAllEvents() {
                 btn.style.width = "auto";
                 btn.style.display = "inline-block";
                 
-                // Decide text based on situation
                 if (hasMoreLocal) {
                     btn.innerText = `Load More (${allEvents.length - visibleCount} nearby)`;
-                    btn.onclick = () => {
-                        visibleCount += 4; // Just show more local ones
-                        loadAndRender();
-                    };
+                    btn.onclick = () => { visibleCount += 4; loadAndRender(); };
                 } else {
-                    // We ran out of local data, but there might be more in DB
                     btn.innerText = `Search Wider Area 📡`;
-                    btn.onclick = () => {
-                        dbLimit += 25; // Fetch 25 MORE from DB
-                        visibleCount += 4; // And show 4 of them
-                        loadAndRender(); // Re-run query
-                    };
+                    btn.onclick = () => { dbLimit += 25; visibleCount += 4; loadAndRender(); };
                 }
 
                 btnContainer.appendChild(btn);
@@ -805,39 +815,58 @@ export async function fetchAndDisplayAllEvents() {
         }
     };
 
-    // Trigger Initial Load
     loadAndRender();
 } // end fetchAndDisplayAllEvents ******************
 
 // (Keep openViewMeetupsModal and deleteMeetup as they were, or update them to show dates too)
-function openViewMeetupsModal(poiName) {
+export async function openViewMeetupsModal(poiName) {
     document.getElementById('viewMeetupsLocationName').textContent = poiName;
     const meetupsList = document.getElementById('meetupsList');
     meetupsList.innerHTML = '<li>Loading meetups...</li>';
     document.getElementById('viewMeetupsModal').style.display = 'flex';
 
+    // 1. Check Admin Status First
+    let isAdmin = false;
+    if (state.currentUser) {
+        try {
+            const pSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
+            if (pSnap.exists() && pSnap.data().role === 'admin') isAdmin = true;
+        } catch (e) { console.error(e); }
+    }
+
+    // 2. Fetch Meetups
     const q = query(collection(db, "meetups"), where("poiName", "==", poiName), orderBy("createdAt", "desc"));
     
-    // ... existing snapshot logic ...
-    // Note: You might want to update the display here to show eventDate as well
     onSnapshot(q, (querySnapshot) => {
         meetupsList.innerHTML = '';
-        if(querySnapshot.empty) { meetupsList.innerHTML = '<li>No meetups here.</li>'; return; }
+        if(querySnapshot.empty) { meetupsList.innerHTML = '<li>No meetups scheduled here yet.</li>'; return; }
         
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
             const dateObj = data.eventDate ? data.eventDate.toDate() : data.createdAt.toDate();
             const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
+            // PERMISSION CHECK
+            const isOwner = state.currentUser && state.currentUser.uid === data.organizerId;
+            const canDelete = isOwner || isAdmin;
+
             const li = document.createElement('li');
             li.innerHTML = `
-                <strong>${data.title}</strong> (${dateStr})<br>
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>${data.title}</strong>
+                    ${canDelete ? `<button class="del-btn" style="color:red; font-size:0.8em; border:none; background:none; cursor:pointer;">🗑️</button>` : ''}
+                </div>
+                <small>${dateStr}</small><br>
                 ${data.description}
-                ${state.currentUser && state.currentUser.uid === data.organizerId ? `<br><button onclick="deleteMeetup('${doc.id}')" style="color:red; font-size:0.8em;">Delete</button>` : ''}
             `;
-            // Note: Attaching onclick like above is quick, but addEventListener is safer if you prefer consistent style
-            const delBtn = li.querySelector('button');
-            if(delBtn) delBtn.addEventListener('click', () => deleteMeetup(doc.id));
+
+            if (canDelete) {
+                li.querySelector('.del-btn').addEventListener('click', async () => {
+                    if (confirm("Delete this meetup?")) {
+                        await deleteDoc(doc(db, "meetups", docSnap.id));
+                    }
+                });
+            }
             
             meetupsList.appendChild(li);
         });
