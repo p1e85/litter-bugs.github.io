@@ -886,18 +886,19 @@ export function openPastChallenges(type) {
     `;
 }
 
-export async function createNewChallenge(title, desc, goal, badgeId, expireDate) {
+export async function createNewChallenge(title, description, type, goal, timeLimit, badgeIcon, expirationDate) {
     if (!confirm("Are you sure you want to launch this challenge globally?")) return;
 
     try {
-        const docRef = await addDoc(collection(db, "active_challenges"), {
+        const docRef = await addDoc(collection(db, "challenges"), {
             title: title,
-            description: desc,
-            goal_miles: parseFloat(goal),
-            badge_id: badgeId,
-            expires_at: new Date(expireDate),
+            description: description,
+            challengeType: type || 'distance', // 'distance' or 'count'
+            goalValue: Number(goal),           // The number to reach
+            timeLimit: timeLimit ? Number(timeLimit) : null, // Minutes (null if unlimited)
+            badge_icon: badgeIcon || "🏅",
             created_at: serverTimestamp(),
-            active: true
+            expires_at: Timestamp.fromDate(new Date(expirationDate))
         });
         
         alert("✅ Challenge Launched! ID: " + docRef.id);
@@ -915,7 +916,7 @@ export async function deleteChallenge(challengeId) {
     if (!confirm("⚠️ Are you sure you want to DELETE this challenge?")) return;
 
     try {
-        await deleteDoc(doc(db, "active_challenges", challengeId));
+        await deleteDoc(doc(db, "challenges", challengeId));
         alert("🗑️ Challenge Deleted!");
         // We will refresh the list in the UI
     } catch (e) {
@@ -926,7 +927,7 @@ export async function deleteChallenge(challengeId) {
 
 // 2. Fetch all challenges (for the admin list)
 export async function getAdminChallenges() {
-    const q = query(collection(db, "active_challenges"), orderBy("created_at", "desc"));
+    const q = query(collection(db, "challenges"), orderBy("created_at", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -1003,7 +1004,7 @@ export async function updateChallengeProgress(userId, distanceMiles) {
 
             // Fetch the original challenge rules to check expiration/goal
             // (We fetch this to ensure we have the authoritative Goal and Expiration)
-            const chalRef = doc(db, "active_challenges", chalId);
+            const chalRef = doc(db, "challenges", chalId);
             const chalSnap = await getDoc(chalRef);
             
             if (!chalSnap.exists()) {
@@ -1063,4 +1064,125 @@ export async function updateChallengeProgress(userId, distanceMiles) {
         console.error("Error updating challenge progress:", e);
     }
     return [];
+}
+
+async function loadPublicChallenges() {
+    const listContainer = elements.publicChallengeList;
+    if (!listContainer) return;
+    listContainer.innerHTML = "<p>Loading quests...</p>";
+
+    try {
+        const challenges = await getAdminChallenges();
+        let myQuests = {};
+        if (state.currentUser) {
+            myQuests = await getUserQuests(state.currentUser.uid);
+        }
+
+        listContainer.innerHTML = ""; 
+
+        if (challenges.length === 0) {
+            listContainer.innerHTML = "<p>No active challenges.</p>";
+            return;
+        }
+
+        // Sort: Active first, Completed last
+        challenges.sort((a, b) => {
+            const statA = myQuests[a.id] ? myQuests[a.id].status : 'new';
+            const statB = myQuests[b.id] ? myQuests[b.id].status : 'new';
+            if (statA === 'completed' && statB !== 'completed') return 1;
+            if (statA !== 'completed' && statB === 'completed') return -1;
+            return 0;
+        });
+
+        challenges.forEach(chal => {
+            const card = document.createElement('div');
+            card.className = "hub-card"; 
+            
+            // --- LOGIC FOR DISPLAYING TEXT ---
+            const type = chal.challengeType || 'distance'; // default to distance for old data
+            const goalVal = chal.goalValue || chal.goal_miles; // fallback for old data
+            
+            let goalText = "";
+            let progressText = "";
+            
+            // Format Goal String
+            if (type === 'count') {
+                goalText = `${goalVal} Items`;
+            } else {
+                goalText = `${goalVal} Miles`;
+            }
+
+            // Format Time Limit String
+            let timeText = "";
+            if (chal.timeLimit) {
+                timeText = `<br>⏱ Time Limit: ${chal.timeLimit} mins`;
+            }
+
+            const expireDate = new Date(chal.expires_at.seconds * 1000);
+            const diffDays = Math.ceil((expireDate - new Date()) / (1000 * 60 * 60 * 24)); 
+            
+            const questData = myQuests[chal.id];
+            const isJoined = !!questData;
+            const isCompleted = questData && questData.status === 'completed';
+            const userProgress = isJoined ? questData.progress : 0;
+
+            // Format Progress String
+            if (isJoined) {
+                if (type === 'count') {
+                    progressText = `${userProgress.toFixed(0)} / ${goalVal} items`;
+                } else {
+                    progressText = `${userProgress.toFixed(2)} / ${goalVal} mi`;
+                }
+            }
+
+            let statusColor = "#333";
+            let buttonHtml = "";
+
+            if (isCompleted) {
+                card.style.border = "2px solid #FFD700"; 
+                card.style.backgroundColor = "#fff9db"; 
+                buttonHtml = `
+                    <div style="text-align: right;">
+                        <span style="font-size:1.2em;">🏆</span>
+                        <span style="display:block; font-size:0.8em; color:#B8860B; font-weight:bold;">COMPLETED</span>
+                    </div>`;
+            } else if (isJoined) {
+                card.style.border = "1px solid #4A7C59"; 
+                buttonHtml = `
+                    <div style="text-align: right;">
+                        <span style="display:block; font-size:0.8em; color:#4A7C59; font-weight:bold;">✅ Active</span>
+                        <small style="color:#666;">${progressText}</small>
+                    </div>`;
+            } else {
+                buttonHtml = `<button class="modal-button primary start-btn" data-id="${chal.id}">Start</button>`;
+            }
+
+            card.innerHTML = `
+                <div style="flex-grow:1;">
+                    <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
+                    <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${chal.description}</p>
+                    <div style="font-size: 0.85em; font-weight: bold; color: ${statusColor};">
+                        🎯 Goal: ${goalText} ${timeText} <br>
+                        ⏳ Ends in: ${diffDays} days
+                    </div>
+                </div>
+                ${buttonHtml}
+            `;
+            
+            if (!isJoined) {
+                const btn = card.querySelector('.start-btn');
+                btn.addEventListener('click', async () => {
+                    if (!state.currentUser) { alert("Please login first!"); return; }
+                    btn.innerText = "Joining...";
+                    // Pass the type to the join function if needed, or just ID
+                    await joinChallenge(chal.id, chal.title, state.currentUser.uid);
+                    loadPublicChallenges(); // Refresh
+                });
+            }
+            listContainer.appendChild(card);
+        });
+    } catch (e) {
+        console.error("Error loading challenges:", e);
+        listContainer.innerHTML = "<p>Error loading content.</p>";
+    }
 }
