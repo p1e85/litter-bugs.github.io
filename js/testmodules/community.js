@@ -627,145 +627,186 @@ function getDistanceInMiles(lat1, lon1, lat2, lon2) {
 // --- 2. THE MAIN DISPLAY FUNCTION ---
 // js/testmodules/community.js
 
+// js/testmodules/community.js
+
+// js/testmodules/community.js
+
 export async function fetchAndDisplayAllEvents() {
     const eventsList = document.getElementById('eventsList');
     if (!eventsList) return;
+    
+    // Initial Loading State
     eventsList.innerHTML = '<li><div style="text-align:center; padding:20px;">📡 Locating events near you...</div></li>';
 
+    // --- STATE VARIABLES ---
+    let dbLimit = 25;       // Start by fetching 25 from DB
+    let visibleCount = 4;   // Start by showing 4 on screen
+    let userPos = null;
+
+    // --- 1. GET USER LOCATION (Once) ---
     try {
-        // A. Get User's Current Position
-        let userPos = null;
+        const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        });
+        userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch (err) { console.log("Location error:", err); }
+
+
+    // --- 2. MAIN DATA LOADER ---
+    const loadAndRender = async () => {
         try {
-            const pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-            });
-            userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        } catch (err) {
-            console.log("Could not get user location:", err);
-        }
+            // Update button text to show we are working
+            const existingBtn = document.getElementById('loadMoreEventsBtn');
+            if(existingBtn) existingBtn.querySelector('button').innerText = "Loading...";
 
-        // B. Fetch Upcoming Events
-        const today = new Date();
-        const q = query(
-            collection(db, "meetups"), 
-            where("eventDate", ">=", today),
-            orderBy("eventDate", "asc"), 
-            limit(50)
-        );
+            const today = new Date();
+            
+            // Query with the dynamic 'dbLimit'
+            const q = query(
+                collection(db, "meetups"), 
+                where("eventDate", ">=", today),
+                orderBy("eventDate", "asc"), 
+                limit(dbLimit) // <--- This grows by 25 when needed
+            );
 
-        const querySnapshot = await getDocs(q);
+            const querySnapshot = await getDocs(q);
 
-        if (querySnapshot.empty) {
-            eventsList.innerHTML = `
-                <div style="text-align:center; padding:30px; color:#666;">
-                    <h3>No upcoming events.</h3>
-                    <p>Be the first to schedule a cleanup!</p>
-                </div>`;
-            return;
-        }
-
-        // C. Process Distances
-        let events = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            let dist = null;
-            if (userPos && data.coordinates) {
-                dist = getDistanceInMiles(userPos.lat, userPos.lng, data.coordinates.lat, data.coordinates.lng);
-            }
-            events.push({ id: doc.id, ...data, distance: dist });
-        });
-
-        // D. Sort by Distance
-        if (userPos) {
-            events.sort((a, b) => {
-                const distA = a.distance !== null ? a.distance : 99999;
-                const distB = b.distance !== null ? b.distance : 99999;
-                return distA - distB;
-            });
-        }
-
-        // E. Render the List
-        eventsList.innerHTML = '';
-        events.forEach(event => {
-            const dateObj = event.eventDate ? event.eventDate.toDate() : event.createdAt.toDate();
-            const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-            const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-
-            let distanceBadge = '';
-            if (event.distance !== null) {
-                const distText = event.distance < 0.2 ? "📍 Nearby" : `${event.distance.toFixed(1)} mi away`;
-                distanceBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; margin-left:8px;">${distText}</span>`;
-            } else if (userPos) {
-                 distanceBadge = `<span style="background:#f5f5f5; color:#888; padding:3px 8px; border-radius:12px; font-size:0.75em;">🌎 Global</span>`;
+            if (querySnapshot.empty) {
+                eventsList.innerHTML = `<div style="text-align:center; padding:30px; color:#666;"><h3>No upcoming events.</h3><p>Be the first to schedule a cleanup!</p></div>`;
+                return;
             }
 
-            const li = document.createElement('li');
-            li.className = "event-card"; 
-            li.style.borderBottom = "1px solid #eee";
-            li.style.padding = "15px";
-            li.style.marginBottom = "10px";
-            li.style.background = "white";
-            li.style.borderRadius = "8px";
-            li.style.cursor = "pointer"; // Make it look clickable
-
-            li.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <div style="width:100%;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                            <strong style="font-size:1.1em; color:#333;">${event.title}</strong>
-                            ${distanceBadge}
-                        </div>
-                        <div style="color: #4A7C59; font-weight: 600; font-size: 0.9em; margin-bottom: 5px;">
-                            📅 ${dateStr} @ ${timeStr}
-                        </div>
-                        <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">
-                            📍 ${event.poiName} <br>
-                            👤 Host: ${event.organizerName}
-                        </div>
-                        <p style="margin: 0; font-size: 0.9em; color:#444; line-height:1.4;">${event.description}</p>
-                    </div>
-                </div>
-            `;
-
-            // --- NEW CLICK LISTENER ---
-            li.addEventListener('click', () => {
-                if (event.coordinates) {
-                    // 1. Close ALL overlay modals
-                    document.getElementById('eventsModal').style.display = 'none';
-                    document.getElementById('hubModal').style.display = 'none';
-                    document.getElementById('menuModal').style.display = 'none';
-
-                    // 2. Fly to the location
-                    state.map.flyTo({
-                        center: [event.coordinates.lng, event.coordinates.lat],
-                        zoom: 16,
-                        essential: true
-                    });
-
-                    // 3. Drop a temporary popup so they see the target
-                    new mapboxgl.Popup()
-                        .setLngLat([event.coordinates.lng, event.coordinates.lat])
-                        .setHTML(`
-                            <div style="text-align:center;">
-                                <strong>${event.title}</strong><br>
-                                <span style="font-size:0.9em; color:#666;">${event.poiName}</span><br>
-                                <span style="font-size:0.8em; color:#4A7C59;">📅 ${dateStr} @ ${timeStr}</span>
-                            </div>
-                        `)
-                        .addTo(state.map);
-                        
-                } else {
-                    alert("⚠️ This event doesn't have GPS data attached (it might be an older event).");
+            // Process & Sort
+            let allEvents = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                let dist = null;
+                if (userPos && data.coordinates) {
+                    dist = getDistanceInMiles(userPos.lat, userPos.lng, data.coordinates.lat, data.coordinates.lng);
                 }
+                allEvents.push({ id: doc.id, ...data, distance: dist });
             });
 
-            eventsList.appendChild(li);
-        });
+            if (userPos) {
+                allEvents.sort((a, b) => {
+                    const distA = a.distance !== null ? a.distance : 99999;
+                    const distB = b.distance !== null ? b.distance : 99999;
+                    return distA - distB;
+                });
+            }
 
-    } catch (error) {
-        console.error("Error fetching events:", error);
-        eventsList.innerHTML = '<li>Could not load events.</li>';
-    }
+            // --- RENDER LOGIC ---
+            // We clear the list and re-render the 'visibleCount' amount
+            // (This ensures the sort order stays correct if we fetched new data)
+            eventsList.innerHTML = ''; 
+
+            const eventsToShow = allEvents.slice(0, visibleCount);
+
+            eventsToShow.forEach(event => {
+                const dateObj = event.eventDate ? event.eventDate.toDate() : event.createdAt.toDate();
+                const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+                const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+                let distanceBadge = '';
+                if (event.distance !== null) {
+                    const distText = event.distance < 0.2 ? "📍 Nearby" : `${event.distance.toFixed(1)} mi away`;
+                    distanceBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; margin-left:8px;">${distText}</span>`;
+                } else if (userPos) {
+                     distanceBadge = `<span style="background:#f5f5f5; color:#888; padding:3px 8px; border-radius:12px; font-size:0.75em;">🌎 Global</span>`;
+                }
+
+                const li = document.createElement('li');
+                li.className = "event-card"; 
+                li.style.borderBottom = "1px solid #eee";
+                li.style.padding = "15px";
+                li.style.marginBottom = "10px";
+                li.style.background = "white";
+                li.style.borderRadius = "8px";
+                li.style.cursor = "pointer";
+
+                li.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <div style="width:100%;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                <strong style="font-size:1.1em; color:#333;">${event.title}</strong>
+                                ${distanceBadge}
+                            </div>
+                            <div style="color: #4A7C59; font-weight: 600; font-size: 0.9em; margin-bottom: 5px;">
+                                📅 ${dateStr} @ ${timeStr}
+                            </div>
+                            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">
+                                📍 ${event.poiName} <br>
+                                👤 Host: ${event.organizerName}
+                            </div>
+                            <p style="margin: 0; font-size: 0.9em; color:#444; line-height:1.4;">${event.description}</p>
+                        </div>
+                    </div>
+                `;
+
+                li.addEventListener('click', () => {
+                    if (event.coordinates) {
+                        document.getElementById('eventsModal').style.display = 'none';
+                        document.getElementById('hubModal').style.display = 'none';
+                        document.getElementById('menuModal').style.display = 'none';
+                        state.map.flyTo({ center: [event.coordinates.lng, event.coordinates.lat], zoom: 16, essential: true });
+                        new mapboxgl.Popup().setLngLat([event.coordinates.lng, event.coordinates.lat])
+                            .setHTML(`<div style="text-align:center;"><strong>${event.title}</strong><br><span style="font-size:0.9em; color:#666;">${event.poiName}</span><br><span style="font-size:0.8em; color:#4A7C59;">📅 ${dateStr} @ ${timeStr}</span></div>`)
+                            .addTo(state.map);
+                    } else {
+                        alert("⚠️ This event doesn't have GPS data attached.");
+                    }
+                });
+
+                eventsList.appendChild(li);
+            });
+
+            // --- SMART BUTTON LOGIC ---
+            // 1. Are there more events in the CURRENT fetch we haven't shown?
+            // 2. OR, did we hit the limit (25) and there might be more in the DB?
+            
+            const hasMoreLocal = visibleCount < allEvents.length;
+            const mightHaveMoreDB = allEvents.length === dbLimit; // If we got exactly 25, there's likely more.
+
+            if (hasMoreLocal || mightHaveMoreDB) {
+                const btnContainer = document.createElement('div');
+                btnContainer.id = "loadMoreEventsBtn";
+                btnContainer.style.textAlign = "center";
+                btnContainer.style.padding = "10px";
+                
+                const btn = document.createElement('button');
+                btn.className = "modal-button secondary"; 
+                btn.style.width = "auto";
+                btn.style.display = "inline-block";
+                
+                // Decide text based on situation
+                if (hasMoreLocal) {
+                    btn.innerText = `Load More (${allEvents.length - visibleCount} nearby)`;
+                    btn.onclick = () => {
+                        visibleCount += 4; // Just show more local ones
+                        loadAndRender();
+                    };
+                } else {
+                    // We ran out of local data, but there might be more in DB
+                    btn.innerText = `Search Wider Area 📡`;
+                    btn.onclick = () => {
+                        dbLimit += 25; // Fetch 25 MORE from DB
+                        visibleCount += 4; // And show 4 of them
+                        loadAndRender(); // Re-run query
+                    };
+                }
+
+                btnContainer.appendChild(btn);
+                eventsList.appendChild(btnContainer);
+            }
+
+        } catch (error) {
+            console.error("Error loading events:", error);
+            eventsList.innerHTML = '<li>Error loading events.</li>';
+        }
+    };
+
+    // Trigger Initial Load
+    loadAndRender();
 } // end fetchAndDisplayAllEvents ******************
 
 // (Keep openViewMeetupsModal and deleteMeetup as they were, or update them to show dates too)
