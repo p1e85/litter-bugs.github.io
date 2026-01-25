@@ -569,6 +569,8 @@ export async function handleMeetupSubmit() {
     const description = document.getElementById('meetupDescriptionInput').value.trim();
     const dateVal = document.getElementById('meetupDateInput').value;
     const poiName = document.getElementById('poiNameInput').value;
+    const latStr = document.getElementById('meetupLat').value;
+    const lngStr = document.getElementById('meetupLng').value;
 
     try {
         const publicProfileRef = doc(db, "publicProfiles", state.currentUser.uid);
@@ -585,7 +587,11 @@ export async function handleMeetupSubmit() {
             title: title,
             description: description,
             eventDate: new Date(dateVal), // Convert string to Date object
-            createdAt: new Date()
+            createdAt: new Date(),
+            coordinates: (latStr && lngStr) ? {
+                lat: parseFloat(latStr),
+                lng: parseFloat(lngStr)
+            } : null
         });
 
         alert("Meetup scheduled successfully!");
@@ -598,7 +604,7 @@ export async function handleMeetupSubmit() {
         console.error("Error scheduling meetup:", error);
         alert("There was an error scheduling your meetup.");
     }
-}
+} // end handle meetup submit **********************
 
 // --- NEW: Fetch All Upcoming Events ---
 export async function fetchAndDisplayAllEvents() {
