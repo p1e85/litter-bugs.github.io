@@ -61,5 +61,6 @@ export {
     signOut,
     onAuthStateChanged,
     deleteUser,
-    serverTimestamp
+    serverTimestamp,
+    Timestamp
 };
