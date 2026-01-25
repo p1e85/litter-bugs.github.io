@@ -79,26 +79,28 @@ export async function saveSession() {
             await addDoc(collection(db, "users", state.currentUser.uid, "privateSessions"), sessionDataToSave);
             
             // ✅ START CHALLENGE TRACKER
-            // This runs immediately after the save is successful
             try {
                 const rawDistance = state.currentSession.distance || 0;
                 // Convert meters to miles (1609.34 meters = 1 mile)
                 const distanceMiles = rawDistance / 1609.34; 
+                
+                // Count the items (1 Pin = 1 Item)
+                const itemsCollected = state.photoPins.length;
 
-                // Only track if distance is significant (> 0.05 miles)
-                if (distanceMiles > 0.05) {
-                    console.log(`Tracking Challenge Progress: ${distanceMiles.toFixed(2)} miles`);
+                // Only track if meaningful activity occurred
+                if (distanceMiles > 0.05 || itemsCollected > 0) {
+                    console.log(`Tracking Progress: ${distanceMiles.toFixed(2)} mi, ${itemsCollected} items`);
                     
-                    // Import dynamically to avoid conflicts
-                    const community = await import('./community.js');
+                    // DYNAMIC IMPORT: We load tracking.js here to avoid a circular dependency loop.
+                    // (Since tracking.js imports data.js, we can't import tracking.js at the top of data.js)
+                    const trackingModule = await import('./tracking.js');
                     
-                    // Send progress to the Challenge Engine
-                    const newBadges = await community.updateChallengeProgress(state.currentUser.uid, distanceMiles);
-                    
-                    // Did they win?
-                    if (newBadges && newBadges.length > 0) {
-                        alert(`🎉 QUEST COMPLETE!\nYou earned ${newBadges.length} new badge(s)! Check your profile.`);
-                    }
+                    // Send both distance AND items to the engine
+                    await trackingModule.updateUserChallenges(
+                        state.currentUser.uid, 
+                        distanceMiles, 
+                        itemsCollected
+                    );
                 }
             } catch (err) {
                 console.error("Tracking update failed:", err);
@@ -186,9 +188,9 @@ function loadSpecificLocalSession(sessionIndex) {
         displaySessionData(convertedData);
         alert(`Session "${sessionData.sessionName}" loaded!`);
         document.getElementById('localSessionsModal').style.display = 'none';
- document.getElementById('centerOnRouteBtn').classList.remove('disabled');
+        document.getElementById('centerOnRouteBtn').classList.remove('disabled');
 
- document.getElementById('dataModal').style.display = 'flex';
+        document.getElementById('dataModal').style.display = 'flex';
     }
 }
 
@@ -255,9 +257,9 @@ async function loadSpecificSession(sessionId) {
             });
             alert(`Session "${sessionData.sessionName}" loaded!`);
             document.getElementById('sessionsModal').style.display = 'none';
- document.getElementById('centerOnRouteBtn').classList.remove('disabled');
+            document.getElementById('centerOnRouteBtn').classList.remove('disabled');
 
- document.getElementById('dataModal').style.display = 'flex';
+            document.getElementById('dataModal').style.display = 'flex';
         }
     } catch (error) {
         console.error("Error loading specific session:", error);
