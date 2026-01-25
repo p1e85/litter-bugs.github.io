@@ -1,9 +1,22 @@
-import { db, collection, addDoc, getDocs, getDoc, query, where, orderBy, updateDoc, doc, limit, deleteDoc, onSnapshot, setDoc, arrayUnion, arrayRemove, runTransaction } from './firebase.js';
+import { 
+    db, collection, addDoc, getDocs, getDoc, query, where, orderBy, 
+    updateDoc, doc, limit, deleteDoc, onSnapshot, setDoc, 
+    arrayUnion, arrayRemove, runTransaction 
+} from './firebase.js';
+
 import { state } from './config.js';
-import { convertRouteFromFirestore, convertPinsFromFirestore, convertRouteForFirestore, convertPinsForFirestore } from './utils.js';
+import { 
+    convertRouteFromFirestore, convertPinsFromFirestore, 
+    convertRouteForFirestore, convertPinsForFirestore 
+} from './utils.js';
+
+// IMPORT UI FUNCTION TO FIX CIRCULAR DEPENDENCY ON MAP CLICKS
 import { showPublicProfile } from './ui.js';
 
-// --- HELPER: Haversine Distance (Miles) ---
+// ==========================================
+// 0. HELPERS
+// ==========================================
+
 function getDistanceInMiles(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
     const R = 3958.8; 
@@ -26,7 +39,7 @@ export async function awardBadge(userId, badgeTitle, badgeDescription, icon = '
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-            // Upgrade Existing
+            // --- UPGRADE EXISTING BADGE ---
             const docSnap = querySnapshot.docs[0];
             const currentData = docSnap.data();
             const newCount = (currentData.count || 1) + 1;
@@ -53,7 +66,7 @@ export async function awardBadge(userId, badgeTitle, badgeDescription, icon = '
             alert(`üî• BADGE UPGRADED!\nYour "${badgeTitle}" badge is now ${tier} Tier (${newCount}x)!`);
 
         } else {
-            // Create New
+            // --- CREATE NEW BADGE ---
             await addDoc(badgesRef, {
                 title: badgeTitle,
                 description: badgeDescription,
@@ -71,7 +84,7 @@ export async function awardBadge(userId, badgeTitle, badgeDescription, icon = '
 }
 
 // ==========================================
-// 2. MAP ROUTES & EVENTS (God Mode Enabled)
+// 2. MAP ROUTES (Community Map)
 // ==========================================
 
 export function toggleCommunityView() {
@@ -141,7 +154,7 @@ export async function fetchAndDisplayCommunityRoutes() {
               thumbnailURL: pin.thumbnailURL,
               username: routeData.username,
               userId: routeData.userId,
-              routeId: routeId // Critical for God Mode
+              routeId: routeId // Critical for God Mode Deletion
             },
             'geometry': { 'type': 'Point', 'coordinates': pin.coords }
           });
@@ -184,11 +197,12 @@ export async function fetchAndDisplayCommunityRoutes() {
       paint: { 'circle-color': '#4A7C59', 'circle-radius': 8, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' }
     });
 
-    // Click Listener (GOD MODE)
+    // --- CLICK LISTENER (GOD MODE) ---
     state.map.on('click', 'unclustered-point', async (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
 
+      // 1. Check Admin Status
       let isAdmin = false;
       if (state.currentUser) {
           try {
@@ -197,9 +211,11 @@ export async function fetchAndDisplayCommunityRoutes() {
           } catch (err) { console.error(err); }
       }
 
+      // 2. Check Permissions
       const isOwner = state.currentUser && (state.currentUser.uid == properties.userId);
       const canDelete = isOwner || isAdmin;
 
+      // 3. Build Popup
       const popupHTML = `
         <div style="text-align:center;">
             <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px; margin-bottom:5px;"/>
@@ -212,7 +228,7 @@ export async function fetchAndDisplayCommunityRoutes() {
 
       const popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupHTML).addTo(state.map);
 
-      // Listeners
+      // 4. Attach Listeners
       const profileLink = popup.getElement().querySelector('.profile-link');
       if (profileLink) {
           profileLink.addEventListener('click', (ev) => {
@@ -237,6 +253,11 @@ export async function fetchAndDisplayCommunityRoutes() {
 
   } catch (error) { console.error(error); }
 }
+
+
+// ==========================================
+// 3. EVENTS (Meetups)
+// ==========================================
 
 export async function fetchAndDisplayAllEvents() {
     const eventsList = document.getElementById('eventsList');
@@ -370,7 +391,7 @@ export async function fetchAndDisplayAllEvents() {
 }
 
 // ==========================================
-// 3. CHALLENGE SYSTEM (Logic Helpers)
+// 4. CHALLENGE SYSTEM (Logic Helpers)
 // ==========================================
 
 export async function createNewChallenge(title, desc, type, goal, timeLimit, badge, expire) {
@@ -379,7 +400,7 @@ export async function createNewChallenge(title, desc, type, goal, timeLimit, bad
         description: desc,
         type: type, // 'distance' or 'count'
         goal: parseInt(goal),
-        goal_miles: parseInt(goal), // Legacy support
+        goal_miles: parseInt(goal), // Legacy support for old challenges
         time_limit: parseInt(timeLimit),
         badge_icon: badge,
         created_at: new Date(),
@@ -411,9 +432,9 @@ export async function joinChallenge(challengeId, title, userId) {
         status: 'active',
         joined_at: new Date()
     });
-    // 2. Increment participant count
+    // 2. Increment participant count on the main challenge
     const chalRef = doc(db, "activeChallenges", challengeId);
-    await updateDoc(chalRef, { participants: arrayUnion(userId) }); // Using arrayUnion as a simple counter marker
+    await updateDoc(chalRef, { participants: arrayUnion(userId) });
 }
 
 export async function getUserQuests(userId) {
@@ -424,7 +445,7 @@ export async function getUserQuests(userId) {
     return quests;
 }
 
-// Admin Panel for Challenges: Includes Clone and Delete logic.
+// --- ADMIN PANEL UI (Challenge Management) ---
 export function openAdminChallengeModal() {
     const list = document.getElementById('adminChallengeList');
     if (!list) return;
@@ -432,7 +453,7 @@ export function openAdminChallengeModal() {
     const modal = document.getElementById('adminChallengeModal');
     if (modal) modal.style.display = 'flex';
 
-    // Clone Logic
+    // Clone Logic Helper
     const fillFormWith = (data) => {
         document.getElementById('challengeTitleInput').value = data.title;
         document.getElementById('challengeDescInput').value = data.description;
@@ -481,14 +502,13 @@ export function openAdminChallengeModal() {
 
 
 // ==========================================
-// 4. STANDARD FEATURES (Profile, Publishing, Leaderboard)
+// 5. STANDARD FEATURES (Profile, Publishing, Leaderboard)
 // ==========================================
 
 export async function publishRoute() {
     if (!state.currentUser) { alert("Please log in to publish your route."); return; }
     if (state.routeCoordinates.length === 0 && state.photoPins.length === 0) { alert("No route or pins to publish."); return; }
 
-    const publishModal = document.getElementById('publishedRoutesModal'); // Reuse modal or create new one
     const sessionName = prompt("Give your cleanup a public title:");
     if (!sessionName) return;
 
@@ -496,8 +516,7 @@ export async function publishRoute() {
         const docSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
         const username = docSnap.exists() ? docSnap.data().username : "Anonymous";
         
-        let cleanupPhotoURL = null;
-        // (Assuming photo upload logic is handled elsewhere or passed in state, simplifying for restoration)
+        // (Photo logic would go here, simplified for this file)
         
         const routeData = {
             userId: state.currentUser.uid,
@@ -566,8 +585,6 @@ export async function saveProfile() {
 export async function fetchAndDisplayLeaderboard(metric) {
     const list = document.getElementById('leaderboardList');
     list.innerHTML = '<li>Loading...</li>';
-    // Simplified logic: In real app, you'd likely have a specific leaderboard collection or index
-    // For now, querying publicProfiles
     const q = query(collection(db, "publicProfiles"), orderBy(metric === 'totalPins' ? 'totalPins' : 'totalDistance', 'desc'), limit(10));
     const snapshot = await getDocs(q);
     list.innerHTML = '';
@@ -583,7 +600,6 @@ export async function fetchAndDisplayLeaderboard(metric) {
 }
 
 export async function fetchAndDisplayMyStats() {
-    // Basic stub to prevent errors
     if(!state.currentUser) return;
     const docSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
     if(docSnap.exists()) {
@@ -622,17 +638,72 @@ export async function toggleRouteLike(routeId) {
     } catch (e) { console.error("Like failed: ", e); return null; }
 }
 
-export function openAchievementsModal() {
-    // Stub to prevent UI error
-    // (Logic handled in UI listeners mostly)
+// --- FIXED: Full Achievements Modal Implementation ---
+export async function openAchievementsModal() {
+    const list = document.getElementById('achievementsList');
+    if (!list) return;
+    
+    list.innerHTML = '<li>Loading your achievements...</li>';
+    
+    if (!state.currentUser) {
+        list.innerHTML = '<li>Please log in to view your achievements.</li>';
+        return;
+    }
+
+    try {
+        const badgesRef = collection(db, "publicProfiles", state.currentUser.uid, "badges");
+        const q = query(badgesRef, orderBy("date", "desc"));
+        const snapshot = await getDocs(q);
+
+        list.innerHTML = ''; 
+
+        if (snapshot.empty) {
+            list.innerHTML = `
+                <div style="text-align:center; padding:20px; color:#888;">
+                    <h3>No Badges Yet üò¢</h3>
+                    <p>Complete challenges to earn your first badge!</p>
+                </div>`;
+            return;
+        }
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            const dateStr = data.date ? data.date.toDate().toLocaleDateString() : 'Unknown';
+            const count = data.count || 1;
+            
+            const li = document.createElement('li');
+            li.className = "hub-card";
+            li.style.display = "flex";
+            li.style.alignItems = "center";
+            li.style.gap = "15px";
+            li.style.marginBottom = "10px";
+
+            li.innerHTML = `
+                <div style="font-size: 2.5em; width: 60px; text-align: center;">
+                    ${data.icon || 'üèÜ'}
+                </div>
+                <div>
+                    <h4 style="margin: 0;">${data.title} <span style="font-size:0.8em; background:#eee; padding:2px 6px; border-radius:10px;">x${count}</span></h4>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #666;">${data.description}</p>
+                    <small style="color: ${data.color || '#888'}; font-weight:bold;">${data.tier || 'Stone'} Tier ‚Ä¢ Earned: ${dateStr}</small>
+                </div>
+            `;
+            list.appendChild(li);
+        });
+
+    } catch (error) {
+        console.error("Error loading achievements:", error);
+        list.innerHTML = '<li>Error loading achievements.</li>';
+    }
 }
 
 export function openEventBadgesModal() {
-    // Stub
+    // Placeholder for future Event Specific Badges logic
+    alert("Event Badges coming soon!");
 }
 
 // ==========================================
-// 5. POI & MEETUPS
+// 6. POI & MEETUPS
 // ==========================================
 
 export function setupPoiClickListeners() {
@@ -748,4 +819,12 @@ export async function openViewMeetupsModal(poiName) {
         });
     });
 }
-export function validateMeetupForm() {}
+
+export function validateMeetupForm() {
+    const title = document.getElementById('meetupTitleInput').value.trim();
+    const desc = document.getElementById('meetupDescriptionInput').value.trim();
+    const date = document.getElementById('meetupDateInput').value;
+    const isSafe = document.getElementById('safetyCheckbox').checked;
+    
+    document.getElementById('createMeetupBtn').disabled = !(title && desc && date && isSafe);
+}
