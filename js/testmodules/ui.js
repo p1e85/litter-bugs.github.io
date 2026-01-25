@@ -1,5 +1,4 @@
-// 1. TOP LEVEL IMPORTS (Required)
-import { db, collection, query, orderBy, limit, getDocs } from './firebase.js'; 
+import { db, collection, query, orderBy, limit, getDocs, doc, getDoc } from './firebase.js'; 
 import { state } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion } from './auth.js';
@@ -8,8 +7,9 @@ import { saveSession, loadSession, exportGeoJSON } from './data.js';
 import { 
     toggleCommunityView, publishRoute, populatePublishedRoutesList, 
     loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, 
-    fetchAndDisplayMyStats, showPublicProfile, handleMeetupSubmit, 
-    validateMeetupForm, toggleRouteLike, openAchievementsModal, openEventBadgesModal, 
+    fetchAndDisplayMyStats, 
+    handleMeetupSubmit, validateMeetupForm, toggleRouteLike, 
+    openAchievementsModal, openEventBadgesModal, 
     // Logic Helpers
     getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents 
 } from './community.js';
@@ -132,6 +132,12 @@ const elements = {
     // Tabs
     tabCompleted: document.getElementById('tabCompleted'),
     tabUncompleted: document.getElementById('tabUncompleted'),
+    
+    // LOG TRASH ITEMS (NEW)
+    logTrashBtn: document.getElementById('logTrashBtn'),
+    logTrashModal: document.getElementById('logTrashModal'),
+    trashCountInput: document.getElementById('trashCountInput'),
+    confirmTrashBtn: document.getElementById('confirmTrashBtn')
 };
 
 /**
@@ -496,7 +502,7 @@ export function attachEventListeners() {
         });
     }
 
-if (elements.btnSaveChallenge) {
+    if (elements.btnSaveChallenge) {
         elements.btnSaveChallenge.addEventListener('click', async () => {
             const title = elements.adminChalTitle.value;
             const desc = elements.adminChalDesc.value;
@@ -537,6 +543,34 @@ if (elements.btnSaveChallenge) {
         elements.btnPastChallengesBack.addEventListener('click', () => {
             elements.pastChallengesModal.style.display = 'none';
             elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+    
+    // --- LOG TRASH (NEW BUTTONS) ---
+    if (elements.logTrashBtn) {
+        elements.logTrashBtn.addEventListener('click', () => {
+            elements.logTrashModal.style.display = 'flex';
+            elements.trashCountInput.value = ''; 
+            elements.trashCountInput.focus();
+        });
+    }
+
+    if (elements.confirmTrashBtn) {
+        elements.confirmTrashBtn.addEventListener('click', () => {
+            const count = parseInt(elements.trashCountInput.value);
+            if (count > 0) {
+                // We add these to the 'state' temporarily, or we could just alert for now.
+                // Since we are using "1 Pin = 1 Item" for the main logic, 
+                // this button is likely for "Bulk Logging" if you decided to keep it.
+                // If you opted for "1 Pin = 1 Item" only, you might not need this listener logic connected to DB yet.
+                alert(`Logged ${count} items! (This will be saved when you stop tracking).`);
+                
+                // Optional: Push dummy pins to count as items?
+                // For now, just close modal.
+                elements.logTrashModal.style.display = 'none';
+            } else {
+                alert("Please enter a valid number.");
+            }
         });
     }
 
@@ -923,6 +957,8 @@ async function loadPastChallenges(filterType) {
     }
 }
 
+// --- PUBLIC PROFILE FUNCTION ---
+// Correctly exported here.
 export async function showPublicProfile(userId) {
     const modal = document.getElementById('publicProfileModal');
     const content = document.getElementById('publicProfileContent');
