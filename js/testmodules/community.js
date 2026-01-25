@@ -835,14 +835,17 @@ export async function openEventBadgesModal() {
         }
     });
 
-    if (count === 0) {
+if (count === 0) {
+        // FIX: Added 'grid-column: 1 / -1' so it spans the whole width
+        // and 'display: flex' to center content vertically/horizontally
         list.innerHTML = `
-            <div style="text-align:center; padding: 20px; color:#888;">
-                <p>No event badges earned yet.</p>
-                <small>Complete a Quest to earn one!</small>
+            <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: #888; text-align: center;">
+                <div style="font-size: 3em; margin-bottom: 10px; opacity: 0.5;">🛡️</div>
+                <h4 style="margin: 0; color: #666;">No Event Badges Yet</h4>
+                <p style="margin-top: 5px; font-size: 0.9em;">Complete a Quest to earn your first reward!</p>
             </div>`;
     }
-}
+} // end ........
 
 // --- Helper to draw the HTML (Reduces duplicate code) ---
 function createBadgeElement(config, isUnlocked) {
