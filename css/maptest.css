@@ -721,7 +721,7 @@ button.close-btn:hover { color: var(--color-text-dark); }
 #pastChallengesContent .hub-card:hover, 
 #adminChallengeList .hub-card:hover {
     /* Moves UP by 3px instead of getting bigger */
-    transform: translateY(-3px); 
+    transform: translateY(-2px); 
     
     /* Green Border & Shadow */
     border-color: #4A7C59;
