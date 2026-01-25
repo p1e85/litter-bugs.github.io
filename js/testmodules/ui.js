@@ -28,6 +28,8 @@ const elements = {
     adminChalBadge: document.getElementById('adminChalBadge'),
     adminChalExpire: document.getElementById('adminChalExpire'),
     adminChallengeList: document.getElementById('adminChallengeList'),
+    adminChalType: document.getElementById('adminChalType'),
+    adminChalTime: document.getElementById('adminChalTime'),
     
     // General Modals
     termsModal: document.getElementById('termsModal'),
@@ -494,21 +496,29 @@ export function attachEventListeners() {
         });
     }
 
-    if (elements.btnSaveChallenge) {
+if (elements.btnSaveChallenge) {
         elements.btnSaveChallenge.addEventListener('click', async () => {
             const title = elements.adminChalTitle.value;
             const desc = elements.adminChalDesc.value;
+            const type = elements.adminChalType.value; // NEW
             const goal = elements.adminChalGoal.value;
+            const timeLimit = elements.adminChalTime.value; // NEW
             const badge = elements.adminChalBadge.value;
             const expire = elements.adminChalExpire.value;
 
             if(!title || !goal || !expire) {
-                alert("Please fill in Title, Goal, and Date.");
+                alert("Please fill in Title, Goal, and Expiration Date.");
                 return;
             }
 
-            await createNewChallenge(title, desc, goal, badge, expire);
+            // Pass all arguments to the function
+            await createNewChallenge(title, desc, type, goal, timeLimit, badge, expire);
+            
             alert("Challenge Created!");
+            // Clear inputs (Optional)
+            elements.adminChalTitle.value = '';
+            elements.adminChalGoal.value = '';
+            
             loadAdminChallengeList(); 
         });
     }
