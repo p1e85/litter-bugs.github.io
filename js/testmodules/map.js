@@ -1,6 +1,7 @@
 import { state, mapStyles, ZOOM_THRESHOLD } from './config.js';
 import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners, showPublicProfile } from './community.js';
 import { pinCategories } from './config.js';
+import { showPublicProfile } from './ui.js';
 
 /**
  * Initializes the Mapbox map, geocoder, and initial event listeners.
