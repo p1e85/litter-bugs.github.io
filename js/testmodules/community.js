@@ -31,9 +31,10 @@ export async function fetchAndDisplayCommunityRoutes() {
 
     querySnapshot.forEach(doc => {
       const routeData = doc.data();
-      const routeId = doc.id;
+      const routeId = doc.id; // Capture the ID here
       const mapboxCoords = convertRouteFromFirestore(routeData.route);
       
+      // 1. Draw the Route Lines
       if (mapboxCoords && mapboxCoords.length > 0) {
         state.map.addSource(`community-route-${routeId}`, {
           'type': 'geojson',
@@ -48,6 +49,7 @@ export async function fetchAndDisplayCommunityRoutes() {
         state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
       }
       
+      // 2. Prepare the Pins (Photos)
       const mapboxPins = convertPinsFromFirestore(routeData.pins);
       if (mapboxPins) {
         mapboxPins.forEach(pin => {
@@ -59,7 +61,8 @@ export async function fetchAndDisplayCommunityRoutes() {
               imageURL: pin.imageURL,
               thumbnailURL: pin.thumbnailURL,
               username: routeData.username,
-              userId: routeData.userId
+              userId: routeData.userId,
+              routeId: routeId // <--- CRITICAL: Pass the ID so we can delete it later
             },
             'geometry': { 'type': 'Point', 'coordinates': pin.coords }
           });
@@ -67,6 +70,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       }
     });
 
+    // 3. Add the Pins Source
     if (!state.map.getSource('community-pins')) {
       state.map.addSource('community-pins', {
         type: 'geojson',
@@ -77,6 +81,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     }
 
+    // 4. Cluster Circles
     state.map.addLayer({
       id: 'clusters',
       type: 'circle',
@@ -88,6 +93,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       }
     });
 
+    // 5. Cluster Counts
     state.map.addLayer({
       id: 'cluster-count',
       type: 'symbol',
@@ -101,6 +107,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       paint: { 'text-color': '#ffffff' }
     });
 
+    // 6. Individual Pins (The clickable ones)
     state.map.addLayer({
       id: 'unclustered-point',
       type: 'circle',
@@ -114,6 +121,7 @@ export async function fetchAndDisplayCommunityRoutes() {
       }
     });
 
+    // 7. Cluster Click Listener
     state.map.on('click', 'clusters', (e) => {
       const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       const clusterId = features[0].properties.cluster_id;
@@ -123,24 +131,69 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     });
 
-    state.map.on('click', 'unclustered-point', (e) => {
+    // 8. INDIVIDUAL PIN CLICK LISTENER (God Mode Updated)
+    state.map.on('click', 'unclustered-point', async (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
+
+      // A. Check Admin Status
+      let isAdmin = false;
+      if (state.currentUser) {
+          try {
+              const pSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
+              if (pSnap.exists() && pSnap.data().role === 'admin') isAdmin = true;
+          } catch (err) { console.error(err); }
+      }
+
+      // B. Determine Permissions
+      const isOwner = state.currentUser && (state.currentUser.uid == properties.userId);
+      const canDelete = isOwner || isAdmin;
+
+      // C. Build Popup HTML
       const popupHTML = `
-        <div>
-            <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px;"/>
-            <p style="margin: 5px 0 0;"><strong>${properties.title}</strong></p>
-            <p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${properties.category || 'Other'}</p>
+        <div style="text-align:center;">
+            <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px; margin-bottom:5px;"/>
+            <p style="margin: 0; font-weight:bold;">${properties.title}</p>
+            <p style="margin: 0; font-size:0.8em; color:#555;">${properties.category || 'Other'}</p>
             <small>By: <a href="#" class="profile-link" data-userid="${properties.userId}">${properties.username || 'A user'}</a></small>
+            
+            ${canDelete ? `<br><button class="delete-route-btn" style="background:#d32f2f; color:white; border:none; padding:5px 10px; border-radius:4px; margin-top:8px; cursor:pointer; font-size:0.8em;">⚠️ Delete Route</button>` : ''}
         </div>
       `;
+
       const popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupHTML).addTo(state.map);
-      popup.getElement().querySelector('.profile-link').addEventListener('click', (ev) => {
-        ev.preventDefault();
-        showPublicProfile(properties.userId);
-      });
+
+      // D. Attach Profile Link Listener
+      const profileLink = popup.getElement().querySelector('.profile-link');
+      if (profileLink) {
+          profileLink.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              showPublicProfile(properties.userId);
+          });
+      }
+
+      // E. Attach Delete Button Listener
+      if (canDelete) {
+          const delBtn = popup.getElement().querySelector('.delete-route-btn');
+          if (delBtn) {
+              delBtn.addEventListener('click', async () => {
+                  if (confirm("⚠️ GOD MODE: Permanently delete this entire route and its photos?")) {
+                      try {
+                          await deleteDoc(doc(db, "publishedRoutes", properties.routeId)); 
+                          popup.remove();
+                          alert("Route deleted.");
+                          fetchAndDisplayCommunityRoutes(); // Refresh map
+                      } catch (err) {
+                          console.error("Delete failed:", err);
+                          alert("Error deleting route.");
+                      }
+                  }
+              });
+          }
+      }
     });
 
+    // 9. Mouse Cursors
     const clickableLayers = ['clusters', 'unclustered-point'];
     clickableLayers.forEach(layer => {
       state.map.on('mouseenter', layer, () => { state.map.getCanvas().style.cursor = 'pointer'; });
@@ -151,7 +204,7 @@ export async function fetchAndDisplayCommunityRoutes() {
     console.error("Error fetching community routes:", error);
     alert("Could not load community data.");
   }
-}
+} //*** end fetchAndDisplayCommunityRoutes ********
 
 export function toggleCommunityView() {
     state.isCommunityViewOn = !state.isCommunityViewOn;
