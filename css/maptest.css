@@ -682,3 +682,66 @@ button.close-btn:hover { color: var(--color-text-dark); }
     text-align: left;
     gap: 15px; /* Space between text and button */
 }
+
+/* Make Challenge Modals Wider */
+#activeChallengesModal .modal-content,
+#pastChallengesModal .modal-content,
+#adminChallengeModal .modal-content {
+    max-width: 600px; /* Increased from 500px */
+    width: 95%;
+}
+
+/* --- COMPACT LIST CARD --- */
+/* Targets cards inside lists (Active, Past, Admin) */
+#publicChallengeList .hub-card, 
+#pastChallengesContent .hub-card, 
+#adminChallengeList .hub-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    gap: 15px;
+    
+    /* COMPACT SIZING */
+    padding: 12px 15px; /* Tighter padding */
+    margin-bottom: 10px; /* Less gap between cards */
+    
+    background: white;
+    border-radius: 8px; /* Slightly smaller radius */
+    border: 2px solid #f0f0f0; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+}
+
+/* HOVER: FLOAT UP (Don't Grow) */
+#publicChallengeList .hub-card:hover, 
+#pastChallengesContent .hub-card:hover, 
+#adminChallengeList .hub-card:hover {
+    /* Moves UP by 3px instead of getting bigger */
+    transform: translateY(-3px); 
+    
+    /* Green Border & Shadow */
+    border-color: #4A7C59;
+    box-shadow: 0 6px 12px rgba(74, 124, 89, 0.15);
+    
+    /* No Z-Index needed because we aren't overlapping anymore */
+}
+
+/* Make the text inside smaller/tighter */
+.hub-card h4 {
+    font-size: 1rem; /* Standard readable size */
+    margin: 0 0 4px 0;
+}
+
+.hub-card p {
+    font-size: 0.85rem; /* Smaller description */
+    margin: 0 0 4px 0;
+    color: #666;
+}
+
+.hub-card div {
+    font-size: 0.8rem !important; /* Goal text smaller */
+}
