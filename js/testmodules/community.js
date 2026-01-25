@@ -607,51 +607,137 @@ export async function handleMeetupSubmit() {
 } // end handle meetup submit **********************
 
 // --- NEW: Fetch All Upcoming Events ---
+// js/testmodules/community.js
+
+// --- 1. THE MATH HELPER (Haversine Formula) ---
+// Calculates the distance (in miles) between two GPS points
+function getDistanceInMiles(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null; // Safety check
+    
+    const R = 3958.8; // Radius of the earth in miles
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+    return R * c;
+}
+
+// --- 2. THE MAIN DISPLAY FUNCTION ---
 export async function fetchAndDisplayAllEvents() {
     const eventsList = document.getElementById('eventsList');
     if (!eventsList) return;
-    eventsList.innerHTML = '<li>Loading upcoming events...</li>';
+    eventsList.innerHTML = '<li><div style="text-align:center; padding:20px;">📡 Locating events near you...</div></li>';
 
     try {
+        // A. Get User's Current Position
+        let userPos = null;
+        try {
+            // We use a Promise wrapper to make navigator.geolocation work with async/await
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+            });
+            userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        } catch (err) {
+            console.log("Could not get user location:", err);
+            // We continue anyway, just without distance sorting
+        }
+
+        // B. Fetch Upcoming Events from Database
         const today = new Date();
-        // Get all meetups where eventDate is in the future
         const q = query(
             collection(db, "meetups"), 
             where("eventDate", ">=", today),
-            orderBy("eventDate", "asc"), // Soonest events first
-            limit(20)
+            orderBy("eventDate", "asc"), 
+            limit(50) // Grab more so we can filter locally
         );
 
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-            eventsList.innerHTML = '<li>No upcoming events found. Schedule one on the map!</li>';
+            eventsList.innerHTML = `
+                <div style="text-align:center; padding:30px; color:#666;">
+                    <h3>No upcoming events.</h3>
+                    <p>Be the first to schedule a cleanup!</p>
+                </div>`;
             return;
         }
 
-        eventsList.innerHTML = '';
+        // C. Process & Calculate Distances
+        let events = [];
         querySnapshot.forEach((doc) => {
-            const event = doc.data();
+            const data = doc.data();
+            let dist = null;
+
+            // If we have user location AND event coordinates, do the math
+            if (userPos && data.coordinates) {
+                dist = getDistanceInMiles(userPos.lat, userPos.lng, data.coordinates.lat, data.coordinates.lng);
+            }
+
+            events.push({
+                id: doc.id,
+                ...data,
+                distance: dist // Store the calculated distance
+            });
+        });
+
+        // D. Sort by Distance
+        // If we have distance, put closest first. 
+        // If no distance (old events), put them at the bottom.
+        if (userPos) {
+            events.sort((a, b) => {
+                const distA = a.distance !== null ? a.distance : 99999;
+                const distB = b.distance !== null ? b.distance : 99999;
+                return distA - distB;
+            });
+        }
+
+        // E. Render the List
+        eventsList.innerHTML = '';
+        events.forEach(event => {
             const dateObj = event.eventDate ? event.eventDate.toDate() : event.createdAt.toDate();
-            
-            // Format Date: "Mon, Jan 24 @ 2:00 PM"
             const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
             const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
+            // Create the Distance Badge HTML
+            let distanceBadge = '';
+            if (event.distance !== null) {
+                // If close (under 0.2 miles), say "Here". Else show miles.
+                const distText = event.distance < 0.2 ? "📍 Nearby" : `${event.distance.toFixed(1)} mi away`;
+                distanceBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; margin-left:8px;">${distText}</span>`;
+            } else if (userPos) {
+                 // Only show "Unknown Location" if we successfully got user GPS but the event lacks data
+                 distanceBadge = `<span style="background:#f5f5f5; color:#888; padding:3px 8px; border-radius:12px; font-size:0.75em;">🌎 Global</span>`;
+            }
+
             const li = document.createElement('li');
-            li.className = "event-card"; // You can style this class in CSS
+            li.className = "event-card"; 
+            // Simple styling for the card
+            li.style.borderBottom = "1px solid #eee";
+            li.style.padding = "15px";
+            li.style.marginBottom = "10px";
+            li.style.background = "white";
+            li.style.borderRadius = "8px";
+
             li.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <div>
-                        <strong>${event.title}</strong>
-                        <div style="color: #4A7C59; font-weight: bold; font-size: 0.9em; margin: 4px 0;">
+                    <div style="width:100%;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                            <strong style="font-size:1.1em; color:#333;">${event.title}</strong>
+                            ${distanceBadge}
+                        </div>
+                        
+                        <div style="color: #4A7C59; font-weight: 600; font-size: 0.9em; margin-bottom: 5px;">
                             📅 ${dateStr} @ ${timeStr}
                         </div>
-                        <div style="font-size: 0.85em; color: #666;">
+                        
+                        <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">
                             📍 ${event.poiName} <br>
                             👤 Host: ${event.organizerName}
                         </div>
-                        <p style="margin-top: 5px; font-size: 0.9em;">${event.description}</p>
+                        
+                        <p style="margin: 0; font-size: 0.9em; color:#444; line-height:1.4;">${event.description}</p>
                     </div>
                 </div>
             `;
@@ -660,9 +746,9 @@ export async function fetchAndDisplayAllEvents() {
 
     } catch (error) {
         console.error("Error fetching events:", error);
-        eventsList.innerHTML = '<li>Could not load events. (Make sure your Firestore Index is created!)</li>';
+        eventsList.innerHTML = '<li>Could not load events.</li>';
     }
-}
+} // end fetchAndDisplayAllEvents ******************
 
 // (Keep openViewMeetupsModal and deleteMeetup as they were, or update them to show dates too)
 function openViewMeetupsModal(poiName) {
