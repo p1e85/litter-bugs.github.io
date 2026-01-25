@@ -1,4 +1,5 @@
-import { storage, ref, uploadBytes, getDownloadURL } from './firebase.js';
+// Updated Imports: Added 'db' and Firestore functions
+import { db, storage, ref, uploadBytes, getDownloadURL, collection, query, where, getDocs, updateDoc, doc } from './firebase.js';
 import { state } from './config.js';
 import { createAndAddMarker, updateUserPinsSource } from './map.js';
 import { calculateRouteDistance } from './utils.js';
@@ -83,7 +84,7 @@ export function startTracking() {
     clearCurrentSession();
     const trackBtn = document.getElementById('trackBtn');
     state.trackingStartTime = new Date();
-    state.cleanupPhoto = null; // Correct place to clear the photo for a NEW session
+    state.cleanupPhoto = null; 
 
     // Center map on user's starting location
     navigator.geolocation.getCurrentPosition(pos => {
@@ -131,7 +132,6 @@ export async function handlePhoto(event) {
     const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
     let processedFile;
     try {
-        // We use the global imageCompression library loaded in index.html/maptest.html
         processedFile = await imageCompression(file, options);
     } catch (error) {
         console.error("Image compression error:", error);
@@ -173,7 +173,7 @@ export async function handlePhoto(event) {
         if (pinInfo) {
             state.photoPins.push(pinInfo);
             const newMarker = createAndAddMarker(pinInfo, 'user');
-            newMarker.togglePopup(); // Open popup immediately
+            newMarker.togglePopup(); 
             updateUserPinsSource();
         }
 
@@ -207,11 +207,11 @@ function showCleanupSummary() {
     document.getElementById('summaryDuration').textContent = `${minutes}m ${seconds}s`;
     document.getElementById('summaryModal').style.display = 'flex';
 
-    state.trackingStartTime = null; // Reset for next session
+    state.trackingStartTime = null; 
 }
 
 /**
- * Shares the cleanup results using the Web Share API or copies to clipboard.
+ * Shares the cleanup results using the Web Share API.
  */
 export async function shareCleanupResults() {
     const distance = document.getElementById('summaryDistance').textContent;
@@ -224,17 +224,13 @@ export async function shareCleanupResults() {
         url: 'https://www.littertroopers.com/' 
     };
 
-    // --- FIX: Convert Blob to File ---
     if (state.cleanupPhoto) {
-        // The Web Share API specifically requires a File object, not a Blob.
-        // We create a new File object using the data from the Blob.
         const file = new File([state.cleanupPhoto], "cleanup_stats.jpg", {
             type: state.cleanupPhoto.type,
             lastModified: new Date().getTime()
         });
         shareData.files = [file];
     }
-    // --------------------------------
 
     if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         try {
@@ -270,4 +266,62 @@ export function resetFindMeState() {
     document.getElementById('findMeBtn').classList.remove('active');
     document.getElementById('findMeBtn').innerHTML = '📍';
     state.findMeState = 0;
+}
+
+/**
+ * Updates the user's active challenges based on the session data.
+ * NEW: Handles 'count' challenges by accepting itemsCollected.
+ */
+export async function updateUserChallenges(userId, sessionDistance, itemsCollected) {
+    try {
+        // 1. Get all active challenges for this user
+        const q = query(
+            collection(db, "activeChallenges"), 
+            where("userId", "==", userId),
+            where("status", "==", "active")
+        );
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) return;
+
+        // 2. Loop through them and update progress
+        const updates = [];
+        
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            let newProgress = data.progress;
+            
+            // --- THE LOGIC SWITCH ---
+            if (data.type === 'distance') {
+                // Add Miles
+                newProgress += sessionDistance;
+            } else if (data.type === 'count') {
+                // Add Pins (Items) - Safely handle missing values
+                const itemsToAdd = itemsCollected || 0; 
+                newProgress += itemsToAdd;
+            }
+            
+            // 3. Check for Completion
+            let newStatus = data.status;
+            if (newProgress >= data.goal) {
+                newStatus = 'completed';
+                newProgress = data.goal; // Cap it at the goal
+                alert(`🎉 Challenge Complete: ${data.title}!`);
+            }
+            
+            // Prepare the update
+            updates.push(updateDoc(doc(db, "activeChallenges", docSnap.id), {
+                progress: newProgress,
+                status: newStatus,
+                lastUpdated: new Date()
+            }));
+        });
+        
+        await Promise.all(updates);
+        console.log("Challenges updated successfully.");
+        
+    } catch (error) {
+        console.error("Error updating challenges:", error);
+    }
 }
