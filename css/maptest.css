@@ -297,7 +297,7 @@ button.close-btn:hover { color: var(--color-text-dark); }
 /* HOVER STATE */
 .hub-card:hover {
     /* Subtle lift */
-    transform: translateY(-2px); 
+    /*transform: translateY(-2px); */
     
     /* FIX 3: Strong Green Outline */
     border-color: #4A7C59; 
