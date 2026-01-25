@@ -625,6 +625,8 @@ function getDistanceInMiles(lat1, lon1, lat2, lon2) {
 }
 
 // --- 2. THE MAIN DISPLAY FUNCTION ---
+// js/testmodules/community.js
+
 export async function fetchAndDisplayAllEvents() {
     const eventsList = document.getElementById('eventsList');
     if (!eventsList) return;
@@ -634,23 +636,21 @@ export async function fetchAndDisplayAllEvents() {
         // A. Get User's Current Position
         let userPos = null;
         try {
-            // We use a Promise wrapper to make navigator.geolocation work with async/await
             const pos = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
             });
             userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         } catch (err) {
             console.log("Could not get user location:", err);
-            // We continue anyway, just without distance sorting
         }
 
-        // B. Fetch Upcoming Events from Database
+        // B. Fetch Upcoming Events
         const today = new Date();
         const q = query(
             collection(db, "meetups"), 
             where("eventDate", ">=", today),
             orderBy("eventDate", "asc"), 
-            limit(50) // Grab more so we can filter locally
+            limit(50)
         );
 
         const querySnapshot = await getDocs(q);
@@ -664,27 +664,18 @@ export async function fetchAndDisplayAllEvents() {
             return;
         }
 
-        // C. Process & Calculate Distances
+        // C. Process Distances
         let events = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             let dist = null;
-
-            // If we have user location AND event coordinates, do the math
             if (userPos && data.coordinates) {
                 dist = getDistanceInMiles(userPos.lat, userPos.lng, data.coordinates.lat, data.coordinates.lng);
             }
-
-            events.push({
-                id: doc.id,
-                ...data,
-                distance: dist // Store the calculated distance
-            });
+            events.push({ id: doc.id, ...data, distance: dist });
         });
 
         // D. Sort by Distance
-        // If we have distance, put closest first. 
-        // If no distance (old events), put them at the bottom.
         if (userPos) {
             events.sort((a, b) => {
                 const distA = a.distance !== null ? a.distance : 99999;
@@ -700,25 +691,22 @@ export async function fetchAndDisplayAllEvents() {
             const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
             const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-            // Create the Distance Badge HTML
             let distanceBadge = '';
             if (event.distance !== null) {
-                // If close (under 0.2 miles), say "Here". Else show miles.
                 const distText = event.distance < 0.2 ? "📍 Nearby" : `${event.distance.toFixed(1)} mi away`;
                 distanceBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; margin-left:8px;">${distText}</span>`;
             } else if (userPos) {
-                 // Only show "Unknown Location" if we successfully got user GPS but the event lacks data
                  distanceBadge = `<span style="background:#f5f5f5; color:#888; padding:3px 8px; border-radius:12px; font-size:0.75em;">🌎 Global</span>`;
             }
 
             const li = document.createElement('li');
             li.className = "event-card"; 
-            // Simple styling for the card
             li.style.borderBottom = "1px solid #eee";
             li.style.padding = "15px";
             li.style.marginBottom = "10px";
             li.style.background = "white";
             li.style.borderRadius = "8px";
+            li.style.cursor = "pointer"; // Make it look clickable
 
             li.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -727,20 +715,50 @@ export async function fetchAndDisplayAllEvents() {
                             <strong style="font-size:1.1em; color:#333;">${event.title}</strong>
                             ${distanceBadge}
                         </div>
-                        
                         <div style="color: #4A7C59; font-weight: 600; font-size: 0.9em; margin-bottom: 5px;">
                             📅 ${dateStr} @ ${timeStr}
                         </div>
-                        
                         <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">
                             📍 ${event.poiName} <br>
                             👤 Host: ${event.organizerName}
                         </div>
-                        
                         <p style="margin: 0; font-size: 0.9em; color:#444; line-height:1.4;">${event.description}</p>
                     </div>
                 </div>
             `;
+
+            // --- NEW CLICK LISTENER ---
+            li.addEventListener('click', () => {
+                if (event.coordinates) {
+                    // 1. Close ALL overlay modals
+                    document.getElementById('eventsModal').style.display = 'none';
+                    document.getElementById('hubModal').style.display = 'none';
+                    document.getElementById('menuModal').style.display = 'none';
+
+                    // 2. Fly to the location
+                    state.map.flyTo({
+                        center: [event.coordinates.lng, event.coordinates.lat],
+                        zoom: 16,
+                        essential: true
+                    });
+
+                    // 3. Drop a temporary popup so they see the target
+                    new mapboxgl.Popup()
+                        .setLngLat([event.coordinates.lng, event.coordinates.lat])
+                        .setHTML(`
+                            <div style="text-align:center;">
+                                <strong>${event.title}</strong><br>
+                                <span style="font-size:0.9em; color:#666;">${event.poiName}</span><br>
+                                <span style="font-size:0.8em; color:#4A7C59;">📅 ${dateStr} @ ${timeStr}</span>
+                            </div>
+                        `)
+                        .addTo(state.map);
+                        
+                } else {
+                    alert("⚠️ This event doesn't have GPS data attached (it might be an older event).");
+                }
+            });
+
             eventsList.appendChild(li);
         });
 
