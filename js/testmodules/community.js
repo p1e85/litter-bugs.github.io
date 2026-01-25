@@ -477,46 +477,71 @@ function showPopup(badgeKey) {
 
 // --- Meetups ---
 
+// js/testmodules/community.js
+
 export function setupPoiClickListeners() {
     const poiLayers = ['poi-label', 'transit-label', 'airport-label', 'natural-point-label', 'natural-line-label', 'water-point-label', 'water-line-label', 'waterway-label'];
+    
     poiLayers.forEach(layerId => {
         if (state.map.getLayer(layerId)) {
             state.map.on('click', layerId, (e) => {
                 if (e.features.length > 0) {
                     const feature = e.features[0];
+                    const name = feature.properties.name || "Unknown Location";
+                    
+                    // NEW: Get Coordinates
+                    // e.lngLat contains {lng: -87.xxx, lat: 41.xxx}
+                    const coords = e.lngLat; 
+
                     const popupHTML = `
                         <div>
-                            <strong>${feature.properties.name}</strong>
+                            <strong>${name}</strong>
                             <div class="poi-popup-buttons">
                                 <button class="modal-button schedule-btn">Schedule Meetup</button>
                                 <button class="modal-button view-btn">View Meetups</button>
                             </div>
                         </div>`;
-                    const popup = new mapboxgl.Popup().setLngLat(e.lngLat).setHTML(popupHTML).addTo(state.map);
+                        
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(coords) // Use the clicked coordinates
+                        .setHTML(popupHTML)
+                        .addTo(state.map);
+
+                    // PASS COORDINATES TO THE MODAL
                     popup.getElement().querySelector('.schedule-btn').addEventListener('click', () => {
-                        openMeetupModal(feature.properties.name);
+                        openMeetupModal(name, coords.lat, coords.lng); // <--- NEW ARGUMENTS
                         popup.remove();
                     });
+
                     popup.getElement().querySelector('.view-btn').addEventListener('click', () => {
-                        openViewMeetupsModal(feature.properties.name);
+                        openViewMeetupsModal(name);
                         popup.remove();
                     });
                 }
             });
+            
+            // Cursor pointers
             state.map.on('mouseenter', layerId, () => { state.map.getCanvas().style.cursor = 'pointer'; });
             state.map.on('mouseleave', layerId, () => { state.map.getCanvas().style.cursor = ''; });
         }
     });
 }
 
-function openMeetupModal(poiName) {
+// Updated to accept coordinates
+function openMeetupModal(poiName, lat, lng) {
     if (!state.currentUser) {
         alert("Please log in to schedule a meetup.");
         return;
     }
+    
     document.getElementById('meetupLocationName').textContent = poiName;
     document.getElementById('poiNameInput').value = poiName;
-    // Reset date input
+    
+    // NEW: Save coordinates to the hidden inputs
+    document.getElementById('meetupLat').value = lat;
+    document.getElementById('meetupLng').value = lng;
+    
+    // Reset other fields
     document.getElementById('meetupDateInput').value = '';
     document.getElementById('meetupModal').style.display = 'flex';
     validateMeetupForm();
