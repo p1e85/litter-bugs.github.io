@@ -582,3 +582,56 @@ button.close-btn:hover { color: var(--color-text-dark); }
     transform: translateY(1px);
     box-shadow: 0 2px 10px rgba(220, 53, 69, 0.3);
 }
+
+/* --- COMPACT CARD & SUBTLE HOVER --- */
+.hub-card {
+    background: white;
+    border-radius: 10px; /* Slightly tighter corners */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08); /* Softer shadow */
+    
+    /* Tighter Spacing */
+    padding: 10px 12px; 
+    margin-bottom: 10px;
+    
+    /* Stack Context */
+    position: relative; 
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    border: 1px solid #eee; 
+    text-align: left; /* Easier to read */
+    cursor: pointer;
+}
+
+/* HOVER: Very subtle pop */
+.hub-card:hover {
+    transform: scale(1.01); /* Changed from 1.03 to 1.01 (Barely moves) */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: var(--color-primary-green);
+    z-index: 100;
+}
+
+/* Tighter Text Layout */
+.hub-card h4 { 
+    margin: 0 0 3px 0; /* Less gap below title */
+    font-size: 1em; 
+    color: #333; 
+}
+
+.hub-card p { 
+    margin: 0 0 5px 0; 
+    font-size: 0.85em; 
+    color: #666; 
+    line-height: 1.2; 
+}
+
+/* Goal Text */
+.hub-card div {
+    font-size: 0.8em !important;
+}
+
+/* Compact Button */
+.hub-card .modal-button {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    width: auto; /* Button doesn't stretch full width */
+    margin: 0;
+}
