@@ -1,4 +1,3 @@
-// Updated Imports: Added 'db' and Firestore functions
 import { db, storage, ref, uploadBytes, getDownloadURL, collection, query, where, getDocs, updateDoc, doc } from './firebase.js';
 import { state } from './config.js';
 import { createAndAddMarker, updateUserPinsSource } from './map.js';
@@ -270,7 +269,7 @@ export function resetFindMeState() {
 
 /**
  * Updates the user's active challenges based on the session data.
- * NEW: Handles 'count' challenges by accepting itemsCollected.
+ * NEW: Handles 'count' challenges and Badge Awarding
  */
 export async function updateUserChallenges(userId, sessionDistance, itemsCollected) {
     try {
@@ -282,22 +281,22 @@ export async function updateUserChallenges(userId, sessionDistance, itemsCollect
         );
         
         const querySnapshot = await getDocs(q);
-        
         if (querySnapshot.empty) return;
 
         // 2. Loop through them and update progress
         const updates = [];
         
-        querySnapshot.forEach((docSnap) => {
+        // Dynamically import community to award badges (avoids circular dependency)
+        let communityModule = null;
+
+        for (const docSnap of querySnapshot.docs) {
             const data = docSnap.data();
             let newProgress = data.progress;
             
-            // --- THE LOGIC SWITCH ---
+            // --- LOGIC SWITCH: Check Type ---
             if (data.type === 'distance') {
-                // Add Miles
                 newProgress += sessionDistance;
             } else if (data.type === 'count') {
-                // Add Pins (Items) - Safely handle missing values
                 const itemsToAdd = itemsCollected || 0; 
                 newProgress += itemsToAdd;
             }
@@ -306,8 +305,20 @@ export async function updateUserChallenges(userId, sessionDistance, itemsCollect
             let newStatus = data.status;
             if (newProgress >= data.goal) {
                 newStatus = 'completed';
-                newProgress = data.goal; // Cap it at the goal
-                alert(`🎉 Challenge Complete: ${data.title}!`);
+                newProgress = data.goal; // Cap it
+                
+                // --- AWARD BADGE ---
+                try {
+                    if (!communityModule) communityModule = await import('./community.js');
+                    const icon = data.type === 'distance' ? '🏃' : '🗑️';
+                    
+                    await communityModule.awardBadge(
+                        userId, 
+                        data.title, 
+                        `Completed the ${data.title} challenge.`,
+                        icon
+                    );
+                } catch (e) { console.error("Badge Error:", e); }
             }
             
             // Prepare the update
@@ -316,7 +327,7 @@ export async function updateUserChallenges(userId, sessionDistance, itemsCollect
                 status: newStatus,
                 lastUpdated: new Date()
             }));
-        });
+        }
         
         await Promise.all(updates);
         console.log("Challenges updated successfully.");
