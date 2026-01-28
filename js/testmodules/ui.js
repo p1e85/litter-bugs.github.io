@@ -1025,3 +1025,20 @@ export async function showPublicProfile(userId) {
         content.innerHTML = '<p>Error loading profile.</p>';
     }
 }
+
+export function updateAuthModalUI() {
+    const authForm = document.getElementById('authForm');
+    const authTitle = document.getElementById('authTitle');
+    const authSubtitle = document.getElementById('authSubtitle');
+    const forgotLink = document.getElementById('forgotPasswordLink'); // Get the link
+
+    if (state.isSignUpMode) {
+        authTitle.textContent = 'Create a Litter Troopers Account';
+        // ... rest of your code ...
+        if (forgotLink) forgotLink.style.display = 'none'; // Hide it on Sign Up
+    } else {
+        authTitle.textContent = 'Log In to Litter Troopers';
+        // ... rest of your code ...
+        if (forgotLink) forgotLink.style.display = 'inline-block'; // SHOW IT on Login
+    }
+}
