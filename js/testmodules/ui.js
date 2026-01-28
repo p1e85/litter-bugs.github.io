@@ -631,20 +631,28 @@ export function updateAuthModalUI() {
     const authForm = document.getElementById('authForm');
     const authTitle = document.getElementById('authTitle');
     const authSubtitle = document.getElementById('authSubtitle');
+    const forgotLink = document.getElementById('forgotPasswordLink'); // Get the link
+
     document.getElementById('authError').textContent = '';
 
     if (state.isSignUpMode) {
-        authTitle.textContent = 'Create a Litter Bugs Account';
+        authTitle.textContent = 'Create a Litter Troopers Account';
         authSubtitle.innerHTML = 'Or <a href="#" id="switchAuthModeLink">log in to an existing account.</a>';
         elements.authActionBtn.textContent = 'Sign Up';
         authForm.classList.add('signup-mode');
         authForm.classList.remove('login-mode');
+        
+        // Hide on Sign Up
+        if (forgotLink) forgotLink.style.display = 'none'; 
     } else {
-        authTitle.textContent = 'Log In to Litter Bugs';
+        authTitle.textContent = 'Log In to Litter Troopers';
         authSubtitle.innerHTML = 'Or <a href="#" id="switchAuthModeLink">create a new account.</a>';
         elements.authActionBtn.textContent = 'Log In';
         authForm.classList.add('login-mode');
         authForm.classList.remove('signup-mode');
+        
+        // Show on Login
+        if (forgotLink) forgotLink.style.display = 'inline-block'; 
     }
     validateSignUpForm();
 }
@@ -1026,19 +1034,3 @@ export async function showPublicProfile(userId) {
     }
 }
 
-export function updateAuthModalUI() {
-    const authForm = document.getElementById('authForm');
-    const authTitle = document.getElementById('authTitle');
-    const authSubtitle = document.getElementById('authSubtitle');
-    const forgotLink = document.getElementById('forgotPasswordLink'); // Get the link
-
-    if (state.isSignUpMode) {
-        authTitle.textContent = 'Create a Litter Troopers Account';
-        // ... rest of your code ...
-        if (forgotLink) forgotLink.style.display = 'none'; // Hide it on Sign Up
-    } else {
-        authTitle.textContent = 'Log In to Litter Troopers';
-        // ... rest of your code ...
-        if (forgotLink) forgotLink.style.display = 'inline-block'; // SHOW IT on Login
-    }
-}
