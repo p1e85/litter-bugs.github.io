@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import { 
     getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-    signOut, onAuthStateChanged, deleteUser 
+    signOut, onAuthStateChanged, deleteUser, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Your web app's Firebase configuration
@@ -65,5 +65,6 @@ export {
     Timestamp,
     arrayUnion,
     arrayRemove,
-    runTransaction
+    runTransaction,
+    sendPasswordResetEmail
 };
