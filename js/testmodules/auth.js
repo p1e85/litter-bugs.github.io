@@ -14,7 +14,8 @@ import {
     query,
     where,
     getDocs,
-    deleteDoc
+    deleteDoc,
+    sendPasswordResetEmail
 } from './firebase.js';
 import { state } from './config.js';
 import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
@@ -201,6 +202,27 @@ export async function handleAccountDeletion() {
             alert("This is a sensitive operation. Please log out and log back in to delete your account.");
         } else {
             alert("An error occurred while deleting your account.");
+        }
+    }
+}
+
+export async function handlePasswordReset() {
+    const email = document.getElementById('emailInput').value.trim();
+    
+    if (!email) {
+        alert("Please enter your email address first.");
+        return;
+    }
+
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert("Reset link sent! Check your inbox (and spam folder).");
+    } catch (error) {
+        console.error("Reset Error:", error.code);
+        if (error.code === 'auth/user-not-found') {
+            alert("No account found with this email.");
+        } else {
+            alert("Error sending reset link. Please try again.");
         }
     }
 }
