@@ -574,6 +574,14 @@ export function attachEventListeners() {
         });
     }
 
+    const forgotLink = document.getElementById('forgotPasswordLink');
+    if (forgotLink) {
+        forgotLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            handlePasswordReset();
+        });
+    }
+
     // Generic Close Listeners
     addAllModalCloseListeners();
 } //********************end event listern**************
