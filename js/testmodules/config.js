@@ -100,33 +100,44 @@ export const allTitles = {
 
 export const RP_SECTORS = {
     'RP-01': {
-        name: "The North End", // Howard to Jarvis
-        minLat: 42.0155, maxLat: 42.0195, 
+        name: "North of Howard / Juneway",
+        minLat: 42.0155, maxLat: 42.0230, 
         minLon: -87.6750, maxLon: -87.6630,
-        color: '#FF5733' // Sunset Orange
+        color: '#FF5733', // Sunset Orange
+        isPolygon: false
     },
     'RP-02': {
-        name: "Glenwood Arts", // Jarvis to Morse
+        name: "Glenwood Arts",
         minLat: 42.0075, maxLat: 42.0155,
         minLon: -87.6750, maxLon: -87.6630,
-        color: '#33FF57' // Lime Green
+        color: '#33FF57', // Lime Green
+        isPolygon: false
     },
     'RP-03': {
-        name: "The University", // Morse to Devon
+        name: "The University",
         minLat: 41.9975, maxLat: 42.0075,
         minLon: -87.6750, maxLon: -87.6630,
-        color: '#3357FF' // Royal Blue
+        color: '#3357FF', // Royal Blue
+        isPolygon: false
     },
     'RP-04': {
-        name: "The Lakefront", // Sheridan to the Water
-        minLat: 41.9975, maxLat: 42.0195,
+        name: "The Lakefront",
+        minLat: 41.9975, maxLat: 42.0230,
         minLon: -87.6630, maxLon: -87.6530,
-        color: '#F333FF' // Electric Purple
+        color: '#F333FF', // Electric Purple
+        isPolygon: false
     },
     'RP-05': {
-        name: "The West Side", // West of Clark, East of Ridge
-        minLat: 41.9975, maxLat: 42.0195, 
-        minLon: -87.6830, maxLon: -87.6750, 
-        color: '#FFA500' // Goldenrod / Orange
+        name: "The West Side",
+        color: '#FFA500', // Goldenrod
+        isPolygon: true,
+        // Defined NW to NE to SE to SW to NW to close the shape
+        path: [
+            [-87.6830, 42.0230], // NW: Juneway/Ridge area
+            [-87.6750, 42.0230], // NE: Juneway/Clark area
+            [-87.6750, 41.9975], // SE: Clark/Devon
+            [-87.6755, 41.9975], // SW: Ridge/Devon (The Angle!)
+            [-87.6830, 42.0230]  // Close
+        ]
     }
 };
