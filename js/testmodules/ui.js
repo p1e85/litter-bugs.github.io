@@ -1,6 +1,6 @@
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc } from './firebase.js'; 
 import { state, allTitles } from './config.js';
-import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
+import { initializeMap, changeMapStyle, centerOnRoute, setupSectorVisuals } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
