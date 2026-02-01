@@ -1246,6 +1246,7 @@ export async function updateChallengeProgress(userId, distanceMiles) {
 
 export async function grantTitle(userId, titleKey) {
     const profileRef = doc(db, "publicProfiles", userId);
+    let newlyUnlocked = false; // Track if this is a fresh unlock
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -1253,16 +1254,20 @@ export async function grantTitle(userId, titleKey) {
             if (!profileDoc.exists()) return;
 
             const userData = profileDoc.data();
-            // Get current titles or start with an empty array
             const unlockedTitles = userData.unlockedTitles || [];
 
-            // Only add the title if they don't have it yet
             if (!unlockedTitles.includes(titleKey)) {
                 unlockedTitles.push(titleKey);
                 transaction.update(profileRef, { unlockedTitles: unlockedTitles });
-                console.log(`🏆 Title Unlocked: ${titleKey}`);
+                newlyUnlocked = true; // Mark as new!
             }
         });
+
+        // If it's a new unlock, let the user know!
+        if (newlyUnlocked && allTitles[titleKey]) {
+            alert(`🏆 NEW TITLE UNLOCKED: ${allTitles[titleKey].name}`);
+        }
+        
     } catch (error) {
         console.error("Failed to grant title:", error);
     }
@@ -1300,6 +1305,26 @@ export async function checkForTitleMilestones(userId, routeCoords) {
             // Unlock Pioneer after 5 routes in Rogers Park
             if (rpCount >= 5) await grantTitle(userId, 'rp_pioneer');
         }
+
+        // --- 4. TIME-BASED MILESTONES ---
+        const now = new Date();
+        const hour = now.getHours(); // 0-23 format
+
+        if (hour < 9) {
+            // Early Bird: Before 9:00 AM
+            const earlyCount = (data.earlyBirdCount || 0) + 1;
+            await updateDoc(profileRef, { earlyBirdCount: earlyCount });
+            if (earlyCount >= 5) await grantTitle(userId, 'early_bird');
+            
+        } 
+
+        if (hour >= 19) {
+            // Night Owl: After 7:00 PM
+            const nightCount = (data.nightOwlCount || 0) + 1;
+            await updateDoc(profileRef, { nightOwlCount: nightCount });
+            if (nightCount >= 5) await grantTitle(userId, 'night_owl');
+            
+    }
 
     } catch (error) {
         console.error("Error checking milestones:", error);
