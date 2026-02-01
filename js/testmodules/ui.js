@@ -148,6 +148,7 @@ export function initializeUI() {
     // Add this right after initializeMap();
     state.map.on('load', () => {
         setupSectorVisuals();
+        updateSwarmPulse();
     });
     state.map.on('dragstart', (e) => { if (e.originalEvent) resetFindMeState(); });
     state.map.on('zoomstart', (e) => { if (e.originalEvent) resetFindMeState(); });
