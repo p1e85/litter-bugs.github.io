@@ -1332,7 +1332,15 @@ export async function checkForTitleMilestones(userId, routeCoords) {
 }
 
 function getSectorFromCoords(lon, lat) {
+    const ridgeBoundary = -87.683 + ((lat - 41.9975) * ((-87.6755 - -87.683) / (42.023 - 41.9975)));
+    
+    if (lat >= 41.9975 && lat <= 42.0230 && lon >= ridgeBoundary && lon <= -87.6750) {
+        return 'RP-05';
+    }
+
+    // 2. Check the other rectangular sectors (RP-01 thru RP-04)
     for (const [id, bounds] of Object.entries(RP_SECTORS)) {
+        if (id === 'RP-05') continue; // Skip since we checked it above
         if (lat >= bounds.minLat && lat <= bounds.maxLat &&
             lon >= bounds.minLon && lon <= bounds.maxLon) {
             return id;
