@@ -145,6 +145,10 @@ const elements = {
  */
 export function initializeUI() {
     initializeMap();
+    // Add this right after initializeMap();
+    state.map.on('load', () => {
+        setupSectorVisuals();
+    });
     state.map.on('dragstart', (e) => { if (e.originalEvent) resetFindMeState(); });
     state.map.on('zoomstart', (e) => { if (e.originalEvent) resetFindMeState(); });
     initializeAuthListener();
