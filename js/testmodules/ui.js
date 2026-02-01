@@ -7,7 +7,7 @@ import { saveSession, loadSession, exportGeoJSON } from './data.js';
 import { 
     toggleCommunityView, publishRoute, populatePublishedRoutesList, 
     loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, 
-    fetchAndDisplayMyStats, 
+    fetchAndDisplayMyStats, updateSwarmPulse,
     handleMeetupSubmit, validateMeetupForm, toggleRouteLike, 
     openAchievementsModal, openEventBadgesModal, 
     // Logic Helpers
