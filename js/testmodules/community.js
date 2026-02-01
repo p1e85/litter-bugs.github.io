@@ -1332,9 +1332,12 @@ export async function checkForTitleMilestones(userId, routeCoords) {
 }
 
 function getSectorFromCoords(lon, lat) {
-    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6845 - -87.6765) / (42.0230 - 41.9975)));
-
-    if (lat >= 41.9975 && lat <= 42.0230 && lon >= ridgeBoundary && lon <= -87.6750) {
+// The "West Side" (RP-05) now capped at Howard Street (42.0190)
+    // New slope calculation for the Ridge curb between Howard and Devon
+    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
+    
+    // Checks if the user is South of Howard, but North of Devon
+    if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeBoundary && lon <= -87.6750) {
         return 'RP-05';
     }
 
