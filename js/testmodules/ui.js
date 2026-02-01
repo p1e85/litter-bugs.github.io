@@ -1,5 +1,5 @@
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc } from './firebase.js'; 
-import { state } from './config.js';
+import { state, allTitles } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
@@ -312,6 +312,7 @@ export function attachEventListeners() {
     elements.editProfileBtn.addEventListener('click', () => {
         if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
         elements.menuModal.style.display = 'none'; 
+        populateTitleDropdown();
         loadProfileForEditing();
         elements.profileModal.style.display = 'flex';
     });
@@ -1034,3 +1035,28 @@ export async function showPublicProfile(userId) {
     }
 }
 
+export function populateTitleDropdown() {
+    const titleSelect = document.getElementById('titleSelect');
+    const requirementText = document.getElementById('titleRequirement');
+    
+    if (!titleSelect) return;
+
+    // Clear and fill the dropdown
+    titleSelect.innerHTML = '<option value="">No Title Selected</option>';
+    Object.keys(allTitles).forEach(key => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = allTitles[key].name;
+        titleSelect.appendChild(option);
+    });
+
+    // Use "onchange" instead of "addEventListener" to prevent duplicates
+    titleSelect.onchange = (e) => {
+        const selectedKey = e.target.value;
+        if (selectedKey && allTitles[selectedKey]) {
+            requirementText.textContent = `Requirement: ${allTitles[selectedKey].requirement}`;
+        } else {
+            requirementText.textContent = "Select a title to see how to unlock it.";
+        }
+    };
+}
