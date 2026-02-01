@@ -1340,3 +1340,40 @@ function getSectorFromCoords(lon, lat) {
     }
     return null;
 }
+
+/**
+ * Updates the visual "Pulse" of sectors based on recent cleanup activity.
+ */
+export async function updateSwarmPulse() {
+    try {
+        const publishedRoutesRef = collection(db, "publishedRoutes");
+        // Look at routes from the last 48 hours
+        const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+        const q = query(publishedRoutesRef, where("timestamp", ">=", twoDaysAgo));
+        const querySnapshot = await getDocs(q);
+
+        const sectorActivity = { 'RP-01': 0, 'RP-02': 0, 'RP-03': 0, 'RP-04': 0, 'RP-05': 0 };
+
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.route && data.route.length > 0) {
+                // Get the sector of the starting point
+                const [lon, lat] = data.route[0]; 
+                const sectorId = getSectorFromCoords(lon, lat); // Using our detector
+                if (sectorId) sectorActivity[sectorId]++;
+            }
+        });
+
+        // Apply the "Glow" to the map
+        Object.entries(sectorActivity).forEach(([id, count]) => {
+            const layerId = `layer-${id}`;
+            if (state.map.getLayer(layerId)) {
+                // Base opacity is 0.15. If 3+ routes, bump it to 0.4 for a "Pulse" effect.
+                const newOpacity = count >= 3 ? 0.45 : 0.15;
+                state.map.setPaintProperty(layerId, 'fill-opacity', newOpacity);
+            }
+        });
+    } catch (err) {
+        console.error("Swarm Pulse error:", err);
+    }
+}
