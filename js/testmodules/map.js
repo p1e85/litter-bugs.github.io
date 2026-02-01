@@ -86,15 +86,36 @@ function initializeMapLayers() {
 export function changeMapStyle() {
     state.currentStyleIndex = (state.currentStyleIndex + 1) % mapStyles.length;
     state.map.setStyle(mapStyles[state.currentStyleIndex].url);
+    
     state.map.once('style.load', () => {
+        // --- 1. Restore the standard stuff ---
         initializeMapLayers();
         state.userMarkers.forEach(marker => marker.addTo(state.map));
         state.communityMarkers.forEach(marker => marker.addTo(state.map));
         toggleMarkerVisibility();
+        
         if (state.isCommunityViewOn) {
             fetchAndDisplayCommunityRoutes();
         }
         updateUserPinsSource();
+
+        // --- 2. RESTORE THE SECTORS (The Fix) ---
+        setupSectorVisuals(); // Re-creates the polygon geometry
+        updateSwarmPulse();   // Re-applies the 'glow' opacities
+        
+        // --- 3. RESPECT THE TOGGLE STATE ---
+        // Check if the button is currently 'active' (meaning sectors should be visible)
+        const sectorBtn = document.getElementById('toggleSectorsBtn');
+        const isSectorsActive = sectorBtn && sectorBtn.classList.contains('active');
+        
+        if (isSectorsActive) {
+            ['RP-01', 'RP-02', 'RP-03', 'RP-04', 'RP-05'].forEach(id => {
+                const fillLayer = `layer-${id}`;
+                const labelLayer = `label-${id}`;
+                if (state.map.getLayer(fillLayer)) state.map.setLayoutProperty(fillLayer, 'visibility', 'visible');
+                if (state.map.getLayer(labelLayer)) state.map.setLayoutProperty(labelLayer, 'visibility', 'visible');
+            });
+        }
     });
 }
 
