@@ -100,23 +100,27 @@ export const allTitles = {
 
 export const RP_SECTORS = {
     'RP-01': {
-        name: "The North End",
-        minLat: 42.015, maxLat: 42.019, // Howard to Jarvis
-        minLon: -87.675, maxLon: -87.655
+        name: "The North End", // Howard to Jarvis
+        minLat: 42.0155, maxLat: 42.0195, 
+        minLon: -87.6750, maxLon: -87.6630,
+        color: '#FF5733' // Sunset Orange
     },
     'RP-02': {
-        name: "Glenwood Arts",
-        minLat: 42.008, maxLat: 42.015, // Jarvis to Morse
-        minLon: -87.675, maxLon: -87.655
+        name: "Glenwood Arts", // Jarvis to Morse
+        minLat: 42.0075, maxLat: 42.0155,
+        minLon: -87.6750, maxLon: -87.6630,
+        color: '#33FF57' // Lime Green
     },
     'RP-03': {
-        name: "The University",
-        minLat: 41.997, maxLat: 42.008, // Morse to Devon
-        minLon: -87.675, maxLon: -87.655
+        name: "The University", // Morse to Devon
+        minLat: 41.9975, maxLat: 42.0075,
+        minLon: -87.6750, maxLon: -87.6630,
+        color: '#3357FF' // Royal Blue
     },
     'RP-04': {
-        name: "The Lakefront",
-        minLat: 41.997, maxLat: 42.019,
-        minLon: -87.660, maxLon: -87.650 // East of Sheridan
+        name: "The Lakefront", // Sheridan to the Water
+        minLat: 41.9975, maxLat: 42.0195,
+        minLon: -87.6630, maxLon: -87.6530,
+        color: '#F333FF' // Electric Purple
     }
 };
