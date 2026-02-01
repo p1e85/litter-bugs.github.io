@@ -327,38 +327,65 @@ export function addSectorLayers() {
 export function setupSectorVisuals() {
     if (!state.map) return;
 
-    Object.entries(RP_SECTORS).forEach(([id, bounds]) => {
+    Object.entries(RP_SECTORS).forEach(([id, sector]) => {
         const sourceId = `source-${id}`;
         const layerId = `layer-${id}`;
 
-        // Create the square/polygon for the sector
+        let polygonCoords;
+
+        if (sector.isPolygon) {
+            // Use the custom diagonal path defined in config.js
+            polygonCoords = [sector.path];
+        } else {
+            // Build the standard rectangular box path
+            polygonCoords = [[
+                [sector.minLon, sector.minLat],
+                [sector.maxLon, sector.minLat],
+                [sector.maxLon, sector.maxLat],
+                [sector.minLon, sector.maxLat],
+                [sector.minLon, sector.minLat]
+            ]];
+        }
+
+        // 1. Add the Source (the geometry data)
         state.map.addSource(sourceId, {
             'type': 'geojson',
             'data': {
                 'type': 'Feature',
                 'geometry': {
                     'type': 'Polygon',
-                    'coordinates': [[
-                        [bounds.minLon, bounds.minLat],
-                        [bounds.maxLon, bounds.minLat],
-                        [bounds.maxLon, bounds.maxLat],
-                        [bounds.minLon, bounds.maxLat],
-                        [bounds.minLon, bounds.minLat]
-                    ]]
+                    'coordinates': polygonCoords
                 }
             }
         });
 
-        // Add the fill layer (hidden by default)
+        // 2. Add the Fill Layer (the colored shape)
         state.map.addLayer({
             'id': layerId,
             'type': 'fill',
             'source': sourceId,
-            'layout': { 'visibility': 'none' },
+            'layout': { 'visibility': 'none' }, // Toggleable via UI
             'paint': {
-                'fill-color': bounds.color,
+                'fill-color': sector.color,
                 'fill-opacity': 0.15,
-                'fill-outline-color': bounds.color
+                'fill-outline-color': sector.color
+            }
+        });
+
+        // 3. Add a Label Layer (optional: shows the sector name)
+        state.map.addLayer({
+            'id': `label-${id}`,
+            'type': 'symbol',
+            'source': sourceId,
+            'layout': {
+                'text-field': id, // Displays "RP-01", "RP-05", etc.
+                'text-size': 14,
+                'visibility': 'none'
+            },
+            'paint': {
+                'text-color': sector.color,
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 2
             }
         });
     });
