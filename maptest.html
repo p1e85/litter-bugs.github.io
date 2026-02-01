@@ -375,6 +375,18 @@
                     <h3>Activity Feed</h3>
                     <p>See the latest cleanups from around the world.</p>
                 </div>
+
+                <div class="hub-card" onclick="openActivityFeed()">
+    <div class="hub-icon">📱</div>
+    <h4>Activity Feed</h4>
+    <p>See who is on duty</p>
+</div>
+
+<div id="btnOpenSquads" class="hub-card squad-hub-action" onclick="openSquadsModal()">
+    <div class="hub-icon" style="font-size: 1.5rem;">🛡️</div>
+    <h4 style="font-size: 0.9rem;">Squads</h4>
+    <p style="font-size: 0.75rem;">Join a unit or invade</p>
+</div>
             </div>
         </div>
     </div>
@@ -390,6 +402,40 @@
             </div>
         </div>
     </div>
+
+    <div id="squadsModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('squadsModal')">&times;</button>
+        <h2>Squad Registry</h2>
+        <p class="modal-subtitle">Join a local unit or form your own</p>
+
+        <div id="userSquadStatus" class="admin-header" style="margin-bottom: 20px;">
+            <p>Scanning for active duty status...</p>
+            <button id="btnCreateSquad" class="modal-button btn-primary" style="display:none;">+ Create New Squad</button>
+        </div>
+
+        <hr>
+
+        <div id="localSquadsContainer">
+            <h3 style="font-size: 1rem; margin-bottom: 10px;">Available Squads in Rogers Park</h3>
+            <div id="localSquadsList" class="session-list">
+                <p style="text-align: center; color: #888;">No squads detected in this sector yet...</p>
+            </div>
+        </div>
+
+        <div id="squadDetailView" style="display: none;">
+            <button class="modal-button secondary" onclick="backToSquadList()">← Back to Registry</button>
+            <div id="squadInfoContent">
+                </div>
+            
+            <h4 style="margin-top: 20px; border-bottom: 1px solid #eee;">The Roster</h4>
+            <div id="squadMemberBios" class="feed-container" style="max-height: 250px;">
+                </div>
+
+            <button id="btnRequestJoin" class="launch-btn" style="width: 100%;">Request to Join</button>
+        </div>
+    </div>
+</div>
 
     <div id="challengeMenuModal" class="modal-overlay">
         <div class="modal-content" style="text-align: center;">
