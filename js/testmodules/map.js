@@ -323,3 +323,43 @@ export function addSectorLayers() {
         });
     });
 }
+
+export function setupSectorVisuals() {
+    if (!state.map) return;
+
+    Object.entries(RP_SECTORS).forEach(([id, bounds]) => {
+        const sourceId = `source-${id}`;
+        const layerId = `layer-${id}`;
+
+        // Create the square/polygon for the sector
+        state.map.addSource(sourceId, {
+            'type': 'geojson',
+            'data': {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Polygon',
+                    'coordinates': [[
+                        [bounds.minLon, bounds.minLat],
+                        [bounds.maxLon, bounds.minLat],
+                        [bounds.maxLon, bounds.maxLat],
+                        [bounds.minLon, bounds.maxLat],
+                        [bounds.minLon, bounds.minLat]
+                    ]]
+                }
+            }
+        });
+
+        // Add the fill layer (hidden by default)
+        state.map.addLayer({
+            'id': layerId,
+            'type': 'fill',
+            'source': sourceId,
+            'layout': { 'visibility': 'none' },
+            'paint': {
+                'fill-color': bounds.color,
+                'fill-opacity': 0.15,
+                'fill-outline-color': bounds.color
+            }
+        });
+    });
+}
