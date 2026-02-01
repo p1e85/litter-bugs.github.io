@@ -122,5 +122,11 @@ export const RP_SECTORS = {
         minLat: 41.9975, maxLat: 42.0195,
         minLon: -87.6630, maxLon: -87.6530,
         color: '#F333FF' // Electric Purple
+    },
+    'RP-05': {
+        name: "The West Side", // West of Clark, East of Ridge
+        minLat: 41.9975, maxLat: 42.0195, 
+        minLon: -87.6830, maxLon: -87.6750, 
+        color: '#FFA500' // Goldenrod / Orange
     }
 };
