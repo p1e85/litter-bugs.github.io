@@ -311,10 +311,21 @@ export function attachEventListeners() {
     // --- PROFILE ---
     elements.editProfileBtn.addEventListener('click', () => {
         if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
-        elements.menuModal.style.display = 'none'; 
-        populateTitleDropdown();
-        loadProfileForEditing();
-        elements.profileModal.style.display = 'flex';
+        try {
+            // Fetch the user's profile to see what titles they own
+            const docSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
+            const userData = docSnap.data() || {};
+        
+            // Pass the user's unlocked titles to the dropdown (default to empty array if none)
+            const myTitles = userData.unlockedTitles || []; 
+        
+            populateTitleDropdown(myTitles);
+            loadProfileForEditing();
+        
+            elements.profileModal.style.display = 'flex';
+        } catch (err) {
+            console.error("Error opening profile:", err);
+        }
     });
     elements.saveProfileBtn.addEventListener('click', saveProfile);
 
@@ -1042,28 +1053,33 @@ export async function showPublicProfile(userId) {
     }
 }
 
-export function populateTitleDropdown() {
+export function populateTitleDropdown(unlockedTitles = []) {
     const titleSelect = document.getElementById('titleSelect');
     const requirementText = document.getElementById('titleRequirement');
     
     if (!titleSelect) return;
 
-    // Clear and fill the dropdown
+    // 1. Clear the dropdown
     titleSelect.innerHTML = '<option value="">No Title Selected</option>';
+
+    // 2. Only add titles that are in the user's unlockedTitles array
+    // If the array is empty, they only see "No Title Selected"
     Object.keys(allTitles).forEach(key => {
-        const option = document.createElement('option');
-        option.value = key;
-        option.textContent = allTitles[key].name;
-        titleSelect.appendChild(option);
+        if (unlockedTitles.includes(key)) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = allTitles[key].name;
+            titleSelect.appendChild(option);
+        }
     });
 
-    // Use "onchange" instead of "addEventListener" to prevent duplicates
+    // 3. Update requirement text on change
     titleSelect.onchange = (e) => {
         const selectedKey = e.target.value;
         if (selectedKey && allTitles[selectedKey]) {
-            requirementText.textContent = `Requirement: ${allTitles[selectedKey].requirement}`;
+            requirementText.textContent = `Active Title: ${allTitles[selectedKey].name}`;
         } else {
-            requirementText.textContent = "Select a title to see how to unlock it.";
+            requirementText.textContent = "Select from your unlocked titles.";
         }
     };
 }
