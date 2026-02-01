@@ -1,6 +1,6 @@
 import { state, mapStyles, ZOOM_THRESHOLD } from './config.js';
 import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners} from './community.js';
-import { pinCategories } from './config.js';
+import { pinCategories, RP_SECTORS } from './config.js';
 import { showPublicProfile } from './ui.js';
 
 /**
@@ -286,5 +286,40 @@ export function centerOnRoute() {
     state.map.fitBounds(bounds, {
         padding: { top: 150, bottom: 150, left: 60, right: 60 },
         maxZoom: 16
+    });
+}
+
+export function addSectorLayers() {
+    Object.entries(RP_SECTORS).forEach(([id, bounds]) => {
+        const sourceId = `source-${id}`;
+        
+        state.map.addSource(sourceId, {
+            'type': 'geojson',
+            'data': {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Polygon',
+                    'coordinates': [[
+                        [bounds.minLon, bounds.minLat],
+                        [bounds.maxLon, bounds.minLat],
+                        [bounds.maxLon, bounds.maxLat],
+                        [bounds.minLon, bounds.maxLat],
+                        [bounds.minLon, bounds.minLat]
+                    ]]
+                }
+            }
+        });
+
+        state.map.addLayer({
+            'id': `layer-${id}`,
+            'type': 'fill',
+            'source': sourceId,
+            'layout': { 'visibility': 'none' }, // Start hidden
+            'paint': {
+                'fill-color': id === 'RP-01' ? '#ff0000' : id === 'RP-02' ? '#00ff00' : '#0000ff', // Different colors per sector
+                'fill-opacity': 0.1,
+                'fill-outline-color': '#000'
+            }
+        });
     });
 }
