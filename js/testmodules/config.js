@@ -132,11 +132,11 @@ export const RP_SECTORS = {
         color: '#FFA500',
         isPolygon: true,
         path: [
-            [-87.6880, 42.0230], // NW: Pushed further West to catch Ridge/Howard
-            [-87.6750, 42.0230], // NE: Clark/Howard area
+            [-87.6845, 42.0230], // NW: Calibrated for Ridge/Howard
+            [-87.6750, 42.0230], // NE: Clark/Howard
             [-87.6750, 41.9975], // SE: Clark/Devon
-            [-87.6815, 41.9975], // SW: Pushed West to catch Ridge/Devon
-            [-87.6880, 42.0230]  // Close
+            [-87.6765, 41.9975], // SW: Calibrated for Ridge/Devon
+            [-87.6845, 42.0230]  // Close
         ]
     }
 };
