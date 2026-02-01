@@ -975,7 +975,6 @@ async function loadPastChallenges(filterType) {
 }
 
 // --- PUBLIC PROFILE FUNCTION ---
-// Correctly exported here.
 export async function showPublicProfile(userId) {
     const modal = document.getElementById('publicProfileModal');
     const content = document.getElementById('publicProfileContent');
@@ -991,6 +990,12 @@ export async function showPublicProfile(userId) {
         }
         const data = docSnap.data();
 
+        // --- NEW TITLE LOOKUP LOGIC ---
+        // Converts the saved key (og_9) into the display name (The Original Nine)
+        const titleDisplay = (data.selectedTitle && allTitles[data.selectedTitle]) 
+            ? `<p style="margin:-5px 0 10px; font-weight:bold; color:#4A7C59; font-size:0.9em;">${allTitles[data.selectedTitle].name}</p>` 
+            : '';
+
         // 2. Get Badges
         const badgesSnap = await getDocs(query(collection(db, "publicProfiles", userId, "badges"), orderBy("date", "desc")));
         let badgesHTML = '';
@@ -1000,7 +1005,6 @@ export async function showPublicProfile(userId) {
             badgesSnap.forEach(b => {
                 const badge = b.data();
                 const count = badge.count || 1;
-                // Show multiplier if > 1 (e.g., "x5")
                 const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-left:4px;">x${count}</span>` : '';
                 
                 badgesHTML += `
@@ -1019,6 +1023,9 @@ export async function showPublicProfile(userId) {
             <div style="text-align:center;">
                 <img src="${data.photoURL || 'https://via.placeholder.com/100'}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #4A7C59;">
                 <h2 style="margin:10px 0;">${data.username}</h2>
+                
+                ${titleDisplay}
+                
                 <p style="color:#666;">${data.bio || 'No bio yet.'}</p>
                 <div style="margin:15px 0; font-size:0.9em; background:#e8f5e9; padding:10px; border-radius:8px; display:inline-block;">
                     <strong>${data.totalDistance ? data.totalDistance.toFixed(1) : 0}</strong> miles cleaned
