@@ -97,3 +97,26 @@ export const allTitles = {
     'early_bird': { name: "Early Bird", requirement: "Completed 5 cleanups before 9:00 AM." },
     'night_owl': { name: "Night Owl", requirement: "Completed 5 cleanups after 7:00 PM." }
 };
+
+export const RP_SECTORS = {
+    'RP-01': {
+        name: "The North End",
+        minLat: 42.015, maxLat: 42.019, // Howard to Jarvis
+        minLon: -87.675, maxLon: -87.655
+    },
+    'RP-02': {
+        name: "Glenwood Arts",
+        minLat: 42.008, maxLat: 42.015, // Jarvis to Morse
+        minLon: -87.675, maxLon: -87.655
+    },
+    'RP-03': {
+        name: "The University",
+        minLat: 41.997, maxLat: 42.008, // Morse to Devon
+        minLon: -87.675, maxLon: -87.655
+    },
+    'RP-04': {
+        name: "The Lakefront",
+        minLat: 41.997, maxLat: 42.019,
+        minLon: -87.660, maxLon: -87.650 // East of Sheridan
+    }
+};
