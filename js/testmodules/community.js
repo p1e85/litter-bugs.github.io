@@ -1,5 +1,5 @@
 import { 
-    db, serverTimestamp, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL 
+    db, serverTimestamp, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL, runTransaction 
 } from './firebase.js';
 import { state, allBadges, allTitles, profanityList } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
@@ -1239,4 +1239,28 @@ export async function updateChallengeProgress(userId, distanceMiles) {
         console.error("Error updating challenge progress:", e);
     }
     return [];
+}
+
+export async function grantTitle(userId, titleKey) {
+    const profileRef = doc(db, "publicProfiles", userId);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const profileDoc = await transaction.get(profileRef);
+            if (!profileDoc.exists()) return;
+
+            const userData = profileDoc.data();
+            // Get current titles or start with an empty array
+            const unlockedTitles = userData.unlockedTitles || [];
+
+            // Only add the title if they don't have it yet
+            if (!unlockedTitles.includes(titleKey)) {
+                unlockedTitles.push(titleKey);
+                transaction.update(profileRef, { unlockedTitles: unlockedTitles });
+                console.log(`🏆 Title Unlocked: ${titleKey}`);
+            }
+        });
+    } catch (error) {
+        console.error("Failed to grant title:", error);
+    }
 }
