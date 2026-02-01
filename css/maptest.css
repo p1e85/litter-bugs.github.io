@@ -108,14 +108,21 @@ hr {
 }
 
 /* Top Bar / See-Thru Buttons */
-.top-bar-button, .community-button {
+.top-bar-button, .community-button, #toggleSectorsBtn {
   padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;
   font-weight: 500; background-color: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(4px); border: 1px solid rgba(0, 0, 0, 0.1);
   color: var(--color-text-dark); transition: background-color 0.2s ease;
 }
-.top-bar-button:hover, .community-button:hover {
+.top-bar-button:hover, .community-button:hover, #toggleSectorsBtn:hover {
   background-color: rgba(255, 255, 255, 0.9);
+}
+
+#toggleSectorsBtn.active {
+    background-color: var(--color-primary-green);
+    color: var(--color-text-light);
+    border-color: var(--color-primary-green);
+    font-weight: bold;
 }
 
 /* Floating Map Buttons (Find Me / Camera) */
