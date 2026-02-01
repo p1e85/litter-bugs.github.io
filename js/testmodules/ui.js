@@ -606,7 +606,7 @@ document.getElementById('toggleSectorsBtn').addEventListener('click', () => {
     const btn = document.getElementById('toggleSectorsBtn');
 
     // Loop through our 4 sectors and flip the switch
-    ['RP-01', 'RP-02', 'RP-03', 'RP-04'].forEach(id => {
+    ['RP-01', 'RP-02', 'RP-03', 'RP-04', 'RP-05'].forEach(id => {
         if (state.map.getLayer(`layer-${id}`)) {
             state.map.setLayoutProperty(`layer-${id}`, 'visibility', visibility);
         }
