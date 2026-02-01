@@ -594,8 +594,28 @@ export function attachEventListeners() {
         });
     }
 
+    let sectorsVisible = false;
+
+document.getElementById('toggleSectorsBtn').addEventListener('click', () => {
+    sectorsVisible = !sectorsVisible;
+    const visibility = sectorsVisible ? 'visible' : 'none';
+    const btn = document.getElementById('toggleSectorsBtn');
+
+    // Loop through our 4 sectors and flip the switch
+    ['RP-01', 'RP-02', 'RP-03', 'RP-04'].forEach(id => {
+        if (state.map.getLayer(`layer-${id}`)) {
+            state.map.setLayoutProperty(`layer-${id}`, 'visibility', visibility);
+        }
+    });
+
+    btn.textContent = sectorsVisible ? '🗺️ Hide Sectors' : '🗺️ Show Sectors';
+    btn.classList.toggle('active', sectorsVisible);
+});
+    
     // Generic Close Listeners
     addAllModalCloseListeners();
+
+    
 } //********************end event listern**************
 
 function addAllModalCloseListeners() {
