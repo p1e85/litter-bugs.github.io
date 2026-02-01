@@ -274,6 +274,7 @@ export async function publishRoute() {
         if (newBadges.length > 0) {
             showPopup(newBadges[0]);
         } else {
+            await checkForTitleMilestones(state.currentUser.uid, state.routeCoordinates);
             alert("Success! Your route has been published.");
         }
         clearCurrentSession();
@@ -1280,29 +1281,37 @@ export async function checkForTitleMilestones(userId, routeCoords) {
         const totalPins = data.totalPins || 0;
         const totalRoutes = data.totalRoutes || 0;
 
-        // 1. Check Pin Milestones
+        // 1. PIN MILESTONES
         if (totalPins >= 50) await grantTitle(userId, 'trash_wizard');
         if (totalPins >= 100) await grantTitle(userId, 'eco_legend');
 
-        // 2. Check Route Milestones
+        // 2. ROUTE MILESTONES
         if (totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
 
-        // 3. Check Rogers Park Pioneer (If the start of the route is in RP)
+        // 3. GEOGRAPHIC MILESTONES (Rogers Park)
         const [startLon, startLat] = routeCoords[0];
-        const isInRP = (startLat <= 42.019 && startLat >= 41.997) && 
-                       (startLon >= -87.683 && startLon <= -87.655);
+        const sectorId = getSectorFromCoords(startLon, startLat);
 
-        if (isInRP) {
-            // Increment an internal RP counter or check total routes
-            // For now, let's say 5 routes in RP unlocks Pioneer
-            const rpRoutes = data.rpRoutesCount || 0;
-            const newRpCount = rpRoutes + 1;
-            await updateDoc(profileRef, { rpRoutesCount: newRpCount });
+        if (sectorId) {
+            // Track how many routes this user has done in RP
+            const rpCount = (data.rpRoutesCount || 0) + 1;
+            await updateDoc(profileRef, { rpRoutesCount: rpCount });
 
-            if (newRpCount >= 5) await grantTitle(userId, 'rp_pioneer');
+            // Unlock Pioneer after 5 routes in Rogers Park
+            if (rpCount >= 5) await grantTitle(userId, 'rp_pioneer');
         }
 
     } catch (error) {
         console.error("Error checking milestones:", error);
     }
+}
+
+function getSectorFromCoords(lon, lat) {
+    for (const [id, bounds] of Object.entries(RP_SECTORS)) {
+        if (lat >= bounds.minLat && lat <= bounds.maxLat &&
+            lon >= bounds.minLon && lon <= bounds.maxLon) {
+            return id;
+        }
+    }
+    return null;
 }
