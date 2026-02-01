@@ -129,15 +129,14 @@ export const RP_SECTORS = {
     },
     'RP-05': {
         name: "The West Side",
-        color: '#FFA500', // Goldenrod
+        color: '#FFA500',
         isPolygon: true,
-        // Defined NW to NE to SE to SW to NW to close the shape
         path: [
-            [-87.6830, 42.0230], // NW: Juneway/Ridge area
-            [-87.6750, 42.0230], // NE: Juneway/Clark area
+            [-87.6880, 42.0230], // NW: Pushed further West to catch Ridge/Howard
+            [-87.6750, 42.0230], // NE: Clark/Howard area
             [-87.6750, 41.9975], // SE: Clark/Devon
-            [-87.6755, 41.9975], // SW: Ridge/Devon (The Angle!)
-            [-87.6830, 42.0230]  // Close
+            [-87.6815, 41.9975], // SW: Pushed West to catch Ridge/Devon
+            [-87.6880, 42.0230]  // Close
         ]
     }
 };
