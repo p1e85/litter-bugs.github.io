@@ -309,7 +309,7 @@ export function attachEventListeners() {
     });
 
     // --- PROFILE ---
-    elements.editProfileBtn.addEventListener('click', () => {
+    elements.editProfileBtn.addEventListener('click', async () => {
         if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
         try {
             // Fetch the user's profile to see what titles they own
