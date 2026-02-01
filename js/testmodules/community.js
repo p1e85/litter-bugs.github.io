@@ -1,7 +1,7 @@
 import { 
     db, serverTimestamp, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL 
 } from './firebase.js';
-import { state, allBadges, profanityList } from './config.js';
+import { state, allBadges, allTitles, profanityList } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
@@ -335,6 +335,14 @@ export async function loadProfileForEditing() {
             document.getElementById('bioInput').value = profileData.bio || '';
             document.getElementById('locationInput').value = profileData.location || '';
             document.getElementById('coffeeLinkInput').value = profileData.buyMeACoffeeLink || '';
+
+            // --- TITLE LOGIC ---
+            const titleSelect = document.getElementById('titleSelect');
+            if (titleSelect) {
+                titleSelect.value = profileData.selectedTitle || '';
+                // Manually trigger the "Requirement" text update
+                titleSelect.dispatchEvent(new Event('change'));
+            }
         }
     } catch (error) {
         console.error("Error loading profile:", error);
@@ -347,9 +355,18 @@ export async function saveProfile() {
     const bio = document.getElementById('bioInput').value;
     const location = document.getElementById('locationInput').value;
     const coffeeLink = document.getElementById('coffeeLinkInput').value;
+    
+    // Get the key (e.g., 'og_9') from the dropdown
+    const selectedTitle = document.getElementById('titleSelect').value;
+
     try {
         const publicProfileRef = doc(db, "publicProfiles", state.currentUser.uid);
-        await updateDoc(publicProfileRef, { bio, location, buyMeACoffeeLink: coffeeLink });
+        await updateDoc(publicProfileRef, { 
+            bio, 
+            location, 
+            buyMeACoffeeLink: coffeeLink,
+            selectedTitle: selectedTitle // SAVE THE KEY
+        });
         alert("Profile updated successfully!");
         document.getElementById('profileModal').style.display = 'none';
     } catch (error) {
