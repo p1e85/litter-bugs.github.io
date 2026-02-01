@@ -19,7 +19,8 @@ import {
 } from './firebase.js';
 import { state } from './config.js';
 import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
-import * as ui from './ui.js'; // Ensure UI is imported at the top
+import * as ui from './ui.js';
+import { grantTitle } from './community.js';
 
 /**
  * Sets up the listener that responds to changes in the user's login state.
@@ -106,24 +107,37 @@ export async function handleSignUp() {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const userId = userCredential.user.uid;
-        // Create a private user document for sensitive info
+
+        // 1. Create a private user document for sensitive info
         await setDoc(doc(db, "users", userId), {
             email: userCredential.user.email,
             totalPins: 0,
             totalDistance: 0,
-            totalRoutes: 0
+            totalRoutes: 0,
+            unlockedTitles: ['beta_trooper'] // Set initial array here too for safety
         });
-        // Create a public profile document
+
+        // 2. Create a public profile document
         await setDoc(doc(db, "publicProfiles", userId), {
             username,
-            bio: "This user is new to Litter Bugs!",
+            bio: "New recruit in the Litter Troopers squad!", // Updated name
             location: "",
             buyMeACoffeeLink: "",
             badges: {},
             totalPins: 0,
             totalDistance: 0,
-            totalRoutes: 0
+            totalRoutes: 0,
+            unlockedTitles: ['beta_trooper'], // Matches the private doc
+            selectedTitle: "" // Default empty
         });
+
+        // 3. --- REWARD HOOK ---
+        // This ensures the grant logic (and potential alert) fires correctly
+        await grantTitle(userId, 'beta_trooper');
+
+        // Optional: Close modal after success
+        if (elements.authModal) elements.authModal.style.display = 'none';
+
     } catch (error) {
         authError.textContent = error.message;
     }
