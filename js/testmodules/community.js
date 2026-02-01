@@ -263,6 +263,8 @@ export async function publishRoute() {
             likedBy: []
         });
 
+        // Trigger the milestone check
+        await checkForTitleMilestones(state.currentUser.uid, state.routeCoordinates);
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const afterSnap = await getDoc(publicProfileRef);
@@ -1262,5 +1264,45 @@ export async function grantTitle(userId, titleKey) {
         });
     } catch (error) {
         console.error("Failed to grant title:", error);
+    }
+}
+
+/**
+ * Checks if the user qualifies for any new titles based on their updated stats.
+ */
+export async function checkForTitleMilestones(userId, routeCoords) {
+    try {
+        const profileRef = doc(db, "publicProfiles", userId);
+        const profileSnap = await getDoc(profileRef);
+        if (!profileSnap.exists()) return;
+
+        const data = profileSnap.data();
+        const totalPins = data.totalPins || 0;
+        const totalRoutes = data.totalRoutes || 0;
+
+        // 1. Check Pin Milestones
+        if (totalPins >= 50) await grantTitle(userId, 'trash_wizard');
+        if (totalPins >= 100) await grantTitle(userId, 'eco_legend');
+
+        // 2. Check Route Milestones
+        if (totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
+
+        // 3. Check Rogers Park Pioneer (If the start of the route is in RP)
+        const [startLon, startLat] = routeCoords[0];
+        const isInRP = (startLat <= 42.019 && startLat >= 41.997) && 
+                       (startLon >= -87.683 && startLon <= -87.655);
+
+        if (isInRP) {
+            // Increment an internal RP counter or check total routes
+            // For now, let's say 5 routes in RP unlocks Pioneer
+            const rpRoutes = data.rpRoutesCount || 0;
+            const newRpCount = rpRoutes + 1;
+            await updateDoc(profileRef, { rpRoutesCount: newRpCount });
+
+            if (newRpCount >= 5) await grantTitle(userId, 'rp_pioneer');
+        }
+
+    } catch (error) {
+        console.error("Error checking milestones:", error);
     }
 }
