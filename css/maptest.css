@@ -752,3 +752,16 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .hub-card div {
     font-size: 0.8rem !important; /* Goal text smaller */
 }
+
+/* Styling for the smaller Squads button in the Hub */
+.squads-btn-compact {
+    width: 100%;
+    padding: 6px 12px; /* Half the vertical padding of the Feed button */
+    font-size: 0.85rem;
+    margin-top: -10px; /* Pulls it tighter to the button above */
+    background-color: var(--color-secondary-blue);
+    color: white;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+}
