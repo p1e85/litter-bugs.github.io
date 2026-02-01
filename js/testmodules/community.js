@@ -1332,9 +1332,8 @@ export async function checkForTitleMilestones(userId, routeCoords) {
 }
 
 function getSectorFromCoords(lon, lat) {
-    const ridgeBoundary = -87.688 + ((lat - 41.9975) * ((-87.6815 - -87.688) / (42.023 - 41.9975)));
-    
-    // Check if the coordinate is East of that slanted line, but West of Clark
+    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6845 - -87.6765) / (42.0230 - 41.9975)));
+
     if (lat >= 41.9975 && lat <= 42.0230 && lon >= ridgeBoundary && lon <= -87.6750) {
         return 'RP-05';
     }
