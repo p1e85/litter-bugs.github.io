@@ -449,8 +449,7 @@ export function attachEventListeners() {
                 });
             }
         });
-    }
-}
+    } // new bracker here*****************************
 
     // 2. Current Challenges
     if (elements.btnCurrentChallenges) {
