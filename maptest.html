@@ -535,6 +535,17 @@
     <div id="adminChallengeList" style="max-height: 200px; overflow-y: auto; text-align: left;">
         <p>Loading...</p>
     </div>
+</div> </div>
+
+<div id="feedModal" class="modal-overlay">
+    <div class="modal-content feed-modal">
+        <button class="close-btn" onclick="closeModal('feedModal')">&times;</button>
+        <h2>Activity Feed</h2>
+        <p class="modal-subtitle">Recent cleanup mission reports</p>
+        <div id="activityFeedContainer" class="feed-container">
+            <p style="text-align: center; color: #888;">Loading the latest Trooper activity...</p>
+        </div>
+    </div>
 </div>
     
     <script src="js/maintest.js" type="module"></script>
