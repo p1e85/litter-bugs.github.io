@@ -142,14 +142,26 @@ hr {
    4. MODALS (BASE STYLES)
    ========================================= */
 .modal-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.6); z-index: 10; display: none;
-  justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Dim the background */
+    display: none; /* JS will change this to flex */
+    justify-content: center;
+    align-items: center;
+    z-index: 10000 !important; /* MUST be higher than Mapbox (usually 0-1000) */
 }
 .modal-content {
-  background: var(--color-background-modal); padding: 20px; border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 100%; max-width: 500px;
-  position: relative; max-height: 90vh; overflow-y: auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 12px;
+    max-width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    z-index: 10001; /* Ensure content is above overlay */
 }
 .modal-content h2 {
   text-align: center; margin-top: 0; margin-bottom: 25px;
