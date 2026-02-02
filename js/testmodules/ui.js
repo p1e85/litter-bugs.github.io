@@ -1,1144 +1,754 @@
-import { db, collection, query, orderBy, limit, getDocs, doc, getDoc } from './firebase.js'; 
-import { state, allTitles } from './config.js';
-import { initializeMap, changeMapStyle, centerOnRoute, setupSectorVisuals } from './map.js';
-import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
-import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
-import { saveSession, loadSession, exportGeoJSON } from './data.js';
-import { 
-    toggleCommunityView, publishRoute, populatePublishedRoutesList, 
-    loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, 
-    fetchAndDisplayMyStats, updateSwarmPulse,
-    handleMeetupSubmit, validateMeetupForm, toggleRouteLike, 
-    openAchievementsModal, openEventBadgesModal, 
-    // Logic Helpers
-    getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents 
-} from './community.js';
-
-// --- DOM Element Selection ---
-const elements = {
-    // Admin Elements
-    btnAdminPanel: document.getElementById('btnAdminPanel'),
-    adminChallengeModal: document.getElementById('adminChallengeModal'),
-    btnSaveChallenge: document.getElementById('btnSaveChallenge'),
-    
-    // Admin Inputs
-    adminChalTitle: document.getElementById('adminChalTitle'),
-    adminChalDesc: document.getElementById('adminChalDesc'),
-    adminChalGoal: document.getElementById('adminChalGoal'),
-    adminChalBadge: document.getElementById('adminChalBadge'),
-    adminChalExpire: document.getElementById('adminChalExpire'),
-    adminChallengeList: document.getElementById('adminChallengeList'),
-    adminChalType: document.getElementById('adminChalType'),
-    adminChalTime: document.getElementById('adminChalTime'),
-    
-    // General Modals
-    termsModal: document.getElementById('termsModal'),
-    authModal: document.getElementById('authModal'),
-    dataModal: document.getElementById('dataModal'),
-    sessionsModal: document.getElementById('sessionsModal'),
-    localSessionsModal: document.getElementById('localSessionsModal'),
-    infoModal: document.getElementById('infoModal'),
-    publishedRoutesModal: document.getElementById('publishedRoutesModal'),
-    profileModal: document.getElementById('profileModal'),
-    publicProfileModal: document.getElementById('publicProfileModal'),
-    safetyModal: document.getElementById('safetyModal'),
-    summaryModal: document.getElementById('summaryModal'),
-    leaderboardModal: document.getElementById('leaderboardModal'),
-    meetupModal: document.getElementById('meetupModal'),
-    viewMeetupsModal: document.getElementById('viewMeetupsModal'),
-    menuModal: document.getElementById('menuModal'),
-    eventsModal: document.getElementById('eventsModal'),
-    activityFeedContainer: document.getElementById('activityFeedContainer'),
-    
-    // Challenge System Modals
-    challengeMenuModal: document.getElementById('challengeMenuModal'),
-    activeChallengesModal: document.getElementById('activeChallengesModal'),
-    pastChallengesModal: document.getElementById('pastChallengesModal'),
-    achievementsModal: document.getElementById('achievementsModal'), // The List Modal
-    achievementModal: document.getElementById('achievementModal'), // The Popup Modal
-
-    // Buttons
-    agreeBtn: document.getElementById('agreeBtn'),
-    skipBtn: document.getElementById('skipBtn'),
-    findMeBtn: document.getElementById('findMeBtn'),
-    trackBtn: document.getElementById('trackBtn'),
-    pictureBtn: document.getElementById('pictureBtn'),
-    dataBtn: document.getElementById('dataBtn'),
-    saveBtn: document.getElementById('saveBtn'),
-    loadBtn: document.getElementById('loadBtn'),
-    exportBtn: document.getElementById('exportBtn'),
-    communityBtn: document.getElementById('communityBtn'),
-    publishBtn: document.getElementById('publishBtn'),
-    loginSignupBtn: document.getElementById('loginSignupBtn'),
-    infoBtn: document.getElementById('infoBtn'),
-    authActionBtn: document.getElementById('authActionBtn'),
-    managePublicationsBtn: document.getElementById('managePublicationsBtn'),
-    editProfileBtn: document.getElementById('editProfileBtn'),
-    saveProfileBtn: document.getElementById('saveProfileBtn'),
-    deleteAccountBtn: document.getElementById('deleteAccountBtn'),
-    safetyModalOkBtn: document.getElementById('safetyModalOkBtn'),
-    changeStyleBtn: document.getElementById('changeStyleBtn'),
-    centerOnRouteBtn: document.getElementById('centerOnRouteBtn'),
-    summaryOkBtn: document.getElementById('summaryOkBtn'),
-    leaderboardBtn: document.getElementById('leaderboardBtn'),
-    achievementOkBtn: document.getElementById('achievementOkBtn'),
-    createMeetupBtn: document.getElementById('createMeetupBtn'),
-    shareBtn: document.getElementById('shareBtn'),
-    menuBtn: document.getElementById('menuBtn'),
-    logoutBtn: document.getElementById('logoutBtn'),
-    btnPastChallengesBack: document.getElementById('btnPastChallengesBack'),
-    
-    // Hub Navigation
-    hubModal: document.getElementById('hubModal'),
-    hubBtn: document.getElementById('hubBtn'),
-    hubChallengesBtn: document.getElementById('hubChallengesBtn'),
-    hubEventsBtn: document.getElementById('hubEventsBtn'),
-    hubFeedBtn: document.getElementById('hubFeedBtn'),
-    feedModal: document.getElementById('feedModal'),
-    feedContainer: document.getElementById('feedContainer'),
-    
-    // Inputs
-    cameraInput: document.getElementById('cameraInput'),
-    termsCheckbox: document.getElementById('termsCheckbox'),
-    ageCheckbox: document.getElementById('ageCheckbox'),
-    emailInput: document.getElementById('emailInput'),
-    passwordInput: document.getElementById('passwordInput'),
-    usernameInput: document.getElementById('usernameInput'),
-    safetyCheckbox: document.getElementById('safetyCheckbox'),
-    meetupTitleInput: document.getElementById('meetupTitleInput'),
-    meetupDescriptionInput: document.getElementById('meetupDescriptionInput'),
-    meetupDateInput: document.getElementById('meetupDateInput'),
-    viewTermsLink: document.getElementById('viewTermsLink'),
-    
-    // Lists & Containers
-    leaderboardTabs: document.querySelectorAll('.leaderboard-tab'),
-    leaderboardList: document.getElementById('leaderboardList'),
-    publicChallengeList: document.getElementById('publicChallengeList'),
-    pastChallengesContent: document.getElementById('pastChallengesContent'),
-    achievementsList: document.getElementById('achievementsList'),
-    achievementsTitle: document.getElementById('achievementsTitle'),
-    
-    // Specific Navigation Buttons
-    communityChallengeBtn: document.getElementById('communityChallengeBtn'), 
-    btnAchievements: document.getElementById('btnAchievements'), // Main Menu Button
-    btnViewEventBadges: document.getElementById('btnViewEventBadges'), // Challenge Hub Button
-    achievementListBackBtn: document.getElementById('achievementListBackBtn'), // Dynamic Back Button
-    
-    btnCurrentChallenges: document.getElementById('btnCurrentChallenges'),
-    btnPastChallenges: document.getElementById('btnPastChallenges'),
-    btnBackToMenu: document.querySelector('#pastChallengesModal .ok-btn'), // History Back
-    btnBackFromCurrent: document.getElementById('btnBackFromCurrent'), // Current Back
-    btnchallengeMenuBack: document.getElementById('btnchallengeMenuBack'),
-    
-    // Tabs
-    tabCompleted: document.getElementById('tabCompleted'),
-    tabUncompleted: document.getElementById('tabUncompleted'),
-    
-    // LOG TRASH ITEMS (NEW)
-    logTrashBtn: document.getElementById('logTrashBtn'),
-    logTrashModal: document.getElementById('logTrashModal'),
-    trashCountInput: document.getElementById('trashCountInput'),
-    confirmTrashBtn: document.getElementById('confirmTrashBtn')
-};
-
-/**
- * Main initializer for the entire UI.
- */
-export function initializeUI() {
-    initializeMap();
-    // Add this right after initializeMap();
-    state.map.on('load', () => {
-        setupSectorVisuals();
-        updateSwarmPulse();
-    });
-    state.map.on('dragstart', (e) => { if (e.originalEvent) resetFindMeState(); });
-    state.map.on('zoomstart', (e) => { if (e.originalEvent) resetFindMeState(); });
-    initializeAuthListener();
-    attachEventListeners();
-    if (sessionStorage.getItem('termsAccepted')) {
-        elements.termsModal.style.display = 'none';
-        document.getElementById('userStatus').style.display = 'flex';
-    } else {
-        elements.termsModal.style.display = 'flex';
-    }
-
-    const dateElement = document.getElementById('dynamicDateDay');
-    if (dateElement) {
-        dateElement.textContent = new Date().getDate(); 
-    }
+/* =========================================
+   1. COLOR PALETTE & GLOBAL STYLES
+   ========================================= */
+:root {
+  --color-primary-green: #4A7C59;
+  --color-secondary-blue: #4682B4;
+  --color-support-gold: #D4AF37;
+  --color-accent-danger: #dc3545;
+  --color-background-modal: #ffffff;
+  --color-text-dark: #333333;
+  --color-text-light: #ffffff;
+  --color-border: #ccc;
 }
 
-export function attachEventListeners() {
-    
-    // --- AUTHENTICATION ---
-    if (elements.loginBtn) {
-        elements.loginBtn.addEventListener('click', () => {
-            const email = prompt("Enter email:");
-            const password = prompt("Enter password:");
-            if (email && password) loginUser(email, password);
-        });
-    }
-
-    if (elements.logoutBtn) {
-        elements.logoutBtn.addEventListener('click', handleLogOut);
-    }
-    
-    elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
-    
-    elements.agreeBtn.addEventListener('click', () => {
-        elements.termsModal.style.display = 'none';
-        sessionStorage.setItem('termsAccepted', 'true');
-        document.getElementById('userStatus').style.display = 'flex';
-        if (!state.currentUser) elements.authModal.style.display = 'flex';
-    });
-
-    elements.loginSignupBtn.addEventListener('click', () => elements.authModal.style.display = 'flex');
-    elements.skipBtn.addEventListener('click', () => elements.authModal.style.display = 'none');
-    
-    elements.authModal.addEventListener('click', (e) => {
-        if (e.target.id === 'switchAuthModeLink') {
-            e.preventDefault();
-            state.isSignUpMode = !state.isSignUpMode;
-            updateAuthModalUI();
-        }
-    });
-
-    elements.authActionBtn.addEventListener('click', async (event) => { 
-        event.preventDefault();
-        if (state.isSignUpMode) await handleSignUp();
-        else await handleLogIn();
-    });
-
-    elements.emailInput.addEventListener('input', validateSignUpForm);
-    elements.passwordInput.addEventListener('input', validateSignUpForm);
-    elements.usernameInput.addEventListener('input', validateSignUpForm);
-    elements.ageCheckbox.addEventListener('change', validateSignUpForm);
-    elements.deleteAccountBtn.addEventListener('click', handleAccountDeletion);
-
-    // --- MAP & TRACKING ---
-    elements.findMeBtn.addEventListener('click', findMe);
-    elements.trackBtn.addEventListener('click', toggleTracking);
-    
-    elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
-    elements.cameraInput.addEventListener('change', handlePhoto);
-    
-    elements.changeStyleBtn.addEventListener('click', changeMapStyle);
-    
-    // --- MAIN MENU NAVIGATION ---
-    elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
-
-    // 1. Community Hub (Challenges)
-    if (elements.communityChallengeBtn) {
-        elements.communityChallengeBtn.addEventListener('click', () => {
-            elements.menuModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
-        });
-    }
-    
-    // 2. Main Menu: Achievements
-    if (elements.btnAchievements) {
-        elements.btnAchievements.addEventListener('click', () => {
-            elements.menuModal.style.display = 'none';
-            elements.achievementsModal.style.display = 'flex';
-            
-            openAchievementsModal(); // Calls the code above
-            
-            // Back Button logic...
-            if (elements.achievementListBackBtn) {
-                const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
-                elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
-                elements.achievementListBackBtn = newBackBtn; 
-
-                newBackBtn.addEventListener('click', () => {
-                    elements.achievementsModal.style.display = 'none';
-                    elements.menuModal.style.display = 'flex';
-                });
-            }
-        });
-    }
-
-    // 3. Community Map View
-    elements.communityBtn.addEventListener('click', toggleCommunityView);
-    
-    // 4. Info / Settings
-    elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
-    elements.viewTermsLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        elements.infoModal.style.display = 'none';
-        elements.termsModal.style.display = 'flex';
-    });
-
-    // --- DATA & SAVING ---
-    elements.safetyModalOkBtn.addEventListener('click', () => {
-        elements.safetyModal.style.display = 'none';
-        startTracking();
-    });
-
-    elements.summaryOkBtn.addEventListener('click', () => { 
-        elements.summaryModal.style.display = 'none';
-        document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none';
-        document.getElementById('cleanupPhotoPreview').src = '#';
-    });
-
-    elements.dataBtn.addEventListener('click', () => {
-        const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
-        elements.menuModal.style.display = 'none';
-        elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
-        elements.dataModal.style.display = 'flex';
-    });
-
-    elements.saveBtn.addEventListener('click', saveSession);
-    
-    elements.loadBtn.addEventListener('click', () => {
-        elements.dataModal.style.display = 'none';
-        loadSession();
-    });
-    
-    elements.exportBtn.addEventListener('click', exportGeoJSON);
-    
-    elements.centerOnRouteBtn.addEventListener('click', () => {
-        if (elements.centerOnRouteBtn.classList.contains('disabled')) {
-            alert("Please load a route first to use this feature.");
-        } else {
-            centerOnRoute();
-            elements.dataModal.style.display = 'none';
-        }
-    });
-
-    elements.publishBtn.addEventListener('click', publishRoute);
-    
-    elements.managePublicationsBtn.addEventListener('click', () => {
-        if (!state.currentUser) { alert("You must be logged in to manage your publications."); return; }
-        elements.dataModal.style.display = 'none';
-        populatePublishedRoutesList();
-        elements.publishedRoutesModal.style.display = 'flex';
-    });
-
-    // --- PROFILE ---
-    elements.editProfileBtn.addEventListener('click', async () => {
-        if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
-        try {
-            // Fetch the user's profile to see what titles they own
-            const docSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
-            const userData = docSnap.data() || {};
-        
-            // Pass the user's unlocked titles to the dropdown (default to empty array if none)
-            const myTitles = userData.unlockedTitles || []; 
-        
-            populateTitleDropdown(myTitles);
-            loadProfileForEditing();
-        
-            elements.profileModal.style.display = 'flex';
-        } catch (err) {
-            console.error("Error opening profile:", err);
-        }
-    });
-    elements.saveProfileBtn.addEventListener('click', saveProfile);
-
-    // --- LEADERBOARD ---
-    elements.leaderboardBtn.addEventListener('click', () => {
-        elements.leaderboardModal.style.display = 'flex';
-        document.getElementById('leaderboardList').style.display = 'block';
-        document.getElementById('myStatsContainer').style.display = 'none';
-        elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
-        document.querySelector('.leaderboard-tab[data-metric="totalPins"]').classList.add('active');
-        fetchAndDisplayLeaderboard('totalPins');
-    });
-
-    elements.leaderboardTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const isMyStats = tab.id === 'myStatsBtn';
-            document.getElementById('leaderboardList').style.display = isMyStats ? 'none' : 'block';
-            document.getElementById('myStatsContainer').style.display = isMyStats ? 'block' : 'none';
-            if (isMyStats) { fetchAndDisplayMyStats(); }
-            else { fetchAndDisplayLeaderboard(tab.dataset.metric); }
-        });
-    });
-
-    elements.leaderboardList.addEventListener('click', (e) => {
-        if (e.target && e.target.classList.contains('leaderboard-profile-link')) {
-            e.preventDefault();
-            const userId = e.target.closest('li').dataset.userid;
-            if (userId) {
-                elements.leaderboardModal.style.display = 'none';
-                showPublicProfile(userId);
-            }
-        }
-    });
-
-    // --- CLEANUP PHOTOS ---
-    const addCleanupPhotoBtn = document.getElementById('addCleanupPhotoBtn');
-    const cleanupCameraInput = document.getElementById('cleanupCameraInput');
-    const photoPreviewContainer = document.getElementById('cleanupPhotoPreviewContainer');
-    const photoPreview = document.getElementById('cleanupPhotoPreview');
-
-    if (addCleanupPhotoBtn) { 
-        addCleanupPhotoBtn.addEventListener('click', () => {
-            cleanupCameraInput.click(); 
-        });
-    }
-    if (cleanupCameraInput) {
-        cleanupCameraInput.addEventListener('change', async (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                state.cleanupPhoto = file; 
-                const objectURL = URL.createObjectURL(file);
-                photoPreview.src = objectURL;
-                photoPreviewContainer.style.display = 'flex';
-                event.target.value = '';
-            } else {
-                state.cleanupPhoto = null;
-                photoPreview.src = '#';
-                photoPreviewContainer.style.display = 'none';
-            }
-        });
-    }
-
-    // --- MEETUPS ---
-    elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
-    elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
-    elements.meetupDescriptionInput.addEventListener('input', validateMeetupForm);
-    elements.createMeetupBtn.addEventListener('click', handleMeetupSubmit);
-    elements.shareBtn.addEventListener('click', shareCleanupResults);
-    elements.meetupDateInput.addEventListener('change', validateMeetupForm);
-
-    // --- HUB NAVIGATION (Feed/Events) ---
-    elements.hubBtn.addEventListener('click', () => {
-        elements.menuModal.style.display = 'none';
-        elements.hubModal.style.display = 'flex';
-    });
-    if (elements.hubChallengesBtn) {
-        elements.hubChallengesBtn.addEventListener('click', () => {
-            elements.hubModal.style.display = 'none'; 
-            elements.challengeMenuModal.style.display = 'flex'; 
-        });
-    }
-    elements.hubEventsBtn.addEventListener('click', () => {
-        elements.hubModal.style.display = 'none';
-        elements.eventsModal.style.display = 'flex';
-        fetchAndDisplayAllEvents();
-    });
-    
-if (elements.hubFeedBtn) {
-    elements.hubFeedBtn.addEventListener('click', () => {
-        console.log("📸 Feed Button Clicked!");
-        
-        // Let's grab them directly just to be 100% sure
-        const hub = document.getElementById('hubModal');
-        const feed = document.getElementById('feedModal');
-
-        if (hub) {
-            hub.style.display = 'none';
-            console.log("✅ Hub Modal hidden");
-        } else {
-            console.error("❌ Hub Modal NOT found");
-        }
-
-        if (feed) {
-            feed.style.display = 'flex'; // Force it to flex
-            feed.style.zIndex = '9999';  // Ensure it's on top of everything
-            console.log("✅ Feed Modal set to flex");
-        } else {
-            console.error("❌ Feed Modal NOT found");
-        }
-
-        loadActivityFeed();
-    });
+body, html {
+  margin: 0; padding: 0; height: 100%; width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--color-text-dark);
+  overflow: hidden;
 }
 
-    // --- CHALLENGE MENU NAVIGATION ---
+hr {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 15px 0;
+}
 
-    // 1. EVENT BADGES (Challenge Menu -> Event Rewards)
-    if (elements.btnViewEventBadges) {
-        elements.btnViewEventBadges.addEventListener('click', () => {
-            elements.challengeMenuModal.style.display = 'none'; // Close Hub
-            elements.achievementsModal.style.display = 'flex';  // Open List
-            
-            // Call the Specific Function for Events
-            openEventBadgesModal(); 
-            
-            // DYNAMIC BACK BUTTON: Returns to Challenge Hub
-            if (elements.achievementListBackBtn) {
-                // Clone node to strip old listeners
-                const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
-                elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
-                elements.achievementListBackBtn = newBackBtn; 
+/* =========================================
+   2. MAIN LAYOUT & MAP
+   ========================================= */
+#map {
+  position: absolute;
+  top: 0; bottom: 0; width: 100%;
+}
 
-                newBackBtn.addEventListener('click', () => {
-                    elements.achievementsModal.style.display = 'none';
-                    elements.challengeMenuModal.style.display = 'flex'; // <--- Go back to Challenge Hub
-                });
-            }
-        });
-    } // new bracker here*****************************
+.top-ui-container {
+  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 1;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
 
-    // 2. Current Challenges
-    if (elements.btnCurrentChallenges) {
-        elements.btnCurrentChallenges.addEventListener('click', () => {
-            elements.challengeMenuModal.style.display = 'none';
-            elements.activeChallengesModal.style.display = 'flex';
-            loadPublicChallenges();
-        });
-    }
+.top-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; width: 100%; pointer-events: auto;
+}
+
+.bottom-row {
+  display: flex; justify-content: center; gap: 10px; pointer-events: auto;
+}
+
+.bottom-container {
+  position: absolute; bottom: 20px; width: 100%;
+  display: flex; justify-content: center; z-index: 1; pointer-events: none;
+}
+
+/* =========================================
+   3. BUTTONS (GLOBAL)
+   ========================================= */
+
+/* Base Modal Button */
+.modal-button {
+  display: block; box-sizing: border-box; width: 100%; text-decoration: none;
+  text-align: center; padding: 12px; margin: 8px 0; font-size: 14px;
+  font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease;
+  border-radius: 8px; border: 1px solid #ccc;
+  background-color: #f0f0f0; color: var(--color-text-dark);
+}
+.modal-button:hover {
+  background-color: #e9e9e9;
+}
+
+/* Button Colors */
+.btn-primary { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
+.btn-primary:hover { background-color: #3e684b; border-color: #3e684b; }
+
+.btn-secondary { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
+.btn-secondary:hover { background-color: #3a6a92; border-color: #3a6a92; }
+
+.btn-support { background-color: var(--color-support-gold); font-weight: bold; color: var(--color-text-dark); border-color: var(--color-support-gold); }
+.btn-support:hover { background-color: #c5a02e; border-color: #c5a02e; }
+
+.btn-danger { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
+.btn-danger:hover { background-color: #b02a37; border-color: #b02a37; }
+
+/* Disabled State */
+.modal-button:disabled, #authActionBtn:disabled {
+  background-color: #e9ecef !important; color: #adb5bd !important;
+  border-color: #dee2e6 !important; cursor: not-allowed; opacity: 0.8;
+}
+
+/* STYLISH SECONDARY (BACK) BUTTONS */
+.modal-button.secondary {
+    background-color: transparent; /* See-through background */
+    border: 2px solid #4A7C59;     /* Theme colored border */
+    color: #4A7C59;                /* Theme colored text */
+    font-weight: 700;
+    transition: all 0.2s ease;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; 
+}
+.modal-button.secondary:hover {
+    background-color: #4A7C59;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74, 124, 89, 0.3);
+}
+.modal-button.secondary:active {
+    transform: translateY(0);
+}
+
+/* Top Bar / See-Thru Buttons */
+.top-bar-button, .community-button, #toggleSectorsBtn {
+  padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;
+  font-weight: 500; background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px); border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--color-text-dark); transition: background-color 0.2s ease;
+}
+.top-bar-button:hover, .community-button:hover, #toggleSectorsBtn:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+#toggleSectorsBtn.active {
+    background-color: var(--color-primary-green);
+    color: var(--color-text-light);
+    border-color: var(--color-primary-green);
+    font-weight: bold;
+}
+
+/* Floating Map Buttons (Find Me / Camera) */
+#findMeBtn, #pictureBtn {
+  width: 50px; height: 50px; border-radius: 50%; background-color: var(--color-background-modal);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2); font-size: 24px; padding: 0;
+  outline: none; border: 1px solid var(--color-border); cursor: pointer;
+}
+#findMeBtn { position: absolute; bottom: 30px; left: 20px; z-index: 1; }
+#pictureBtn { position: absolute; bottom: 30px; right: 20px; z-index: 1; }
+
+#findMeBtn.active { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
+.modal-button.tracking { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
+#pictureBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* =========================================
+   4. MODALS (BASE STYLES)
+   ========================================= */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.6); z-index: 10; display: none;
+  justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;
+}
+.modal-content {
+  background: var(--color-background-modal); padding: 20px; border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 100%; max-width: 500px;
+  position: relative; max-height: 90vh; overflow-y: auto;
+}
+.modal-content h2 {
+  text-align: center; margin-top: 0; margin-bottom: 25px;
+  font-size: 24px; color: var(--color-text-dark);
+}
+.modal-content p {
+  font-size: 14px; color: #666; text-align: center;
+  margin-top: -10px; margin-bottom: 15px;
+}
+.modal-subtitle { 
+  font-size: 15px; color: #666; text-align: center; margin-top: -15px; margin-bottom: 20px; 
+}
+
+/* Close Link/Button (X) */
+button.close-btn {
+  position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; color: #aaa;
+  cursor: pointer; background: none; border: none; padding: 0; line-height: 1;
+}
+button.close-btn:hover { color: var(--color-text-dark); }
+
+/* Text Links (Login/Skip) */
+#logoutBtn, #loginSignupBtn, .skip-button {
+  background: none; border: none; color: var(--color-secondary-blue); text-decoration: underline;
+  cursor: pointer; padding: 0; font-size: 14px; font-family: inherit;
+}
+.skip-button { color: #888; }
+#agreeBtn { width: 100%; box-sizing: border-box; margin-top: 20px; }
+#agreeBtn:disabled { background-color: #f8d7da !important; border-color: #f5c6cb !important; color: #721c24 !important; opacity: 0.7; }
+
+/* =========================================
+   5. MAP COMPONENTS & FORMS
+   ========================================= */
+#geocoder-container { pointer-events: auto; flex-grow: 1; max-width: 75%; }
+#geocoder-container .mapboxgl-ctrl-geocoder {
+  width: 100%; max-width: none; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border-radius: 8px; background-color: var(--color-background-modal);
+}
+
+.user-status-display {
+  display: flex; align-items: center; background: rgba(255, 255, 255, 0.85);
+  border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: auto;
+  font-size: 14px; padding: 6px 12px;
+}
+.user-status-display span { margin-right: 10px; }
+#guestContent, #loggedInContent { display: flex; align-items: center; }
+
+/* Popups */
+.mapboxgl-popup-content { padding: 15px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px !important; }
+.pin-popup-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.pin-popup-form input, .pin-popup-form select, .pin-popup-form button { width: 100%; box-sizing: border-box; }
+.pin-popup-form label { font-weight: 500; font-size: 0.9em; color: #555; margin-top: 8px; display: block; }
+
+/* Photo Marker */
+.photo-marker {
+  width: 40px; height: 40px; border-radius: 50%;
+  background-size: cover; background-position: center;
+  border: 2px solid #4A7C59; box-shadow: 0 1px 3px rgba(0,0,0,0.3); cursor: pointer;
+}
+
+/* Auth Forms */
+.auth-form { display: flex; flex-direction: column; gap: 10px; }
+.auth-form.login-mode #usernameInput, .auth-form.login-mode #ageGateContainer { display: none; }
+.auth-form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+.age-gate-container { display: flex; align-items: center; gap: 5px; }
+
+/* =========================================
+   6. PROFILE, LEADERBOARD, STATS
+   ========================================= */
+/* Leaderboard Tabs */
+.leaderboard-tabs { display: flex; justify-content: stretch; margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); }
+.leaderboard-tab { width: 100%; margin: 0; padding: 10px 12px; border: none; border-radius: 0; border-right: 1px solid var(--color-border); background-color: #f0f0f0; }
+.leaderboard-tab:last-child { border-right: none; }
+.leaderboard-tab.active { background-color: var(--color-primary-green); color: var(--color-text-light); font-weight: bold; }
+
+/* Leaderboard List */
+.leaderboard-list li { display: flex; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; font-size: 16px; }
+.leaderboard-rank { font-weight: bold; font-size: 1.1em; color: #888; width: 30px; text-align: center; }
+.leaderboard-name { flex-grow: 1; padding: 0 15px; font-weight: 500; }
+.leaderboard-name a { text-decoration: none; color: var(--color-primary-green); }
+.leaderboard-score { font-weight: bold; color: var(--color-text-dark); }
+.leaderboard-list li.current-user-entry { background-color: #e8f5e9; border-radius: 6px; }
+
+/* My Stats */
+.my-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.stat-card { background-color: #f9f9f9; border-radius: 8px; padding: 15px; text-align: center; border: 1px solid #eee; }
+.my-stats-value { font-size: 24px; font-weight: bold; color: var(--color-primary-green); }
+.my-stats-label { font-size: 14px; color: #666; margin-top: 5px; }
+.my-stats-container h4 { margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+.badge-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+.badge-item { font-size: 28px; }
+
+/* Summary Modal */
+.summary-modal h2::before { content: '🎉'; display: block; font-size: 48px; margin-bottom: 10px; }
+.summary-stats { display: flex; justify-content: space-around; gap: 15px; margin-bottom: 30px; }
+.summary-stats > div { background-color: #f9f9f9; border-radius: 8px; padding: 15px; flex-grow: 1; border: 1px solid #eee; }
+.stat-value { display: block; font-size: 26px; font-weight: bold; color: var(--color-primary-green); }
+.stat-label { display: block; font-size: 14px; color: #666; margin-top: 5px; }
+#cleanupPhotoPreviewContainer { display: flex; justify-content: center; align-items: center; min-height: 150px; margin-top: 10px; border: 1px dashed #ccc; }
+#cleanupPhotoPreview { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+/* Profile Edit */
+.profile-form { display: flex; flex-direction: column; gap: 8px; }
+.profile-form label { font-weight: 500; margin-top: 10px; color: #555; text-align: left; }
+.profile-form input[type="text"], .profile-form input[type="url"], .profile-form textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-border); font-size: 14px; font-family: inherit; box-sizing: border-box; }
+.profile-form textarea { min-height: 80px; resize: vertical; }
+.profile-form .modal-button { margin-top: 15px; }
+
+/* =========================================
+   7. DATA MANAGEMENT MODAL
+   ========================================= */
+#dataModal .modal-content h2 { border-bottom: 1px solid #eee; padding-bottom: 15px; }
+#dataModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
+#dataModal #saveBtn, #dataModal #loadBtn, #dataModal #exportBtn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
+#dataModal #saveBtn:hover, #dataModal #loadBtn:hover, #dataModal #exportBtn:hover { background-color: #3e684b; }
+#dataModal #centerOnRouteBtn, #dataModal #managePublicationsBtn { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
+#dataModal #centerOnRouteBtn:hover, #dataModal #managePublicationsBtn:hover { background-color: #3a6a92; }
+#dataModal .modal-button:disabled { background-color: #f8f9fa !important; color: #adb5bd !important; border-color: #dee2e6 !important; cursor: not-allowed; opacity: 0.7; }
+.session-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+.session-list li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.session-list li:hover { background-color: #f9f9f9; }
+.session-list li:last-child { border-bottom: none; }
+.session-date { font-size: 0.8em; color: #777; }
+
+/* =========================================
+   8. COMMUNITY HUB & FEED
+   ========================================= */
+.hub-modal { max-width: 500px; }
+.hub-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+
+/* UPDATED HUB CARD: Compact, Stackable, Interactive */
+/* --- ACTIVE CHALLENGE CARD (Fixed) --- */
+.hub-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* Light shadow */
     
-    // Back from Current -> Hub
-    if (elements.btnBackFromCurrent) {
-        elements.btnBackFromCurrent.addEventListener('click', (e) => {
-            e.stopPropagation();
-            elements.activeChallengesModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
-        });
-    }
-
-    // 3. Challenge Menu BACK Button (The Fix!)
-    if (elements.btnchallengeMenuBack) {
-        elements.btnchallengeMenuBack.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Close the Challenge Menu
-            elements.challengeMenuModal.style.display = 'none';
-            // Return to the Community Hub
-            elements.hubModal.style.display = 'flex';
-        });
-    }
-
-    // 4. Past Challenges
-    elements.btnPastChallenges.addEventListener('click', () => {
-        elements.challengeMenuModal.style.display = 'none';
-        elements.pastChallengesModal.style.display = 'flex';
-        elements.tabCompleted.classList.add('active');
-        elements.tabUncompleted.classList.remove('active');
-        loadPastChallenges('completed'); 
-    });
-
-    // Back from History -> Hub
-    if (elements.btnBackToMenu) {
-        elements.btnBackToMenu.addEventListener('click', () => {
-            elements.pastChallengesModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
-        });
-    }
-
-    // 5. History Tabs
-    elements.tabCompleted.addEventListener('click', () => {
-        elements.tabCompleted.classList.add('active');
-        elements.tabUncompleted.classList.remove('active');
-        loadPastChallenges('completed');
-    });
-
-    elements.tabUncompleted.addEventListener('click', () => {
-        elements.tabUncompleted.classList.add('active');
-        elements.tabCompleted.classList.remove('active');
-        loadPastChallenges('uncompleted');
-    });
-
-    // 6. Admin Panel
-    if (elements.btnAdminPanel) {
-        elements.btnAdminPanel.addEventListener('click', async () => {
-            elements.challengeMenuModal.style.display = 'none';
-            elements.adminChallengeModal.style.display = 'flex';
-            await loadAdminChallengeList(); 
-        });
-    }
-
-    if (elements.btnSaveChallenge) {
-        elements.btnSaveChallenge.addEventListener('click', async () => {
-            const title = elements.adminChalTitle.value;
-            const desc = elements.adminChalDesc.value;
-            const type = elements.adminChalType.value; // NEW
-            const goal = elements.adminChalGoal.value;
-            const timeLimit = elements.adminChalTime.value; // NEW
-            const badge = elements.adminChalBadge.value;
-            const expire = elements.adminChalExpire.value;
-
-            if(!title || !goal || !expire) {
-                alert("Please fill in Title, Goal, and Expiration Date.");
-                return;
-            }
-
-            // Pass all arguments to the function
-            await createNewChallenge(title, desc, type, goal, timeLimit, badge, expire);            
-            alert("Challenge Created!");
-            // Clear inputs (Optional)
-            elements.adminChalTitle.value = '';
-            elements.adminChalGoal.value = '';
-            
-            loadAdminChallengeList(); 
-        });
-    }
-
-    // --- LOCAL EVENTS BACK BUTTON ---
-    const btnEventsBack = document.getElementById('btnEventsBack');
-    if (btnEventsBack) {
-        btnEventsBack.addEventListener('click', () => {
-            // Close the Events Modal
-            elements.eventsModal.style.display = 'none';
-            // Return to the Community Hub
-            elements.hubModal.style.display = 'flex';
-        });
-    }
-
-    if (elements.btnPastChallengesBack) {
-        elements.btnPastChallengesBack.addEventListener('click', () => {
-            elements.pastChallengesModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
-        });
-    }
+    /* FIX 1: More side padding (Top/Bottom: 15px, Left/Right: 20px) */
+    padding: 15px 20px; 
     
-    // --- LOG TRASH (NEW BUTTONS) ---
-    if (elements.logTrashBtn) {
-        elements.logTrashBtn.addEventListener('click', () => {
-            elements.logTrashModal.style.display = 'flex';
-            elements.trashCountInput.value = ''; 
-            elements.trashCountInput.focus();
-        });
-    }
-
-    if (elements.confirmTrashBtn) {
-        elements.confirmTrashBtn.addEventListener('click', () => {
-            const count = parseInt(elements.trashCountInput.value);
-            if (count > 0) {
-                // We add these to the 'state' temporarily, or we could just alert for now.
-                // Since we are using "1 Pin = 1 Item" for the main logic, 
-                // this button is likely for "Bulk Logging" if you decided to keep it.
-                // If you opted for "1 Pin = 1 Item" only, you might not need this listener logic connected to DB yet.
-                alert(`Logged ${count} items! (This will be saved when you stop tracking).`);
-                
-                // Optional: Push dummy pins to count as items?
-                // For now, just close modal.
-                elements.logTrashModal.style.display = 'none';
-            } else {
-                alert("Please enter a valid number.");
-            }
-        });
-    }
-
-    const forgotLink = document.getElementById('forgotPasswordLink');
-    if (forgotLink) {
-        forgotLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            handlePasswordReset();
-        });
-    }
-
-    let sectorsVisible = false;
-
-document.getElementById('toggleSectorsBtn').addEventListener('click', () => {
-    sectorsVisible = !sectorsVisible;
-    const visibility = sectorsVisible ? 'visible' : 'none';
-    const btn = document.getElementById('toggleSectorsBtn');
-
-    // Loop through our 4 sectors and flip the switch
-    ['RP-01', 'RP-02', 'RP-03', 'RP-04', 'RP-05'].forEach(id => {
-        if (state.map.getLayer(`layer-${id}`)) {
-            state.map.setLayoutProperty(`layer-${id}`, 'visibility', visibility);
-        }
-    });
-
-    btn.textContent = sectorsVisible ? '🗺️ Hide Sectors' : '🗺️ Show Sectors';
-    btn.classList.toggle('active', sectorsVisible);
-});
+    margin-bottom: 15px;
     
-    // Generic Close Listeners
-    addAllModalCloseListeners();
-
+    /* FIX 2: Thicker border (2px) so it doesn't disappear */
+    border: 2px solid #eee; 
     
-} //********************end event listern**************
-
-function addAllModalCloseListeners() {
-    const allModals = Object.values(elements).filter(el => el && el.classList && el.classList.contains('modal-overlay'));
-    allModals.forEach(modal => {
-        const closeBtn = modal.querySelector('.close-btn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => modal.style.display = 'none');
-        }
-        // NOTE: We don't auto-close on generic .ok-btn anymore because we have specific logic for them now
-    });
-    window.addEventListener('click', (event) => {
-        if (event.target.classList.contains('modal-overlay')) {
-            event.target.style.display = 'none';
-        }
-    });
+    position: relative; 
+    transition: all 0.2s ease;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box; /* Ensures padding doesn't stretch width */
 }
 
-export function updateLoggedInStatusUI(isLoggedIn, username = '') {
-    const userStatus = document.getElementById('userStatus');
-    const loggedInContent = document.getElementById('loggedInContent');
-    const guestContent = document.getElementById('guestContent');
-    const userEmailSpan = document.getElementById('userEmail');
-
-    if (userStatus) userStatus.style.display = 'flex';
-
-    if (isLoggedIn) {
-        if (userEmailSpan) userEmailSpan.textContent = `Logged in as: ${username}`;
-        if (loggedInContent) loggedInContent.style.display = 'flex';
-        if (guestContent) guestContent.style.display = 'none';
-        if (elements.authModal) elements.authModal.style.display = 'none';
-        if (elements.publishBtn) elements.publishBtn.style.display = 'block';
-        if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'block';
-        if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'block';
-    } else {
-        if (loggedInContent) loggedInContent.style.display = 'none';
-        if (guestContent) guestContent.style.display = 'block';
-        if (elements.publishBtn) elements.publishBtn.style.display = 'none';
-        if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'none';
-        if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'none';
-    }
-}
-
-export function updateAuthModalUI() {
-    const authForm = document.getElementById('authForm');
-    const authTitle = document.getElementById('authTitle');
-    const authSubtitle = document.getElementById('authSubtitle');
-    const forgotLink = document.getElementById('forgotPasswordLink'); // Get the link
-
-    document.getElementById('authError').textContent = '';
-
-    if (state.isSignUpMode) {
-        authTitle.textContent = 'Create a Litter Troopers Account';
-        authSubtitle.innerHTML = 'Or <a href="#" id="switchAuthModeLink">log in to an existing account.</a>';
-        elements.authActionBtn.textContent = 'Sign Up';
-        authForm.classList.add('signup-mode');
-        authForm.classList.remove('login-mode');
-        
-        // Hide on Sign Up
-        if (forgotLink) forgotLink.style.display = 'none'; 
-    } else {
-        authTitle.textContent = 'Log In to Litter Troopers';
-        authSubtitle.innerHTML = 'Or <a href="#" id="switchAuthModeLink">create a new account.</a>';
-        elements.authActionBtn.textContent = 'Log In';
-        authForm.classList.add('login-mode');
-        authForm.classList.remove('signup-mode');
-        
-        // Show on Login
-        if (forgotLink) forgotLink.style.display = 'inline-block'; 
-    }
-    validateSignUpForm();
-}
-
-function validateSignUpForm() {
-    const isEmailValid = elements.emailInput.value.includes('@');
-    const isPasswordValid = elements.passwordInput.value.length >= 6;
-    const isUsernameValid = elements.usernameInput.value.trim().length >= 3;
-    const isAgeChecked = elements.ageCheckbox.checked;
-
-    if (state.isSignUpMode) {
-        elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid && isUsernameValid && isAgeChecked);
-    } else {
-        elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid);
-    }
-}
-
-// --- ACTIVITY FEED (User View) ---
-async function loadActivityFeed() {
-    const container = document.getElementById('activityFeedContainer');
-
-    console.log("🔍 Diagnostic - Does the container exist?", container);
-
-    if (!container) {
-        console.error("🚨 FAIL: JS still can't find 'activityFeedContainer' in the HTML!");
-        return; 
-    }
-
-    // If it found it, clear it and proceed
-    container.innerHTML = '';
-    //const container = elements.feedContainer;
-    //container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
-
-    try {
-        const q = query(
-            collection(db, "publishedRoutes"), 
-            orderBy("timestamp", "desc"), 
-            limit(20)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        container.innerHTML = '';
-
-        if (querySnapshot.empty) {
-            container.innerHTML = '<p>No cleanups shared yet. Be the first!</p>';
-            return;
-        }
-
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            if (typeof data.distance === 'undefined' && typeof data.distanceMiles === 'undefined') return; 
-
-            const date = data.timestamp?.toDate().toLocaleDateString() || "Recently";
-            const photoUrl = data.cleanupPhotoURL || 'https://placehold.co/400x300?text=No+Photo';
-            const likeCount = data.likeCount || 0;
-            const likedBy = data.likedBy || [];
-            const isLiked = state.currentUser && likedBy.includes(state.currentUser.uid);
-            const likeBtnClass = isLiked ? 'like-btn active' : 'like-btn';
-            
-            const card = document.createElement('div');
-            card.className = 'feed-card';
-            card.innerHTML = `
-                <div class="feed-header">
-                    <div class="feed-avatar">${data.username?.charAt(0).toUpperCase() || 'T'}</div>
-                    <div class="feed-user-info">
-                        <h4>${data.username || 'Anonymous Trooper'}</h4>
-                        <span>${date}</span>
-                    </div>
-                </div>
-                <img src="${photoUrl}" class="feed-photo" loading="lazy">
-                <div class="feed-body">
-                    <div class="feed-stats">
-                        <span>📍 <strong>${data.pins?.length || 0}</strong> Items</span>
-                        <span>📏 <strong>${data.distanceMiles || '0.00 mi'}</strong></span>
-                    </div>
-                    <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
-                    <div class="feed-actions">
-                         <button class="${likeBtnClass}">
-                           👍 <span class="like-count">${likeCount}</span>
-                         </button>
-                    </div>
-                </div>
-            `;
-            container.appendChild(card);
-
-            const likeBtn = card.querySelector('.like-btn');
-            likeBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const result = await toggleRouteLike(doc.id);
-                if (result) {
-                    likeBtn.querySelector('.like-count').textContent = result.likeCount;
-                    likeBtn.classList.toggle('active', result.isLiked);
-                }
-            });
-        });
-    } catch (error) {
-        console.error("Error loading feed:", error);
-        container.innerHTML = '<p>Failed to load feed. Check your connection.</p>';
-    }
-}
-
-// --- ADMIN PERMISSIONS ---
-export function checkAdminPermissions(userProfile) {
-    if (userProfile && userProfile.role === 'admin') {
-        if (elements.btnAdminPanel) elements.btnAdminPanel.style.display = 'flex';
-    } else {
-        if (elements.btnAdminPanel) elements.btnAdminPanel.style.display = 'none';
-    }
-}
-
-async function loadAdminChallengeList() {
-    if (!elements.adminChallengeList) return;
-    elements.adminChallengeList.innerHTML = "<p>Loading...</p>";
+/* HOVER STATE */
+.hub-card:hover {
+    /* Subtle lift */
+    /*transform: translateY(-2px); */
     
-    const challenges = await getAdminChallenges();
-
-    elements.adminChallengeList.innerHTML = ""; 
-
-    if (challenges.length === 0) {
-        elements.adminChallengeList.innerHTML = "<p>No active challenges found.</p>";
-        return;
-    }
-
-    challenges.forEach(chal => {
-        const item = document.createElement('div');
-        item.style.borderBottom = "1px solid #eee";
-        item.style.padding = "10px";
-        item.style.display = "flex";
-        item.style.justifyContent = "space-between";
-        item.style.alignItems = "center";
-
-        item.innerHTML = `
-            <div>
-                <strong>${chal.title}</strong><br>
-                <small>${chal.goal_miles} Miles • Exp: ${new Date(chal.expires_at.seconds * 1000).toLocaleDateString()}</small>
-            </div>
-            <button class="delete-btn" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">🗑️</button>
-        `;
-
-        const delBtn = item.querySelector('.delete-btn');
-        delBtn.addEventListener('click', async () => {
-            if(confirm("Delete this challenge?")) {
-                await deleteChallenge(chal.id);
-                loadAdminChallengeList(); 
-            }
-        });
-        elements.adminChallengeList.appendChild(item);
-    });
-}
-
-// --- PUBLIC CHALLENGE DISPLAY (Active) ---
-async function loadPublicChallenges() {
-    const listContainer = elements.publicChallengeList;
-    if (!listContainer) return;
-    listContainer.innerHTML = "<p>Loading quests...</p>";
-
-    try {
-        const challenges = await getAdminChallenges();
-        let myQuests = {};
-        if (state.currentUser) {
-            myQuests = await getUserQuests(state.currentUser.uid);
-        }
-
-        listContainer.innerHTML = ""; 
-
-        if (challenges.length === 0) {
-            listContainer.innerHTML = "<p>No active challenges.</p>";
-            return;
-        }
-
-        // Sort: Active first, Completed last
-        challenges.sort((a, b) => {
-            const statA = myQuests[a.id] ? myQuests[a.id].status : 'new';
-            const statB = myQuests[b.id] ? myQuests[b.id].status : 'new';
-            if (statA === 'completed' && statB !== 'completed') return 1;
-            if (statA !== 'completed' && statB === 'completed') return -1;
-            return 0;
-        });
-
-        challenges.forEach(chal => {
-            const card = document.createElement('div');
-            card.className = "hub-card"; 
-            card.style.marginBottom = "15px";
-            card.style.textAlign = "left";
-            card.style.display = "flex"; 
-            card.style.justifyContent = "space-between";
-            card.style.alignItems = "center";
-
-            const expireDate = new Date(chal.expires_at.seconds * 1000);
-            const diffDays = Math.ceil((expireDate - new Date()) / (1000 * 60 * 60 * 24)); 
-            
-            const questData = myQuests[chal.id];
-            const isJoined = !!questData;
-            const isCompleted = questData && questData.status === 'completed';
-            const userProgress = isJoined ? questData.progress : 0;
-
-            let statusColor = "#333";
-            let buttonHtml = "";
-
-            if (isCompleted) {
-                card.style.border = "2px solid #FFD700"; 
-                card.style.backgroundColor = "#fff9db"; 
-                buttonHtml = `
-                    <div style="text-align: right;">
-                        <span style="font-size:1.2em;">🏆</span>
-                        <span style="display:block; font-size:0.8em; color:#B8860B; font-weight:bold;">COMPLETED</span>
-                    </div>`;
-            } else if (isJoined) {
-                card.style.border = "1px solid #4A7C59"; 
-                buttonHtml = `
-                    <div style="text-align: right;">
-                        <span style="display:block; font-size:0.8em; color:#4A7C59; font-weight:bold;">✅ Active</span>
-                        <small style="color:#666;">${userProgress.toFixed(1)} / ${chal.goal_miles} mi</small>
-                    </div>`;
-            } else {
-                buttonHtml = `<button class="modal-button primary start-btn" data-id="${chal.id}">Start</button>`;
-            }
-
-            card.innerHTML = `
-                <div>
-                    <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
-                    <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${chal.description}</p>
-                    <div style="font-size: 0.85em; font-weight: bold; color: ${statusColor};">
-                        🎯 Goal: ${chal.goal_miles} Miles <br>
-                        ⏳ Ends in: ${diffDays} days
-                    </div>
-                </div>
-                ${buttonHtml}
-            `;
-            
-            if (!isJoined) {
-                const btn = card.querySelector('.start-btn');
-                btn.addEventListener('click', async () => {
-                    if (!state.currentUser) { alert("Please login first!"); return; }
-                    btn.innerText = "Joining...";
-                    await joinChallenge(chal.id, chal.title, state.currentUser.uid);
-                    loadPublicChallenges(); // Refresh
-                });
-            }
-            listContainer.appendChild(card);
-        });
-    } catch (e) {
-        console.error("Error loading challenges:", e);
-        listContainer.innerHTML = "<p>Error loading content.</p>";
-    }
-}
-
-// --- PAST CHALLENGES (History Logic) ---
-async function loadPastChallenges(filterType) {
-    const listContainer = elements.pastChallengesContent;
-    if (!listContainer) return;
-
-    listContainer.innerHTML = "<p>Loading history...</p>";
-
-    try {
-        if (!state.currentUser) {
-            listContainer.innerHTML = "<p>Please login to see history.</p>";
-            return;
-        }
-
-        const myQuests = await getUserQuests(state.currentUser.uid);
-        const questIds = Object.keys(myQuests);
-
-        if (questIds.length === 0) {
-            listContainer.innerHTML = "<p>No challenge history found.</p>";
-            return;
-        }
-
-        const allChallenges = await getAdminChallenges();
-        
-        listContainer.innerHTML = ""; 
-        let count = 0;
-
-        for (const [chalId, userProgress] of Object.entries(myQuests)) {
-            const originalData = allChallenges.find(c => c.id === chalId) || {};
-            const title = originalData.title || userProgress.title || "Unknown Quest";
-            const goal = originalData.goal_miles || "??";
-            
-            const isCompleted = userProgress.status === 'completed';
-            const isExpired = userProgress.status === 'expired'; 
-            
-            let showIt = false;
-            if (filterType === 'completed' && isCompleted) showIt = true;
-            if (filterType === 'uncompleted' && !isCompleted) showIt = true;
-
-            if (showIt) {
-                count++;
-                const card = document.createElement('div');
-                card.className = "hub-card";
-                card.style.marginBottom = "10px";
-                card.style.textAlign = "left";
-                
-                const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#ccc" : "#4A7C59");
-                const statusText = isCompleted ? "🏆 COMPLETED" : (isExpired ? "⌛ EXPIRED" : "🏃 IN PROGRESS");
-                const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#999" : "#4A7C59");
-
-                let dateStr = "";
-                if (userProgress.completed_at) {
-                    dateStr = `Done: ${new Date(userProgress.completed_at.seconds * 1000).toLocaleDateString()}`;
-                } else if (userProgress.joined_at) {
-                    dateStr = `Joined: ${new Date(userProgress.joined_at.seconds * 1000).toLocaleDateString()}`;
-                }
-
-                card.style.borderLeft = `5px solid ${borderColor}`;
-                
-                card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <h4 style="margin:0;">${title}</h4>
-                            <small style="color:#666;">${dateStr}</small>
-                        </div>
-                        <div style="text-align:right;">
-                            <strong style="color:${statusColor}; display:block;">${statusText}</strong>
-                            <span style="font-size:0.9em;">${userProgress.progress.toFixed(1)} / ${goal} mi</span>
-                        </div>
-                    </div>
-                `;
-                listContainer.appendChild(card);
-            }
-        }
-
-        if (count === 0) {
-            listContainer.innerHTML = `<p style="color:#888;">No ${filterType} challenges found.</p>`;
-        }
-
-    } catch (e) {
-        console.error("Error loading past challenges:", e);
-        listContainer.innerHTML = "<p>Error loading content.</p>";
-    }
-}
-
-// --- PUBLIC PROFILE FUNCTION ---
-export async function showPublicProfile(userId) {
-    const modal = document.getElementById('publicProfileModal');
-    const content = document.getElementById('publicProfileContent');
-    content.innerHTML = '<p>Loading profile...</p>';
-    modal.style.display = 'flex';
-
-    try {
-        // 1. Get Profile Data
-        const docSnap = await getDoc(doc(db, "publicProfiles", userId));
-        if (!docSnap.exists()) {
-            content.innerHTML = '<p>User profile not found.</p>';
-            return;
-        }
-        const data = docSnap.data();
-
-        // --- NEW TITLE LOOKUP LOGIC ---
-        // Converts the saved key (og_9) into the display name (The Original Nine)
-        const titleDisplay = (data.selectedTitle && allTitles[data.selectedTitle]) 
-            ? `<p style="margin:-5px 0 10px; font-weight:bold; color:#4A7C59; font-size:0.9em;">${allTitles[data.selectedTitle].name}</p>` 
-            : '';
-
-        // 2. Get Badges
-        const badgesSnap = await getDocs(query(collection(db, "publicProfiles", userId, "badges"), orderBy("date", "desc")));
-        let badgesHTML = '';
-        if (badgesSnap.empty) {
-            badgesHTML = '<p style="color:#888;">No badges yet.</p>';
-        } else {
-            badgesSnap.forEach(b => {
-                const badge = b.data();
-                const count = badge.count || 1;
-                const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-left:4px;">x${count}</span>` : '';
-                
-                badgesHTML += `
-                    <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:80px; text-align:center;">
-                        <div style="font-size:2em;">${badge.icon || '🏆'}</div>
-                        <div style="font-size:0.8em; font-weight:bold; margin-top:5px;">${badge.title}</div>
-                        ${countBadge}
-                        <div style="font-size:0.7em; color:${badge.color || '#666'};">${badge.tier || 'Stone'}</div>
-                    </div>
-                `;
-            });
-        }
-
-        // 3. Render
-        content.innerHTML = `
-            <div style="text-align:center;">
-                <img src="${data.photoURL || 'https://via.placeholder.com/100'}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #4A7C59;">
-                <h2 style="margin:10px 0;">${data.username}</h2>
-                
-                ${titleDisplay}
-                
-                <p style="color:#666;">${data.bio || 'No bio yet.'}</p>
-                <div style="margin:15px 0; font-size:0.9em; background:#e8f5e9; padding:10px; border-radius:8px; display:inline-block;">
-                    <strong>${data.totalDistance ? data.totalDistance.toFixed(1) : 0}</strong> miles cleaned
-                </div>
-            </div>
-            <h3 style="border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">Badges</h3>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
-                ${badgesHTML}
-            </div>
-        `;
-    } catch (err) {
-        console.error("Error loading profile:", err);
-        content.innerHTML = '<p>Error loading profile.</p>';
-    }
-}
-
-export function populateTitleDropdown(unlockedTitles = []) {
-    const titleSelect = document.getElementById('titleSelect');
-    const requirementText = document.getElementById('titleRequirement');
+    /* FIX 3: Strong Green Outline */
+    border-color: #4A7C59; 
     
-    if (!titleSelect) return;
+    /* Stronger shadow to lift it off the page */
+    box-shadow: 0 8px 20px rgba(74, 124, 89, 0.2); 
+    
+    z-index: 100;
+}
 
-    // 1. Clear the dropdown
-    titleSelect.innerHTML = '<option value="">No Title Selected</option>';
+/* Text Tweaks for spacing */
+.hub-card h4, hub-card h3 { 
+    margin: 0 0 5px 0; 
+    font-size: 1.1em; 
+    color: #333; 
+}
 
-    // 2. Only add titles that are in the user's unlockedTitles array
-    // If the array is empty, they only see "No Title Selected"
-    Object.keys(allTitles).forEach(key => {
-        if (unlockedTitles.includes(key)) {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = allTitles[key].name;
-            titleSelect.appendChild(option);
-        }
-    });
+.hub-card p { 
+    margin: 0 0 8px 0; 
+    font-size: 0.9em; 
+    color: #666; 
+}
+.hub-icon { font-size: 2rem; margin-bottom: 10px; }
 
-    // 3. Update requirement text on change
-    titleSelect.onchange = (e) => {
-        const selectedKey = e.target.value;
-        if (selectedKey && allTitles[selectedKey]) {
-            requirementText.textContent = `Active Title: ${allTitles[selectedKey].name}`;
-        } else {
-            requirementText.textContent = "Select from your unlocked titles.";
-        }
-    };
+@media (min-width: 400px) {
+  .hub-grid { grid-template-columns: 1fr 1fr; }
+  .hub-card:last-child { grid-column: span 2; }
+}
+
+/* Activity Feed */
+.feed-modal { max-width: 600px; height: 80vh; display: flex; flex-direction: column; }
+.feed-container { flex-grow: 1; overflow-y: auto; padding: 10px 5px; margin-top: 10px; }
+.feed-card { background: #fff; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 20px; overflow: hidden; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.feed-header { padding: 12px; display: flex; align-items: center; gap: 10px; }
+.feed-avatar { width: 35px; height: 35px; background: var(--color-primary-green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.feed-user-info h4 { margin: 0; font-size: 1rem; }
+.feed-user-info span { font-size: 0.75rem; color: #888; }
+.feed-photo { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #eee; }
+.feed-body { padding: 12px; }
+.feed-stats { display: flex; gap: 15px; font-size: 0.85rem; color: #555; margin-bottom: 8px; }
+.feed-stats strong { color: var(--color-primary-green); }
+.feed-caption { font-size: 0.9rem; line-height: 1.4; color: #333; }
+
+/* Like Button */
+.feed-actions { margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
+.like-btn {
+  background: white; border: 1px solid #ccc; border-radius: 20px; padding: 5px 12px;
+  font-size: 14px; cursor: pointer; color: #555; transition: all 0.2s ease;
+  display: flex; align-items: center; gap: 5px;
+}
+.like-btn:hover { background-color: #f9f9f9; transform: scale(1.02); }
+.like-btn.active { background-color: #4A7C59; color: white; border-color: #4A7C59; }
+
+/* =========================================
+   9. MEETUP / EVENTS MODAL
+   ========================================= */
+#meetupModal .modal-content, #viewMeetupsModal .modal-content { max-width: 550px; }
+
+/* POI Popup Buttons */
+.poi-popup-buttons { display: flex; gap: 8px; margin-top: 15px; }
+.poi-popup-buttons .modal-button { width: 100%; margin: 0; }
+.poi-popup-buttons .schedule-btn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
+.poi-popup-buttons .schedule-btn:hover { background-color: #3e684b; }
+.poi-popup-buttons .view-btn { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
+.poi-popup-buttons .view-btn:hover { background-color: #3a6a92; }
+
+/* Form Elements */
+#meetupDateInput {
+  width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;
+  font-family: inherit; font-size: 1rem; margin-bottom: 15px; background-color: #f8f9fa;
+  transition: border-color 0.2s; -webkit-appearance: none; 
+}
+#meetupDateInput:focus { border-color: #4A7C59; background-color: #fff; outline: none; box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1); }
+#meetupDescriptionInput { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; min-height: 80px; font-family: inherit; }
+
+/* Safety Box */
+.safety-disclaimer {
+  background-color: #fff8e1; border-left: 5px solid #ffc107; color: #664d03;
+  padding: 15px; border-radius: 6px; margin: 15px 0; font-size: 0.85rem;
+  line-height: 1.5; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.safety-disclaimer strong { color: #b88b00; display: block; margin-bottom: 5px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Checkboxes */
+#meetupModal input[type="checkbox"] { width: 20px; height: 20px; vertical-align: middle; margin-right: 8px; accent-color: #4A7C59; cursor: pointer; }
+#meetupModal label[for="safetyCheckbox"] { vertical-align: middle; font-size: 0.95rem; color: #333; cursor: pointer; user-select: none; }
+
+/* Meetup Modal Buttons (Full Width Stacked) */
+#meetupModal .modal-content { max-height: 90vh; overflow-y: auto; }
+#meetupModal .modal-button { width: 100%; padding: 12px; margin-bottom: 8px; border-radius: 8px; font-size: 1rem; }
+#createMeetupBtn { background-color: #4A7C59; color: white; font-weight: bold; margin-top: 15px; }
+#createMeetupBtn:disabled { background-color: #ccc; cursor: not-allowed; }
+#meetupModal .modal-button.close-btn { background-color: #f1f3f5; color: #495057; border: 1px solid #dee2e6; font-weight: 600; }
+#meetupModal .modal-button.close-btn:hover { background-color: #e9ecef; color: #212529; transform: none; }
+.delete-meetup-btn { background-color: var(--color-accent-danger); color: var(--color-text-light); border: none; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+
+/* Event Card Styling */
+.event-card {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    text-align: left;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.event-card strong {
+    color: #2c3e50;
+    font-size: 1.1em;
+}
+
+/* =========================================
+   10. CHALLENGES & ACHIEVEMENTS
+   ========================================= */
+
+/* Challenge Menu Modal (Standardized Match to Data Menu) */
+#challengeMenuModal .modal-content {
+  max-width: 500px; 
+  width: 100%;
+  padding: 15px;
+  display: flex; 
+  flex-direction: column; 
+  gap: 15px;
+  min-height: 300px;
+}
+
+#menuModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
+.menu-buttons-vertical { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px; }
+
+/* MATCHED TO DATA MENU BUTTONS */
+.menu-buttons-vertical .modal-button {
+    display: flex; align-items: center; justify-content: flex-start;
+    text-align: left; width: 100%; padding: 10px; font-size: 14px;
+    margin: 0; gap: 10px; border-radius: 8px; border: 1px solid #ccc;
+}
+
+/* Specific Challenge Buttons */
+#btnViewAchievements { 
+    background-color: var(--color-support-gold); color: var(--color-text-dark); 
+    font-weight: bold; border-color: var(--color-support-gold); 
+}
+#btnViewAchievements:hover { background-color: #c5a02e; border-color: #c5a02e; }
+#btnCurrentChallenges { background-color: #4A7C59; color: white; border-color: #4A7C59; }
+#btnPastChallenges { background-color: #6c757d; color: white; border-color: #6c757d; }
+
+/* Modal Tabs (Past Challenges) */
+.modal-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 15px; }
+.modal-tab { flex: 1; padding: 10px; background: none; border: none; font-weight: bold; color: #888; cursor: pointer; }
+.modal-tab.active { color: #4A7C59; border-bottom: 3px solid #4A7C59; }
+
+/* --- Dynamic Calendar Icon --- */
+.calendar-icon {
+    display: inline-block; width: 40px; height: 40px;
+    background-color: #ffffff; border: 2px solid #ccc;
+    border-radius: 6px; overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 10px;
+}
+.cal-header { height: 12px; width: 100%; background-color: #dc3545; border-bottom: 1px solid #ccc; }
+.cal-body {
+    height: 28px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: bold; color: #333; font-family: sans-serif; line-height: 1;
+}
+.hub-card:hover .calendar-icon { border-color: #4A7C59; transform: scale(1.1); transition: transform 0.2s; }
+
+/* --- ACHIEVEMENT GRID & CARDS --- */
+#achievementsList, #achievementsGrid, .achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    padding: 15px;
+    justify-items: center;
+    margin: 10px -15px 0 -15px;
+}
+
+/* Individual Card (Consolidated) */
+.achievement-card {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    width: 100%; padding: 10px; border-radius: 8px;
+    cursor: default; transition: transform 0.1s;
+    background: #f5f5f5; border: 2px solid transparent; /* Default Locked State border */
+}
+
+.achievement-card:active { transform: scale(0.95); }
+
+/* Icon Styling */
+.achievement-icon {
+    font-size: 3em; margin-bottom: 5px;
+    width: 70px; height: 70px;
+    display: flex; align-items: center; justify-content: center;
+    background: #f0f0f0; border-radius: 50%;
+}
+
+/* Name Style */
+.achievement-name {
+    font-weight: bold; font-size: 0.9em; margin-top: 5px; color: #333;
+}
+
+/* Description Style */
+.achievement-desc {
+    font-size: 0.75em; color: #666; margin-top: 4px;
+    line-height: 1.2; max-width: 90%;
+}
+
+/* STATUS: LOCKED */
+.achievement-card.locked .achievement-icon {
+    filter: grayscale(100%); opacity: 0.4; background: #e0e0e0;
+}
+.achievement-card.locked .achievement-name { color: #999; }
+.achievement-card.locked .achievement-desc { color: #aaa; }
+
+/* STATUS: UNLOCKED */
+.achievement-card.unlocked {
+    background: white;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.5); /* Glow */
+    border-color: #ffc107; /* Gold border */
+    opacity: 1; z-index: 2;
+}
+.achievement-card.unlocked:hover { transform: scale(1.05); }
+
+.achievement-card.unlocked .achievement-icon {
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transform: scale(1.05);
+}
+.achievement-card.unlocked .achievement-name { color: #333; }
+
+
+/* --- ADMIN PANEL STYLING --- */
+
+/* Header */
+.admin-header {
+    background: #f8f9fa;
+    margin: -20px -20px 20px -20px; /* Stretch to edges */
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    border-radius: 10px 10px 0 0;
+}
+.admin-header h3 { margin: 0; color: #333; }
+.admin-header p { margin: 5px 0 0 0; font-size: 0.9em; color: #666; }
+
+/* Form Layout */
+.form-group { margin-bottom: 15px; }
+
+.form-group label {
+    display: block;
+    font-size: 0.85em;
+    font-weight: 700;
+    color: #555;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 1em;
+    box-sizing: border-box; 
+    background: #fff;
+}
+
+.form-group input:focus, .form-group textarea:focus {
+    border-color: #4A7C59;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
+}
+
+/* Grid System for Inputs */
+.form-row { display: flex; gap: 15px; }
+.form-group.half { flex: 1; }
+
+/* --- THE RED LAUNCH BUTTON --- */
+.launch-btn {
+    background: linear-gradient(135deg, #dc3545, #c82333) !important; /* Force Red Gradient */
+    color: white !important;
+    font-size: 1.1em;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: none !important;
+    padding: 15px;
+    margin-top: 10px;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4); /* Red Glow */
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+
+.launch-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6);
+    background: linear-gradient(135deg, #e4606d, #dc3545) !important;
+}
+
+.launch-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 10px rgba(220, 53, 69, 0.3);
+}
+
+/* --- COMPACT CARD & SUBTLE HOVER --- */
+.hub-card {
+    background: white;
+    border-radius: 10px; /* Slightly tighter corners */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08); /* Softer shadow */
+    
+    /* Tighter Spacing */
+    padding: 10px 12px; 
+    margin-bottom: 10px;
+    
+    /* Stack Context */
+    position: relative; 
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    border: 1px solid #eee; 
+    text-align: left; /* Easier to read */
+    cursor: pointer;
+}
+
+/* HOVER: Very subtle pop */
+.hub-card:hover {
+    transform: scale(1.01); /* Changed from 1.03 to 1.01 (Barely moves) */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: var(--color-primary-green);
+    z-index: 100;
+}
+
+/* Tighter Text Layout */
+.hub-card h4 { 
+    margin: 0 0 3px 0; /* Less gap below title */
+    font-size: 1em; 
+    color: #333; 
+}
+
+.hub-card p { 
+    margin: 0 0 5px 0; 
+    font-size: 0.85em; 
+    color: #666; 
+    line-height: 1.2; 
+}
+
+/* Goal Text */
+.hub-card div {
+    font-size: 0.8em !important;
+}
+
+/* Compact Button */
+.hub-card .modal-button {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    width: auto; /* Button doesn't stretch full width */
+    margin: 0;
+}
+
+/* --- FIX: SPLIT LAYOUTS --- */
+
+/* 1. MAIN HUB GRID (The Square Buttons) */
+/* Forces Icon & Text to stack and center */
+.hub-grid .hub-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 140px; /* Ensures consistent height */
+}
+
+/* 2. CHALLENGE LISTS (The Rectangular Rows) */
+/* Forces Text & Button to sit side-by-side */
+#publicChallengeList .hub-card, 
+#pastChallengesContent .hub-card, 
+#adminChallengeList .hub-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    gap: 15px; /* Space between text and button */
+}
+
+/* Make Challenge Modals Wider */
+#activeChallengesModal .modal-content,
+#pastChallengesModal .modal-content,
+#adminChallengeModal .modal-content {
+    max-width: 600px; /* Increased from 500px */
+    width: 95%;
+}
+
+/* --- COMPACT LIST CARD --- */
+/* Targets cards inside lists (Active, Past, Admin) */
+#publicChallengeList .hub-card, 
+#pastChallengesContent .hub-card, 
+#adminChallengeList .hub-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    gap: 15px;
+    
+    /* COMPACT SIZING */
+    padding: 12px 15px; /* Tighter padding */
+    margin-bottom: 10px; /* Less gap between cards */
+    
+    background: white;
+    border-radius: 8px; /* Slightly smaller radius */
+    border: 2px solid #f0f0f0; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+}
+
+/* HOVER: FLOAT UP (Don't Grow) */
+#publicChallengeList .hub-card:hover, 
+#pastChallengesContent .hub-card:hover, 
+#adminChallengeList .hub-card:hover {
+    /* Moves UP by 3px instead of getting bigger */
+   /* transform: translateY(-1px);  */
+    
+    /* Green Border & Shadow */
+    border-color: #4A7C59;
+    box-shadow: 0 6px 12px rgba(74, 124, 89, 0.15);
+    
+    /* No Z-Index needed because we aren't overlapping anymore */
+}
+
+/* Make the text inside smaller/tighter */
+.hub-card h4 {
+    font-size: 1rem; /* Standard readable size */
+    margin: 0 0 4px 0;
+}
+
+.hub-card p {
+    font-size: 0.85rem; /* Smaller description */
+    margin: 0 0 4px 0;
+    color: #666;
+}
+
+.hub-card div {
+    font-size: 0.8rem !important; /* Goal text smaller */
 }
