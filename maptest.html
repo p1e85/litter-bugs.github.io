@@ -349,78 +349,47 @@
     </div>
 
     <div id="hubModal" class="modal-overlay">
-    <div class="modal-content hub-modal">
-        <button class="close-btn" onclick="closeModal('hubModal')">&times;</button>
-        <h2>Community Hub</h2>
-        <p class="modal-subtitle">Connect, challenge, and clean together.</p>
-        
-        <div class="hub-grid">
-            <div class="hub-card" id="hubChallengesBtn">
-                <span class="hub-icon">🏆</span>
-                <h3>Challenges</h3>
-                <p>Join weekly goals</p>
-            </div>
-
-            <div class="hub-card" id="hubEventsBtn">
-                <div class="calendar-icon">
-                    <div class="cal-header"></div>
-                    <div class="cal-body" id="dynamicDateDay">1</div>
-                </div>
-                <h3>Local Events</h3>
-                <p>Find cleanup meetups</p>
-            </div>
-
-            <div class="hub-card full-width" id="hubFeedBtn">
-                <span class="hub-icon">📸</span>
-                <h3>Activity Feed</h3>
-                <p>See the latest cleanups from around the world</p>
-            </div>
-
-            <div id="btnOpenSquads" class="hub-card full-width slim-card" onclick="openSquadsModal()">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
-                    <span style="font-size: 1.2rem;">🛡️</span>
-                    <h3 style="margin: 0; font-size: 1rem;">Squads</h3>
-                    <p style="margin: 0; font-size: 0.8rem;">• Join a unit or invade</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-    <div id="squadsModal" class="modal-overlay">
-    <div class="modal-content">
-        <button class="close-btn" onclick="closeModal('squadsModal')">&times;</button>
-        <h2>Squad Registry</h2>
-        <p class="modal-subtitle">Join a local unit or form your own</p>
-
-        <div id="userSquadStatus" class="admin-header" style="margin-bottom: 20px;">
-            <p>Scanning for active duty status...</p>
-            <button id="btnCreateSquad" class="modal-button btn-primary" style="display:none;">+ Create New Squad</button>
-        </div>
-
-        <hr>
-
-        <div id="localSquadsContainer">
-            <h3 style="font-size: 1rem; margin-bottom: 10px;">Available Squads in Rogers Park</h3>
-            <div id="localSquadsList" class="session-list">
-                <p style="text-align: center; color: #888;">No squads detected in this sector yet...</p>
-            </div>
-        </div>
-
-        <div id="squadDetailView" style="display: none;">
-            <button class="modal-button secondary" onclick="backToSquadList()">← Back to Registry</button>
-            <div id="squadInfoContent">
-                </div>
+        <div class="modal-content hub-modal">
+            <button class="close-btn">&times;</button>
+            <h2>Community Hub</h2>
+            <p class="modal-subtitle">Connect, challenge, and clean together.</p>
             
-            <h4 style="margin-top: 20px; border-bottom: 1px solid #eee;">The Roster</h4>
-            <div id="squadMemberBios" class="feed-container" style="max-height: 250px;">
+            <div class="hub-grid">
+                <div class="hub-card" id="hubChallengesBtn">
+                    <span class="hub-icon">🏆</span>
+                    <h3>Challenges</h3>
+                    <p>Join weekly goals and track progress.</p>
                 </div>
 
-            <button id="btnRequestJoin" class="launch-btn" style="width: 100%;">Request to Join</button>
+                <div class="hub-card" id="hubEventsBtn">
+                    <div class="calendar-icon">
+                        <div class="cal-header"></div>
+                        <div class="cal-body" id="dynamicDateDay">1</div>
+                    </div>
+                    <h3>Local Events</h3>
+                    <p>Find or host cleanup meetups nearby.</p>
+                </div>
+
+                <div class="hub-card" id="hubFeedBtn">
+                    <span class="hub-icon">📸</span>
+                    <h3>Activity Feed</h3>
+                    <p>See the latest cleanups from around the world.</p>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+
+    <div id="feedModal" class="modal-overlay">
+        <div class="modal-content feed-modal">
+            <button class="close-btn">&times;</button>
+            <h2>Community Activity</h2>
+            <p class="modal-subtitle">Real-time updates from fellow Troopers.</p>
+            
+            <div id="feedContainer" class="feed-container">
+                <div class="feed-loader">Scanning the globe for cleanups...</div>
+            </div>
+        </div>
+    </div>
 
     <div id="challengeMenuModal" class="modal-overlay">
         <div class="modal-content" style="text-align: center;">
@@ -534,17 +503,6 @@
     <h3>Manage Active Challenges</h3>
     <div id="adminChallengeList" style="max-height: 200px; overflow-y: auto; text-align: left;">
         <p>Loading...</p>
-    </div>
-</div> </div>
-
-<div id="feedModal" class="modal-overlay">
-    <div class="modal-content feed-modal">
-        <button class="close-btn" onclick="closeModal('feedModal')">&times;</button>
-        <h2>Activity Feed</h2>
-        <p class="modal-subtitle">Recent cleanup mission reports</p>
-        <div id="activityFeedContainer" class="feed-container">
-            <p style="text-align: center; color: #888;">Loading the latest Trooper activity...</p>
-        </div>
     </div>
 </div>
     
