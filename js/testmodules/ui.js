@@ -710,14 +710,19 @@ function validateSignUpForm() {
 
 // --- ACTIVITY FEED (User View) ---
 async function loadActivityFeed() {
-    // 🛑 The Guard Clause: If the container is missing, stop immediately
-    if (!elements.activityFeedContainer) {
-        console.error("🚨 Activity Feed Container not found in elements map!");
+    const container = document.getElementById('activityFeedContainer');
+
+    console.log("🔍 Diagnostic - Does the container exist?", container);
+
+    if (!container) {
+        console.error("🚨 FAIL: JS still can't find 'activityFeedContainer' in the HTML!");
         return; 
     }
-    
-    const container = elements.feedContainer;
-    container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
+
+    // If it found it, clear it and proceed
+    container.innerHTML = '';
+    //const container = elements.feedContainer;
+    //container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
 
     try {
         const q = query(
