@@ -765,3 +765,32 @@ button.close-btn:hover { color: var(--color-text-dark); }
     border: none;
     cursor: pointer;
 }
+
+/* Ensure the grid doesn't force everything into two columns if we want full width */
+.hub-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Force specific cards to span both columns */
+.hub-card.full-width {
+    grid-column: span 2;
+}
+
+/* The "Slim" Squads button styling */
+.hub-card.slim-card {
+    min-height: auto; /* Remove the 140px height from your standard cards */
+    padding: 10px 15px;
+    background-color: var(--color-secondary-blue); /* Match your theme blue */
+}
+
+.hub-card.slim-card h3, .hub-card.slim-card p {
+    color: white; /* Make text pop on the blue background */
+}
+
+.hub-card.slim-card:hover {
+    background-color: #3a6a92; /* Slightly darker on hover */
+    transform: translateY(-2px);
+}
+
