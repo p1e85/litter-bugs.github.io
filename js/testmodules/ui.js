@@ -420,11 +420,33 @@ export function attachEventListeners() {
         elements.eventsModal.style.display = 'flex';
         fetchAndDisplayAllEvents();
     });
+    
+if (elements.hubFeedBtn) {
     elements.hubFeedBtn.addEventListener('click', () => {
-        elements.hubModal.style.display = 'none';
-        elements.feedModal.style.display = 'flex';
+        console.log("📸 Feed Button Clicked!");
+        
+        // Let's grab them directly just to be 100% sure
+        const hub = document.getElementById('hubModal');
+        const feed = document.getElementById('feedModal');
+
+        if (hub) {
+            hub.style.display = 'none';
+            console.log("✅ Hub Modal hidden");
+        } else {
+            console.error("❌ Hub Modal NOT found");
+        }
+
+        if (feed) {
+            feed.style.display = 'flex'; // Force it to flex
+            feed.style.zIndex = '9999';  // Ensure it's on top of everything
+            console.log("✅ Feed Modal set to flex");
+        } else {
+            console.error("❌ Feed Modal NOT found");
+        }
+
         loadActivityFeed();
     });
+}
 
     // --- CHALLENGE MENU NAVIGATION ---
 
