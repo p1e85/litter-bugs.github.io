@@ -48,6 +48,7 @@ const elements = {
     viewMeetupsModal: document.getElementById('viewMeetupsModal'),
     menuModal: document.getElementById('menuModal'),
     eventsModal: document.getElementById('eventsModal'),
+    activityFeedContainer: document.getElementById('activityFeedContainer'),
     
     // Challenge System Modals
     challengeMenuModal: document.getElementById('challengeMenuModal'),
@@ -709,6 +710,12 @@ function validateSignUpForm() {
 
 // --- ACTIVITY FEED (User View) ---
 async function loadActivityFeed() {
+    // 🛑 The Guard Clause: If the container is missing, stop immediately
+    if (!elements.activityFeedContainer) {
+        console.error("🚨 Activity Feed Container not found in elements map!");
+        return; 
+    }
+    
     const container = elements.feedContainer;
     container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
 
