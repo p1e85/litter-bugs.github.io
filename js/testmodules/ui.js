@@ -450,6 +450,7 @@ export function attachEventListeners() {
             }
         });
     }
+}
 
     // 2. Current Challenges
     if (elements.btnCurrentChallenges) {
