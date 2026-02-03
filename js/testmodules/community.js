@@ -382,26 +382,51 @@ export async function fetchAndDisplayLeaderboard(metric) {
     const leaderboardList = document.getElementById('leaderboardList');
     if (!leaderboardList) return;
     leaderboardList.innerHTML = '<li>Loading...</li>';
+    
     try {
         const profilesRef = collection(db, "publicProfiles");
-        const q = query(profilesRef, orderBy(metric, "desc"), limit(10));
+
+        // 🛡️ THE FIX: Added 'where(metric, ">", 0)' 
+        // This ignores anyone with 0 pins or 0 distance.
+        const q = query(
+            profilesRef, 
+            where(metric, ">", 0), 
+            orderBy(metric, "desc"), 
+            limit(10)
+        );
+
         const querySnapshot = await getDocs(q);
+        
         if (querySnapshot.empty) {
-            leaderboardList.innerHTML = '<li>No user data yet. Be the first!</li>';
+            leaderboardList.innerHTML = '<li>No active Troopers yet. Be the first!</li>';
             return;
         }
+
         leaderboardList.innerHTML = '';
         let rank = 1;
+
         querySnapshot.forEach(doc => {
             const profileData = doc.data();
             const li = document.createElement('li');
             li.dataset.userid = doc.id;
+            
             li.classList.toggle('current-user-entry', state.currentUser && doc.id === state.currentUser.uid);
-            const score = metric === 'totalDistance' ? `${((profileData.totalDistance || 0) * 0.000621371).toFixed(2)} mi` : (profileData.totalPins || 0);
-            li.innerHTML = `<span class="leaderboard-rank">${rank}.</span><span class="leaderboard-name"><a href="#" class="leaderboard-profile-link">${profileData.username}</a></span><span class="leaderboard-score">${score}</span>`;
+            
+            const score = metric === 'totalDistance' 
+                ? `${((profileData.totalDistance || 0) * 0.000621371).toFixed(2)} mi` 
+                : (profileData.totalPins || 0);
+
+            li.innerHTML = `
+                <span class="leaderboard-rank">${rank}.</span>
+                <span class="leaderboard-name">
+                    <a href="#" class="leaderboard-profile-link">${profileData.username}</a>
+                </span>
+                <span class="leaderboard-score">${score}</span>
+            `;
             leaderboardList.appendChild(li);
             rank++;
         });
+
     } catch (error) {
         console.error("Error fetching leaderboard:", error);
         leaderboardList.innerHTML = '<li>Could not load leaderboard data.</li>';
