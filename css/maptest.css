@@ -752,3 +752,12 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .hub-card div {
     font-size: 0.8rem !important; /* Goal text smaller */
 }
+
+.squad-btn-compact {
+    min-height: 80px !important; /* Adjust based on your hub-card height */
+    padding: 10px !important;
+}
+
+.squad-btn-compact .hub-icon {
+    font-size: 1.2rem; /* Slightly smaller icon to match the height */
+}
