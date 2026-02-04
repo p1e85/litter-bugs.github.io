@@ -1456,7 +1456,7 @@ export async function initializeSquad() {
         // Replace this console.log with your actual Firebase addDoc call
         console.log("Registering new unit with command...", squadData);
         
-        // Example: await addDoc(collection(db, "squads"), squadData);
+        await addDoc(collection(db, "squads"), squadData);
 
         alert(`Unit [${callsign}] ${name} has been officially initialized.`);
 
@@ -1464,6 +1464,10 @@ export async function initializeSquad() {
         if (typeof window.showSquadRegistry === 'function') {
             window.showSquadRegistry();
         }
+
+        // 2. TRIGGER THE REFRESH (This is the key)
+        // This forces the app to scan Firebase again so the new squad shows up
+        fetchLocalSquads();
         
     } catch (error) {
         console.error("Critical Failure during initialization:", error);
