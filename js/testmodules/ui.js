@@ -1187,3 +1187,14 @@ export function closeModal(modalId) {
 // Make them available to HTML onclicks
 window.openModal = openModal;
 window.closeModal = closeModal;
+
+// Add to the bottom of ui.js where your other window wrappers are
+window.viewSquadIntel = (squadId) => {
+    // 1. Switch the view to the Intel screen
+    switchSquadView('intel');
+    
+    // 2. Trigger the data pull for this specific squad
+    if (typeof fetchSquadDetails === 'function') {
+        fetchSquadDetails(squadId);
+    }
+};
