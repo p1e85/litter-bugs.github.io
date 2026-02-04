@@ -641,16 +641,18 @@ if (hubSquadsBtn) {
 //   fetchLocalSquads(); // Refresh list every time it opens
 //});
 
-    // Add this to your attachEventListeners in ui.js
+    
+
+// Locate the Initialize button and wire up the click event
 const btnFinalizeSquad = document.getElementById('btnFinalizeSquad');
 
 if (btnFinalizeSquad) {
     btnFinalizeSquad.onclick = () => {
-        // This function lives in community.js
+        // Safety check to ensure the function is imported correctly
         if (typeof initializeSquad === 'function') {
             initializeSquad();
         } else {
-            console.error("Tactical Error: initializeSquad function not found in community.js");
+            console.error("ReferenceError: initializeSquad is not available in ui.js");
         }
     };
 }
