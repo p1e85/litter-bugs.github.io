@@ -753,22 +753,15 @@ button.close-btn:hover { color: var(--color-text-dark); }
     font-size: 0.8rem !important; /* Goal text smaller */
 }
 
-/* THE UNIFORM COMPACT STYLE */
+/* THE SHARED FOUNDATION */
 .squad-btn-compact {
-    /* FORCES FULL WIDTH: Spans all columns in the grid */
-    grid-column: 1 / -1 !important; 
-    
+    grid-column: 1 / -1 !important; /* Full width */
     display: flex !important;
-    flex-direction: row !important; /* Icon on left, text on right */
+    flex-direction: row !important;
     align-items: center;
-    justify-content: flex-start;
-    
-    width: 100% !important;
-    min-height: 55px !important; /* Fixed smaller height */
-    padding: 10px 20px !important;
     gap: 15px;
-    box-sizing: border-box; /* Prevents width overflow */
-    text-align: left !important;
+    padding: 10px 20px !important;
+    box-sizing: border-box;
 }
 
 /* Ensure the icon stays centered in its area */
@@ -835,4 +828,25 @@ button.close-btn:hover { color: var(--color-text-dark); }
 #btnRequestJoin {
     background: linear-gradient(135deg, #4A7C59, #3e684b) !important;
     box-shadow: 0 4px 10px rgba(74, 124, 89, 0.3);
+}
+
+/* THE HERO UPGRADE (Activity Feed) */
+.feed-btn-hero {
+    min-height: 90px !important; /* Noticeable height increase */
+    background: linear-gradient(to right, #ffffff, #f9f9f9); /* Subtle depth */
+    border-left: 4px solid var(--color-primary-green) !important; /* Visual pop */
+}
+
+.feed-btn-hero .hub-icon {
+    font-size: 2rem !important; /* Bigger icon for prominence */
+}
+
+.feed-btn-hero h3 {
+    font-size: 1.2rem !important; /* Slightly larger text */
+}
+
+/* THE SQUAD BUTTON (The sleek version) */
+#hubSquadsBtn {
+    min-height: 60px !important; 
+    margin-top: -5px; /* Pulls it closer to the hero button */
 }
