@@ -641,6 +641,20 @@ if (hubSquadsBtn) {
 //   fetchLocalSquads(); // Refresh list every time it opens
 //});
 
+    // Add this to your attachEventListeners in ui.js
+const btnFinalizeSquad = document.getElementById('btnFinalizeSquad');
+
+if (btnFinalizeSquad) {
+    btnFinalizeSquad.onclick = () => {
+        // This function lives in community.js
+        if (typeof initializeSquad === 'function') {
+            initializeSquad();
+        } else {
+            console.error("Tactical Error: initializeSquad function not found in community.js");
+        }
+    };
+}
+
 document.getElementById('btnFinalizeSquad').addEventListener('click', initializeSquad);
     
     // Generic Close Listeners
