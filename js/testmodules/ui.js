@@ -618,10 +618,28 @@ document.getElementById('toggleSectorsBtn').addEventListener('click', () => {
     btn.classList.toggle('active', sectorsVisible);
 });
 
-    document.getElementById('hubSquadsBtn').addEventListener('click', () => {
-    openModal('squadsModal');
-    fetchLocalSquads(); // Refresh list every time it opens
-});
+const hubSquadsBtn = document.getElementById('hubSquadsBtn');
+
+if (hubSquadsBtn) {
+    hubSquadsBtn.onclick = () => { // Using .onclick ensures only ONE function ever runs
+        openModal('squadsModal');
+        
+        // Ensure it always opens to the list, not a half-filled form
+        if (typeof switchSquadView === 'function') {
+            switchSquadView('registry');
+        }
+        
+        // Load the data
+        if (typeof fetchLocalSquads === 'function') {
+            fetchLocalSquads(); 
+        }
+    };
+}
+    
+//    document.getElementById('hubSquadsBtn').addEventListener('click', () => {
+//    openModal('squadsModal');
+//   fetchLocalSquads(); // Refresh list every time it opens
+//});
 
 document.getElementById('btnFinalizeSquad').addEventListener('click', initializeSquad);
     
