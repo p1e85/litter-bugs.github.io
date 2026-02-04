@@ -753,45 +753,86 @@ button.close-btn:hover { color: var(--color-text-dark); }
     font-size: 0.8rem !important; /* Goal text smaller */
 }
 
+/* THE UNIFORM COMPACT STYLE */
 .squad-btn-compact {
-    min-height: 80px !important; /* Adjust based on your hub-card height */
-    padding: 10px !important;
-}
-
-.squad-btn-compact .hub-icon {
-    font-size: 1.2rem; /* Slightly smaller icon to match the height */
-}
-
-/* The Uniform Compact Style */
-.squad-btn-compact {
+    /* FORCES FULL WIDTH: Spans all columns in the grid */
+    grid-column: 1 / -1 !important; 
+    
     display: flex !important;
-    flex-direction: row !important; /* Forces icon and text side-by-side */
+    flex-direction: row !important; /* Icon on left, text on right */
     align-items: center;
     justify-content: flex-start;
-    gap: 15px;
-    min-height: 60px !important; /* Smaller height */
+    
+    width: 100% !important;
+    min-height: 55px !important; /* Fixed smaller height */
     padding: 10px 20px !important;
+    gap: 15px;
+    box-sizing: border-box; /* Prevents width overflow */
     text-align: left !important;
 }
 
-/* Fix the text alignment inside the compact button */
+/* Ensure the icon stays centered in its area */
+.squad-btn-compact .hub-icon {
+    margin: 0 !important;
+    font-size: 1.4rem;
+    flex-shrink: 0; /* Prevents icon from squishing */
+}
+
+/* Stack the title and subtitle tightly */
 .squad-btn-compact .hub-text-wrap {
     display: flex;
     flex-direction: column;
+    justify-content: center;
 }
 
-.squad-btn-compact .hub-text-wrap h3 {
+.squad-btn-compact h3 {
+    margin: 0 !important;
+    font-size: 1rem !important;
+}
+
+.squad-btn-compact p {
+    margin: 0 !important;
+    font-size: 0.8rem !important;
+    line-height: 1.1;
+}
+
+/* Card for individual squad members within the Roster */
+.member-bio-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #eee;
+}
+
+.member-rank-icon {
+    font-size: 1.5rem;
+    background: white;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid var(--color-primary-green);
+}
+
+.member-info h5 {
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.95rem;
 }
 
-.squad-btn-compact .hub-text-wrap p {
+.member-info p {
     margin: 0;
     font-size: 0.8rem;
-    color: #666;
+    color: #777;
 }
 
-.squad-btn-compact .hub-icon {
-    margin-bottom: 0 !important; /* Removes the gap from the square style */
-    font-size: 1.4rem;
+/* Specific styling for the Invasion/Request button */
+#btnRequestJoin {
+    background: linear-gradient(135deg, #4A7C59, #3e684b) !important;
+    box-shadow: 0 4px 10px rgba(74, 124, 89, 0.3);
 }
