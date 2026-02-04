@@ -1383,33 +1383,43 @@ function getSectorFromCoords(lon, lat) {
 export async function updateSwarmPulse() {
     try {
         const publishedRoutesRef = collection(db, "publishedRoutes");
-        // Look at routes from the last 48 hours
         const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+        
         const q = query(publishedRoutesRef, where("timestamp", ">=", twoDaysAgo));
         const querySnapshot = await getDocs(q);
 
-        const sectorActivity = { 'RP-01': 0, 'RP-02': 0, 'RP-03': 0, 'RP-04': 0, 'RP-05': 0 };
+        const activityLog = { 'RP-01': 0, 'RP-02': 0, 'RP-03': 0, 'RP-04': 0, 'RP-05': 0 };
 
-        querySnapshot.forEach(doc => {
+        // FIX: Ensure we are iterating the snapshot correctly
+        querySnapshot.forEach((doc) => {
             const data = doc.data();
-            if (data.route && data.route.length > 0) {
-                // Get the sector of the starting point
-                const [lon, lat] = data.route[0]; 
-                const sectorId = getSectorFromCoords(lon, lat); // Using our detector
-                if (sectorId) sectorActivity[sectorId]++;
+            
+            // Check if route exists and has at least one coordinate pair
+            if (data.route && Array.isArray(data.route) && data.route.length > 0) {
+                // Mapbox/GeoJSON usually stores as [lng, lat]
+                const firstPoint = data.route[0];
+                const lon = firstPoint[0];
+                const lat = firstPoint[1];
+
+                const sectorId = getSectorFromCoords(lon, lat); 
+                if (sectorId && activityLog.hasOwnProperty(sectorId)) {
+                    activityLog[sectorId]++;
+                }
             }
         });
 
-        // Apply the "Glow" to the map
-        Object.entries(sectorActivity).forEach(([id, count]) => {
+        // Apply the "Glow" to the map layers
+        Object.entries(activityLog).forEach(([id, count]) => {
             const layerId = `layer-${id}`;
             if (state.map.getLayer(layerId)) {
-                // Base opacity is 0.15. If 3+ routes, bump it to 0.4 for a "Pulse" effect.
-                const newOpacity = count >= 3 ? 0.45 : 0.15;
-                state.map.setPaintProperty(layerId, 'fill-opacity', newOpacity);
+                // 3+ cleanups = heavy glow, 1-2 = medium, 0 = subtle
+                const opacity = count >= 3 ? 0.5 : (count > 0 ? 0.3 : 0.15);
+                state.map.setPaintProperty(layerId, 'fill-opacity', opacity);
             }
         });
+
+        console.log("🔥 Swarm Pulse updated:", activityLog);
     } catch (err) {
-        console.error("Swarm Pulse error:", err);
+        console.error("❌ Swarm Pulse error:", err);
     }
 }
