@@ -616,6 +616,13 @@ document.getElementById('toggleSectorsBtn').addEventListener('click', () => {
     btn.textContent = sectorsVisible ? '🗺️ Hide Sectors' : '🗺️ Show Sectors';
     btn.classList.toggle('active', sectorsVisible);
 });
+
+    document.getElementById('hubSquadsBtn').addEventListener('click', () => {
+    openModal('squadsModal');
+    fetchLocalSquads(); // Refresh list every time it opens
+});
+
+document.getElementById('btnFinalizeSquad').addEventListener('click', initializeSquad);
     
     // Generic Close Listeners
     addAllModalCloseListeners();
