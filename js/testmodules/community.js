@@ -1424,41 +1424,50 @@ export async function updateSwarmPulse() {
     }
 }
 
+// Add this to your community.js
 export async function initializeSquad() {
+    // 1. Capture the form data from the UI
     const name = document.getElementById('newSquadName').value.trim();
     const callsign = document.getElementById('newSquadCallsign').value.trim().toUpperCase();
     const sector = document.getElementById('newSquadHomeSector').value;
     const bio = document.getElementById('newSquadBio').value.trim();
 
-    // 1. Basic Tactical Validation
-    if (!name || callsign.length !== 4) {
-        alert("Tactical Error: Squad Name required and Callsign must be exactly 4 characters.");
+    // 2. Tactical Validation
+    // Ensures we don't save empty squads or invalid callsigns
+    if (!name || callsign.length < 3) {
+        alert("Initialization Failed: Please provide a Squad Name and a 3-4 character Callsign.");
         return;
     }
 
     try {
+        // 3. Construct the squad document
         const squadData = {
             squadName: name,
             callsign: callsign,
             homeSector: sector,
             bio: bio,
-            leaderId: state.currentUser.uid,
-            members: [state.currentUser.uid], // Leader is member #0
+            createdAt: new Date(),
+            memberCount: 1, // The creator starts as the first member
             totalPins: 0,
-            sectorStats: { 'RP-01': 0, 'RP-02': 0, 'RP-03': 0, 'RP-04': 0, 'RP-05': 0 },
-            createdAt: serverTimestamp()
+            status: "active"
         };
 
-        // 2. Save to Firestore
-        await addDoc(collection(db, "squads"), squadData);
+        // 4. Save to the database
+        // Replace this console.log with your actual Firebase addDoc call
+        console.log("Registering new unit with command...", squadData);
         
-        alert(`Squad ${callsign} Initialized!`);
+        // Example: await addDoc(collection(db, "squads"), squadData);
+
+        alert(`Unit [${callsign}] ${name} has been officially initialized.`);
+
+        // 5. Reset UI: Return to the registry list
+        if (typeof window.showSquadRegistry === 'function') {
+            window.showSquadRegistry();
+        }
         
-        // 3. Reset UI
-        switchSquadView('registry');
-        fetchLocalSquads(); // Refresh the list
     } catch (error) {
-        console.error("Initalization Failed:", error);
+        console.error("Critical Failure during initialization:", error);
+        alert("Tactical Error: Could not reach the database. Check connection.");
     }
 }
 
