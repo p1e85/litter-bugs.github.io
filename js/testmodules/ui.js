@@ -165,6 +165,17 @@ export function initializeUI() {
     if (dateElement) {
         dateElement.textContent = new Date().getDate(); 
     }
+
+    const hubSquadsBtn = document.getElementById('hubSquadsBtn');
+    if (hubSquadsBtn) {
+        hubSquadsBtn.addEventListener('click', () => {
+            openModal('squadsModal'); // This should now work!
+            if (typeof fetchLocalSquads === 'function') {
+                fetchLocalSquads(); 
+            }
+        });
+    }
+    
 }
 
 export function attachEventListeners() {
@@ -1132,3 +1143,23 @@ export function switchSquadView(viewName) {
 // Global-access wrappers for your HTML onclicks
 window.openCreateSquadForm = () => switchSquadView('create');
 window.showSquadRegistry = () => switchSquadView('registry');
+
+// Modal Utility Functions
+export function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+        // Optional: play a subtle sound or trigger an animation here
+    }
+}
+
+export function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Make them available to HTML onclicks
+window.openModal = openModal;
+window.closeModal = closeModal;
