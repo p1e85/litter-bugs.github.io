@@ -5,7 +5,6 @@ import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
-import { collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // --- Helper Function: Calculate Distance ---
 function calculateRouteDistance(coords) {
