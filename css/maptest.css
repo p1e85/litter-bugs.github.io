@@ -62,7 +62,9 @@ hr {
   border-radius: 8px; border: 1px solid #ccc;
   background-color: #f0f0f0; color: var(--color-text-dark);
 }
-.modal-button:hover { background-color: #e9e9e9; }
+.modal-button:hover {
+  background-color: #e9e9e9;
+}
 
 .btn-primary { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
 .btn-primary:hover { background-color: #3e684b; border-color: #3e684b; }
@@ -96,12 +98,18 @@ hr {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(74, 124, 89, 0.3);
 }
+.modal-button.secondary:active {
+    transform: translateY(0);
+}
 
 .top-bar-button, .community-button, #toggleSectorsBtn {
   padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;
   font-weight: 500; background-color: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(4px); border: 1px solid rgba(0, 0, 0, 0.1);
   color: var(--color-text-dark); transition: background-color 0.2s ease;
+}
+.top-bar-button:hover, .community-button:hover, #toggleSectorsBtn:hover {
+  background-color: rgba(255, 255, 255, 0.9);
 }
 
 #toggleSectorsBtn.active {
@@ -119,6 +127,10 @@ hr {
 #findMeBtn { position: absolute; bottom: 30px; left: 20px; z-index: 1; }
 #pictureBtn { position: absolute; bottom: 30px; right: 20px; z-index: 1; }
 
+#findMeBtn.active { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
+.modal-button.tracking { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
+#pictureBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* =========================================
    4. MODALS (BASE STYLES)
    ========================================= */
@@ -132,29 +144,223 @@ hr {
   box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 100%; max-width: 500px;
   position: relative; max-height: 90vh; overflow-y: auto;
 }
-.modal-content h2 { text-align: center; margin-top: 0; margin-bottom: 25px; font-size: 24px; }
-.modal-subtitle { font-size: 15px; color: #666; text-align: center; margin-top: -15px; margin-bottom: 20px; }
+.modal-content h2 {
+  text-align: center; margin-top: 0; margin-bottom: 25px;
+  font-size: 24px; color: var(--color-text-dark);
+}
+.modal-content p {
+  font-size: 14px; color: #666; text-align: center;
+  margin-top: -10px; margin-bottom: 15px;
+}
+.modal-subtitle { 
+  font-size: 15px; color: #666; text-align: center; margin-top: -15px; margin-bottom: 20px; 
+}
 
 button.close-btn {
   position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; color: #aaa;
   cursor: pointer; background: none; border: none; padding: 0; line-height: 1;
 }
+button.close-btn:hover { color: var(--color-text-dark); }
 
 #logoutBtn, #loginSignupBtn, .skip-button {
   background: none; border: none; color: var(--color-secondary-blue); text-decoration: underline;
-  cursor: pointer; padding: 0; font-size: 14px;
+  cursor: pointer; padding: 0; font-size: 14px; font-family: inherit;
 }
+.skip-button { color: #888; }
+#agreeBtn { width: 100%; box-sizing: border-box; margin-top: 20px; }
+#agreeBtn:disabled { background-color: #f8d7da !important; border-color: #f5c6cb !important; color: #721c24 !important; opacity: 0.7; }
 
 /* =========================================
-   5. SQUAD MODAL (SPECIFIC SIZING OVERRIDE)
+   5. MAP COMPONENTS & FORMS
    ========================================= */
+#geocoder-container { pointer-events: auto; flex-grow: 1; max-width: 75%; }
+#geocoder-container .mapboxgl-ctrl-geocoder {
+  width: 100%; max-width: none; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border-radius: 8px; background-color: var(--color-background-modal);
+}
+
+.user-status-display {
+  display: flex; align-items: center; background: rgba(255, 255, 255, 0.85);
+  border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: auto;
+  font-size: 14px; padding: 6px 12px;
+}
+.user-status-display span { margin-right: 10px; }
+#guestContent, #loggedInContent { display: flex; align-items: center; }
+
+.mapboxgl-popup-content { padding: 15px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px !important; }
+.pin-popup-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.pin-popup-form input, .pin-popup-form select, .pin-popup-form button { width: 100%; box-sizing: border-box; }
+.pin-popup-form label { font-weight: 500; font-size: 0.9em; color: #555; margin-top: 8px; display: block; }
+
+.photo-marker {
+  width: 40px; height: 40px; border-radius: 50%;
+  background-size: cover; background-position: center;
+  border: 2px solid #4A7C59; box-shadow: 0 1px 3px rgba(0,0,0,0.3); cursor: pointer;
+}
+
+.auth-form { display: flex; flex-direction: column; gap: 10px; }
+.auth-form.login-mode #usernameInput, .auth-form.login-mode #ageGateContainer { display: none; }
+.auth-form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+.age-gate-container { display: flex; align-items: center; gap: 5px; }
+
+/* =========================================
+   6. PROFILE, LEADERBOARD, STATS
+   ========================================= */
+.leaderboard-tabs { display: flex; justify-content: stretch; margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); }
+.leaderboard-tab { width: 100%; margin: 0; padding: 10px 12px; border: none; border-radius: 0; border-right: 1px solid var(--color-border); background-color: #f0f0f0; }
+.leaderboard-tab:last-child { border-right: none; }
+.leaderboard-tab.active { background-color: var(--color-primary-green); color: var(--color-text-light); font-weight: bold; }
+
+.leaderboard-list li { display: flex; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; font-size: 16px; }
+.leaderboard-rank { font-weight: bold; font-size: 1.1em; color: #888; width: 30px; text-align: center; }
+.leaderboard-name { flex-grow: 1; padding: 0 15px; font-weight: 500; }
+.leaderboard-name a { text-decoration: none; color: var(--color-primary-green); }
+.leaderboard-score { font-weight: bold; color: var(--color-text-dark); }
+.leaderboard-list li.current-user-entry { background-color: #e8f5e9; border-radius: 6px; }
+
+.my-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.stat-card { background-color: #f9f9f9; border-radius: 8px; padding: 15px; text-align: center; border: 1px solid #eee; }
+.my-stats-value { font-size: 24px; font-weight: bold; color: var(--color-primary-green); }
+.my-stats-label { font-size: 14px; color: #666; margin-top: 5px; }
+.my-stats-container h4 { margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+.badge-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+.badge-item { font-size: 28px; }
+
+.summary-modal h2::before { content: '🎉'; display: block; font-size: 48px; margin-bottom: 10px; }
+.summary-stats { display: flex; justify-content: space-around; gap: 15px; margin-bottom: 30px; }
+.summary-stats > div { background-color: #f9f9f9; border-radius: 8px; padding: 15px; flex-grow: 1; border: 1px solid #eee; }
+.stat-value { display: block; font-size: 26px; font-weight: bold; color: var(--color-primary-green); }
+.stat-label { display: block; font-size: 14px; color: #666; margin-top: 5px; }
+#cleanupPhotoPreviewContainer { display: flex; justify-content: center; align-items: center; min-height: 150px; margin-top: 10px; border: 1px dashed #ccc; }
+#cleanupPhotoPreview { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+.profile-form { display: flex; flex-direction: column; gap: 8px; }
+.profile-form label { font-weight: 500; margin-top: 10px; color: #555; text-align: left; }
+.profile-form input[type="text"], .profile-form input[type="url"], .profile-form textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-border); font-size: 14px; box-sizing: border-box; }
+.profile-form textarea { min-height: 80px; resize: vertical; }
+
+/* =========================================
+   7. DATA MANAGEMENT MODAL
+   ========================================= */
+#dataModal .modal-content h2 { border-bottom: 1px solid #eee; padding-bottom: 15px; }
+#dataModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
+#dataModal #saveBtn, #dataModal #loadBtn, #dataModal #exportBtn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
+#dataModal #centerOnRouteBtn, #dataModal #managePublicationsBtn { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
+.session-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+.session-list li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+
+/* =========================================
+   8. COMMUNITY HUB & FEED
+   ========================================= */
+.hub-modal { max-width: 500px; }
+.hub-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+
+.hub-card {
+    background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    padding: 15px 20px; margin-bottom: 15px; border: 2px solid #eee;
+    position: relative; transition: all 0.2s ease; text-align: left;
+    cursor: pointer; box-sizing: border-box;
+}
+.hub-card:hover { border-color: #4A7C59; box-shadow: 0 8px 20px rgba(74, 124, 89, 0.2); z-index: 100; }
+.hub-card h4, .hub-card h3 { margin: 0 0 5px 0; font-size: 1.1em; color: #333; }
+.hub-card p { margin: 0 0 8px 0; font-size: 0.9em; color: #666; }
+.hub-icon { font-size: 2rem; margin-bottom: 10px; }
+
+@media (min-width: 400px) {
+  .hub-grid { grid-template-columns: 1fr 1fr; }
+  .hub-card:last-child { grid-column: span 2; }
+}
+
+.feed-modal { max-width: 600px; height: 80vh; display: flex; flex-direction: column; }
+.feed-container { flex-grow: 1; overflow-y: auto; padding: 10px 5px; margin-top: 10px; }
+.feed-card { background: #fff; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 20px; overflow: hidden; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.feed-header { padding: 12px; display: flex; align-items: center; gap: 10px; }
+.feed-avatar { width: 35px; height: 35px; background: var(--color-primary-green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.feed-user-info h4 { margin: 0; font-size: 1rem; }
+.feed-user-info span { font-size: 0.75rem; color: #888; }
+.feed-photo { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #eee; }
+.feed-body { padding: 12px; }
+.feed-stats { display: flex; gap: 15px; font-size: 0.85rem; color: #555; margin-bottom: 8px; }
+.feed-stats strong { color: var(--color-primary-green); }
+.feed-caption { font-size: 0.9rem; line-height: 1.4; color: #333; }
+.feed-actions { margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
+.like-btn {
+  background: white; border: 1px solid #ccc; border-radius: 20px; padding: 5px 12px;
+  font-size: 14px; cursor: pointer; color: #555; transition: all 0.2s ease;
+  display: flex; align-items: center; gap: 5px;
+}
+.like-btn:hover { background-color: #f9f9f9; transform: scale(1.02); }
+.like-btn.active { background-color: #4A7C59; color: white; border-color: #4A7C59; }
+
+/* =========================================
+   9. MEETUP / EVENTS MODAL
+   ========================================= */
+#meetupModal .modal-content, #viewMeetupsModal .modal-content { max-width: 550px; }
+.poi-popup-buttons { display: flex; gap: 8px; margin-top: 15px; }
+.poi-popup-buttons .modal-button { width: 100%; margin: 0; }
+#meetupDateInput { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-bottom: 15px; background-color: #f8f9fa; }
+#meetupDescriptionInput { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; min-height: 80px; }
+.safety-disclaimer { background-color: #fff8e1; border-left: 5px solid #ffc107; color: #664d03; padding: 15px; border-radius: 6px; margin: 15px 0; font-size: 0.85rem; }
+#createMeetupBtn { background-color: #4A7C59; color: white; font-weight: bold; margin-top: 15px; }
+.event-card { background: #f9f9f9; border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 8px; text-align: left; }
+
+/* =========================================
+   10. CHALLENGES & ACHIEVEMENTS
+   ========================================= */
+#challengeMenuModal .modal-content { max-width: 500px; width: 100%; padding: 15px; display: flex; flex-direction: column; gap: 15px; min-height: 300px; }
+.menu-buttons-vertical { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px; }
+.menu-buttons-vertical .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; width: 100%; padding: 10px; font-size: 14px; margin: 0; gap: 10px; border-radius: 8px; border: 1px solid #ccc; }
+
+#btnViewAchievements { background-color: var(--color-support-gold); color: var(--color-text-dark); font-weight: bold; border-color: var(--color-support-gold); }
+#btnCurrentChallenges { background-color: #4A7C59; color: white; border-color: #4A7C59; }
+.modal-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 15px; }
+.modal-tab { flex: 1; padding: 10px; background: none; border: none; font-weight: bold; color: #888; cursor: pointer; }
+.modal-tab.active { color: #4A7C59; border-bottom: 3px solid #4A7C59; }
+
+.calendar-icon { display: inline-block; width: 40px; height: 40px; background-color: #ffffff; border: 2px solid #ccc; border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+.cal-header { height: 12px; width: 100%; background-color: #dc3545; border-bottom: 1px solid #ccc; }
+.cal-body { height: 28px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; }
+
+.achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 15px; justify-items: center; }
+.achievement-card { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; padding: 10px; border-radius: 8px; background: #f5f5f5; }
+.achievement-icon { font-size: 3em; margin-bottom: 5px; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 50%; }
+.achievement-name { font-weight: bold; font-size: 0.9em; margin-top: 5px; color: #333; }
+.achievement-desc { font-size: 0.75em; color: #666; margin-top: 4px; line-height: 1.2; }
+.achievement-card.unlocked { background: white; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.5); border-color: #ffc107; }
+
+/* =========================================
+   11. ADMIN PANEL & FORMS
+   ========================================= */
+.admin-header { background: #f8f9fa; margin: -20px -20px 20px -20px; padding: 20px; border-bottom: 1px solid #eee; text-align: center; border-radius: 10px 10px 0 0; }
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-size: 0.85em; font-weight: 700; color: #555; margin-bottom: 5px; text-transform: uppercase; text-align: left; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+.form-row { display: flex; gap: 15px; }
+.launch-btn { background: linear-gradient(135deg, #dc3545, #c82333) !important; color: white !important; font-size: 1.1em; font-weight: 800; text-transform: uppercase; padding: 15px; margin-top: 10px; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4); cursor: pointer; }
+
+/* =========================================
+   12. SQUAD-SPECIFIC HUB UPGRADES (RE-RESTORED)
+   ========================================= */
+.squad-btn-compact { grid-column: 1 / -1 !important; display: flex !important; flex-direction: row !important; align-items: center; gap: 15px; padding: 10px 20px !important; box-sizing: border-box; }
+.squad-btn-compact .hub-icon { margin: 0 !important; font-size: 1.4rem; flex-shrink: 0; }
+.squad-btn-compact h3 { margin: 0 !important; font-size: 1rem !important; }
+.squad-btn-compact p { margin: 0 !important; font-size: 0.8rem !important; line-height: 1.1; }
+
+.feed-btn-hero { min-height: 90px !important; background: linear-gradient(to right, #ffffff, #f9f9f9); border-left: 4px solid var(--color-primary-green) !important; }
+.feed-btn-hero .hub-icon { font-size: 2rem !important; }
+.feed-btn-hero h3 { font-size: 1.2rem !important; }
+
+#hubSquadsBtn { min-height: 60px !important; margin-top: -5px; }
+
+/* =========================================
+   13. THE "SAFE" SQUAD MODAL OVERRIDE
+   ========================================= */
+/* THIS BLOCK ONLY AFFECTS THE SQUADS MODAL TO PREVENT BREAKING OTHER STYLES */
 #squadsModal .modal-content {
     width: 95% !important;
-    max-width: 650px !important; /* Made Wider */
-    min-height: 550px !important; /* Forced Taller */
-    height: auto !important;
-    max-height: 85vh !important;
-    padding: 35px !important; /* Spread things out */
+    max-width: 600px !important;
+    min-height: 550px !important; /* Force it to be spread out */
+    padding: 35px !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 20px !important;
@@ -166,137 +372,15 @@ button.close-btn {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    min-height: 200px;
 }
 
 #localSquadsList p {
-    padding: 40px 20px;
-    line-height: 1.6;
-    text-align: center;
-    font-size: 1.1em;
-    color: #555;
+    padding: 40px 20px !important; /* Forces breathing room for the Scan Failed text */
+    line-height: 1.6 !important;
+    text-align: center !important;
+    font-size: 1.1em !important;
 }
 
-/* =========================================
-   6. FORMS & AUTH
-   ========================================= */
-.form-group { margin-bottom: 20px; text-align: left; }
-.form-group label {
-    display: block; font-size: 0.85em; font-weight: 700; color: #555;
-    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
-}
-.form-group input, .form-group select, .form-group textarea {
-    width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;
-    font-family: inherit; font-size: 1em; box-sizing: border-box; background: #fff;
-}
-.form-row { display: flex; gap: 15px; }
-.form-group.half { flex: 1; }
-
-.launch-btn {
-    background: linear-gradient(135deg, #4A7C59, #3e684b) !important;
-    color: white !important; font-size: 1.1em; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 1px; border: none !important;
-    padding: 16px; margin-top: 15px; border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(74, 124, 89, 0.3); transition: transform 0.2s;
-    cursor: pointer; width: 100%;
-}
-
-/* =========================================
-   7. COMMUNITY HUB & CARDS
-   ========================================= */
-.hub-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
-
-@media (min-width: 400px) {
-  .hub-grid { grid-template-columns: 1fr 1fr; }
-  .hub-grid .squad-btn-compact { grid-column: span 2; }
-}
-
-/* Consolidated Hub Card Styles */
-.hub-card {
-    background: white; border-radius: 12px; border: 2px solid #f0f0f0;
-    padding: 15px 20px; margin-bottom: 12px; position: relative;
-    transition: all 0.2s ease; text-align: left; cursor: pointer; box-sizing: border-box;
-}
-
-.hub-card:hover {
-    border-color: var(--color-primary-green);
-    box-shadow: 0 8px 20px rgba(74, 124, 89, 0.15);
-    transform: translateY(-2px);
-}
-
-.hub-grid .hub-card {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; text-align: center; min-height: 140px;
-}
-
-.hub-icon { font-size: 2rem; margin-bottom: 10px; }
-
-/* Squad / Activity Feed Hero Rows */
-.squad-btn-compact {
-    grid-column: 1 / -1 !important;
-    display: flex !important; flex-direction: row !important;
-    align-items: center; gap: 15px; padding: 12px 20px !important;
-}
-
-.feed-btn-hero {
-    min-height: 100px !important;
-    border-left: 5px solid var(--color-primary-green) !important;
-}
-
-.hub-text-wrap h3 { margin: 0; font-size: 1.1rem; }
-.hub-text-wrap p { margin: 4px 0 0 0; font-size: 0.85rem; color: #666; }
-
-/* =========================================
-   8. FEED & LIST ITEMS
-   ========================================= */
-.feed-container { flex-grow: 1; overflow-y: auto; padding: 10px 5px; }
-.member-bio-card {
-    display: flex; align-items: center; gap: 12px; padding: 12px;
-    background: #f9f9f9; border-radius: 8px; margin-bottom: 10px; border: 1px solid #eee;
-}
-
-.member-rank-icon {
-    font-size: 1.5rem; background: white; width: 45px; height: 45px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 50%; border: 2px solid var(--color-primary-green);
-}
-
-/* =========================================
-   9. LEADERBOARD & STATS
-   ========================================= */
-.leaderboard-tabs { display: flex; margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); }
-.leaderboard-tab { width: 100%; padding: 10px; border: none; background-color: #f0f0f0; cursor: pointer; }
-.leaderboard-tab.active { background-color: var(--color-primary-green); color: white; font-weight: bold; }
-
-.leaderboard-list li { display: flex; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; }
-.leaderboard-rank { font-weight: bold; width: 30px; text-align: center; color: #888; }
-.leaderboard-name { flex-grow: 1; padding: 0 15px; font-weight: 500; }
-
-.stat-value { display: block; font-size: 26px; font-weight: bold; color: var(--color-primary-green); }
-.stat-label { font-size: 14px; color: #666; }
-
-/* =========================================
-   10. CHALLENGE SPECIFIC
-   ========================================= */
-#publicChallengeList .hub-card, 
-#pastChallengesContent .hub-card {
-    display: flex; flex-direction: row; align-items: center;
-    justify-content: space-between; text-align: left;
-}
-
-.modal-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 15px; }
-.modal-tab { flex: 1; padding: 10px; background: none; border: none; font-weight: bold; color: #888; cursor: pointer; }
-.modal-tab.active { color: #4A7C59; border-bottom: 3px solid #4A7C59; }
-
-.calendar-icon {
-    display: inline-block; width: 40px; height: 40px; background: #fff;
-    border: 2px solid #ccc; border-radius: 6px; overflow: hidden;
-}
-.cal-header { height: 12px; background: #dc3545; }
-.cal-body { height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-
-/* Success/Red Action Button for Admin */
-.launch-btn.admin {
-    background: linear-gradient(135deg, #dc3545, #c82333) !important;
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+#squadCreateView .form-group {
+    margin-bottom: 20px !important;
 }
