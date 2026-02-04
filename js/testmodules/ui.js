@@ -1108,3 +1108,20 @@ export function populateTitleDropdown(unlockedTitles = []) {
         }
     };
 }
+
+// Switches between the three "screens" in the Squads Modal
+export function switchSquadView(viewName) {
+    const views = {
+        'registry': document.getElementById('squadRegistryView'),
+        'intel': document.getElementById('squadIntelView'),
+        'create': document.getElementById('squadCreateView')
+    };
+
+    // Hide all, then show the requested one
+    Object.values(views).forEach(view => { if(view) view.style.display = 'none'; });
+    if (views[viewName]) views[viewName].style.display = 'block';
+}
+
+// Global-access wrappers for your HTML onclicks
+window.openCreateSquadForm = () => switchSquadView('create');
+window.showSquadRegistry = () => switchSquadView('registry');
