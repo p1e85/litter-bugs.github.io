@@ -850,3 +850,24 @@ button.close-btn:hover { color: var(--color-text-dark); }
     min-height: 60px !important; 
     margin-top: -5px; /* Pulls it closer to the hero button */
 }
+
+/* Ensure the Squad Modal can handle the form height */
+#squadsModal .modal-content {
+    max-height: 90vh; /* Takes up 90% of screen height if needed */
+    overflow-y: auto; /* Adds a scrollbar ONLY if content overflows */
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 30px; /* Extra space at the bottom for the button */
+}
+
+/* Make sure the form groups don't feel squashed */
+#squadCreateView .form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+/* Ensure the Initialize button doesn't get cut off */
+#btnFinalizeSquad {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
