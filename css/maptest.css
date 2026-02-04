@@ -761,3 +761,37 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .squad-btn-compact .hub-icon {
     font-size: 1.2rem; /* Slightly smaller icon to match the height */
 }
+
+/* The Uniform Compact Style */
+.squad-btn-compact {
+    display: flex !important;
+    flex-direction: row !important; /* Forces icon and text side-by-side */
+    align-items: center;
+    justify-content: flex-start;
+    gap: 15px;
+    min-height: 60px !important; /* Smaller height */
+    padding: 10px 20px !important;
+    text-align: left !important;
+}
+
+/* Fix the text alignment inside the compact button */
+.squad-btn-compact .hub-text-wrap {
+    display: flex;
+    flex-direction: column;
+}
+
+.squad-btn-compact .hub-text-wrap h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.squad-btn-compact .hub-text-wrap p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.squad-btn-compact .hub-icon {
+    margin-bottom: 0 !important; /* Removes the gap from the square style */
+    font-size: 1.4rem;
+}
