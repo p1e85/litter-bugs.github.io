@@ -11,7 +11,7 @@ import {
     handleMeetupSubmit, validateMeetupForm, toggleRouteLike, 
     openAchievementsModal, openEventBadgesModal, 
     // Logic Helpers
-    getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents 
+    getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents , initializeSquad, fetchLocalSquads
 } from './community.js';
 
 // --- DOM Element Selection ---
