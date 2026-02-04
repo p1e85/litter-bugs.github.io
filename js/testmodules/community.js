@@ -1423,3 +1423,70 @@ export async function updateSwarmPulse() {
         console.error("❌ Swarm Pulse error:", err);
     }
 }
+
+export async function initializeSquad() {
+    const name = document.getElementById('newSquadName').value.trim();
+    const callsign = document.getElementById('newSquadCallsign').value.trim().toUpperCase();
+    const sector = document.getElementById('newSquadHomeSector').value;
+    const bio = document.getElementById('newSquadBio').value.trim();
+
+    // 1. Basic Tactical Validation
+    if (!name || callsign.length !== 4) {
+        alert("Tactical Error: Squad Name required and Callsign must be exactly 4 characters.");
+        return;
+    }
+
+    try {
+        const squadData = {
+            squadName: name,
+            callsign: callsign,
+            homeSector: sector,
+            bio: bio,
+            leaderId: state.currentUser.uid,
+            members: [state.currentUser.uid], // Leader is member #0
+            totalPins: 0,
+            sectorStats: { 'RP-01': 0, 'RP-02': 0, 'RP-03': 0, 'RP-04': 0, 'RP-05': 0 },
+            createdAt: serverTimestamp()
+        };
+
+        // 2. Save to Firestore
+        await addDoc(collection(db, "squads"), squadData);
+        
+        alert(`Squad ${callsign} Initialized!`);
+        
+        // 3. Reset UI
+        switchSquadView('registry');
+        fetchLocalSquads(); // Refresh the list
+    } catch (error) {
+        console.error("Initalization Failed:", error);
+    }
+}
+
+export async function fetchLocalSquads() {
+    const listContainer = document.getElementById('localSquadsList');
+    listContainer.innerHTML = '<p style="text-align:center;">Scanning Rogers Park for units...</p>';
+
+    try {
+        const querySnapshot = await getDocs(collection(db, "squads"));
+        listContainer.innerHTML = ''; // Clear loader
+
+        querySnapshot.forEach((doc) => {
+            const squad = doc.data();
+            const id = doc.id;
+
+            // Use the squad-btn-compact style we created earlier
+            const squadCard = `
+                <div class="hub-card squad-btn-compact" onclick="viewSquadIntel('${id}')">
+                    <span class="hub-icon">🛡️</span>
+                    <div class="hub-text-wrap">
+                        <h3>${squad.squadName} [${squad.callsign}]</h3>
+                        <p>HQ: ${squad.homeSector} | ${squad.members.length} Troopers</p>
+                    </div>
+                </div>
+            `;
+            listContainer.innerHTML += squadCard;
+        });
+    } catch (err) {
+        listContainer.innerHTML = '<p>Tactical Scan Failed. Try again.</p>';
+    }
+}
