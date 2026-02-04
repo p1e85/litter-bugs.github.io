@@ -407,7 +407,7 @@
 
         <div id="squadRegistryView">
             <div class="menu-buttons-vertical" style="margin-bottom: 20px;">
-                <button id="btnCreateSquad" class="modal-button btn-primary">➕ Form New Squad</button>
+                <button id="btnCreateSquad" class="modal-button btn-primary" onclick="openCreateSquadForm()">➕ Form New Squad</button>
             </div>
 
             <h4 style="text-align: left; margin-bottom: 10px; font-size: 0.9rem; color: #666; text-transform: uppercase;">Local Units in Rogers Park</h4>
@@ -436,10 +436,51 @@
             <div id="squadRosterList" class="feed-container" style="max-height: 200px;">
                 </div>
 
-            <button id="btnRequestJoin" class="modal-button launch-btn" style="margin-top: 20px;">
+            <button id="btnRequestJoin" class="modal-button launch-btn" style="margin-top: 20px; width: 100%;">
                 REQUEST TO JOIN UNIT
             </button>
         </div>
+
+        <div id="squadCreateView" style="display: none;">
+            <button class="modal-button secondary" onclick="showSquadRegistry()" style="padding: 5px; font-size: 0.8rem; width: auto; margin-bottom: 15px;">
+                ← Back to Registry
+            </button>
+            
+            <h3>Form New Squad</h3>
+            <p class="modal-subtitle">Register your unit and claim a home sector.</p>
+
+            <div class="form-group">
+                <label>Squad Name</label>
+                <input type="text" id="newSquadName" placeholder="e.g. Rogers Park Rangers" maxlength="30">
+            </div>
+
+            <div class="form-row" style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Callsign (4 Chars)</label>
+                    <input type="text" id="newSquadCallsign" placeholder="RPR1" maxlength="4" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Home Sector</label>
+                    <select id="newSquadHomeSector">
+                        <option value="RP-01">RP-01: North End</option>
+                        <option value="RP-02">RP-02: Glenwood Arts</option>
+                        <option value="RP-03">RP-03: The University</option>
+                        <option value="RP-04">RP-04: Lakefront</option>
+                        <option value="RP-05">RP-05: West Side</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Squad Mission (Bio)</label>
+                <textarea id="newSquadBio" rows="3" placeholder="What is your squad's focus?" maxlength="150"></textarea>
+            </div>
+
+            <button id="btnFinalizeSquad" class="launch-btn" style="width: 100%; margin-top: 15px;">
+                🚀 INITIALIZE SQUAD
+            </button>
+        </div>
+
     </div>
 </div>
     
