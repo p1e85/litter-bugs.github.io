@@ -396,6 +396,53 @@
         </div>
     </div>
 
+<div id="squadsModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('squadsModal')">&times;</button>
+        
+        <div class="admin-header">
+            <h3>🛡️ Squad Command</h3>
+            <p id="userSquadStatusText">Scanning tactical status...</p>
+        </div>
+
+        <div id="squadRegistryView">
+            <div class="menu-buttons-vertical" style="margin-bottom: 20px;">
+                <button id="btnCreateSquad" class="modal-button btn-primary">➕ Form New Squad</button>
+            </div>
+
+            <h4 style="text-align: left; margin-bottom: 10px; font-size: 0.9rem; color: #666; text-transform: uppercase;">Local Units in Rogers Park</h4>
+            
+            <div id="localSquadsList" class="session-list" style="max-height: 350px; overflow-y: auto;">
+                <p style="text-align: center; padding: 20px; color: #999;">No squads found. Be the first to lead.</p>
+            </div>
+        </div>
+
+        <div id="squadIntelView" style="display: none;">
+            <button class="modal-button secondary" onclick="showSquadRegistry()" style="padding: 5px; font-size: 0.8rem; width: auto; margin-bottom: 15px;">
+                ← Back to Registry
+            </button>
+
+            <div id="squadIntelHeader" style="text-align: left;">
+                <h2 id="intelSquadName" style="margin: 0; text-align: left;">Squad Name</h2>
+                <span id="intelSquadCallsign" style="color: var(--color-primary-green); font-weight: bold; letter-spacing: 1px;">[CALLSIGN]</span>
+            </div>
+
+            <div class="safety-disclaimer" style="margin: 15px 0; background: #f0f4f1; border-color: var(--color-primary-green);">
+                <strong>Mission Statement</strong>
+                <p id="intelSquadBio" style="font-style: italic; margin: 5px 0 0 0;">"No bio provided."</p>
+            </div>
+
+            <h4 style="text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">Active Roster</h4>
+            <div id="squadRosterList" class="feed-container" style="max-height: 200px;">
+                </div>
+
+            <button id="btnRequestJoin" class="modal-button launch-btn" style="margin-top: 20px;">
+                REQUEST TO JOIN UNIT
+            </button>
+        </div>
+    </div>
+</div>
+    
     <div id="challengeMenuModal" class="modal-overlay">
         <div class="modal-content" style="text-align: center;">
             <h3>🚀 Challenge Central</h3>
