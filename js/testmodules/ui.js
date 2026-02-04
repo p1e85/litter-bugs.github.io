@@ -165,16 +165,6 @@ export function initializeUI() {
     if (dateElement) {
         dateElement.textContent = new Date().getDate(); 
     }
-
-    const hubSquadsBtn = document.getElementById('hubSquadsBtn');
-    if (hubSquadsBtn) {
-        hubSquadsBtn.addEventListener('click', () => {
-            openModal('squadsModal'); // This should now work!
-            if (typeof fetchLocalSquads === 'function') {
-                fetchLocalSquads(); 
-            }
-        });
-    }
     
 }
 
