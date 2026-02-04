@@ -1484,15 +1484,6 @@ export async function fetchLocalSquads() {
         const q = query(squadsRef, orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
 
-        if (querySnapshot.empty) {
-            listContainer.innerHTML = `
-                <p>No active units found in this sector.</p>
-                <button class="modal-button btn-primary" onclick="openCreateSquadForm()">
-                    ➕ Form First Squad
-                </button>`;
-            return;
-        }
-
         // Clear the "Scanning" text
         listContainer.innerHTML = '';
 
