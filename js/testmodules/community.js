@@ -5,6 +5,7 @@ import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
+import { collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // --- Helper Function: Calculate Distance ---
 function calculateRouteDistance(coords) {
@@ -1473,29 +1474,56 @@ export async function initializeSquad() {
 
 export async function fetchLocalSquads() {
     const listContainer = document.getElementById('localSquadsList');
-    listContainer.innerHTML = '<p style="text-align:center;">Scanning Rogers Park for units...</p>';
+    if (!listContainer) return;
+
+    // Show a loading state while we talk to Firebase
+    listContainer.innerHTML = '<p class="loading-text">📡 Establishing uplink with Sector Command...</p>';
 
     try {
-        const querySnapshot = await getDocs(collection(db, "squads"));
-        listContainer.innerHTML = ''; // Clear loader
+        const squadsRef = collection(db, "squads");
+        // Optional: Filter by the user's current sector if you want it localized
+        const q = query(squadsRef, orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
 
+        if (querySnapshot.empty) {
+            listContainer.innerHTML = `
+                <p>No active units found in this sector.</p>
+                <button class="modal-button btn-primary" onclick="openCreateSquadForm()">
+                    ➕ Form First Squad
+                </button>`;
+            return;
+        }
+
+        // Clear the "Scanning" text
+        listContainer.innerHTML = '';
+
+        // Loop through the database results
         querySnapshot.forEach((doc) => {
             const squad = doc.data();
-            const id = doc.id;
-
-            // Use the squad-btn-compact style we created earlier
-            const squadCard = `
-                <div class="hub-card squad-btn-compact" onclick="viewSquadIntel('${id}')">
-                    <span class="hub-icon">🛡️</span>
-                    <div class="hub-text-wrap">
-                        <h3>${squad.squadName} [${squad.callsign}]</h3>
-                        <p>HQ: ${squad.homeSector} | ${squad.members.length} Troopers</p>
-                    </div>
+            const squadId = doc.id;
+            
+            // Create a row/card for each squad
+            const card = document.createElement('div');
+            card.className = 'hub-card';
+            card.style.display = 'flex';
+            card.style.justifyContent = 'space-between';
+            card.style.alignItems = 'center';
+            
+            card.innerHTML = `
+                <div class="hub-text-wrap">
+                    <h3>[${squad.callsign}] ${squad.squadName}</h3>
+                    <p>${squad.homeSector} • ${squad.memberCount || 1} Members</p>
                 </div>
+                <button class="modal-button btn-secondary" style="width: auto; padding: 8px 15px;" 
+                        onclick="viewSquadIntel('${squadId}')">
+                    Intel
+                </button>
             `;
-            listContainer.innerHTML += squadCard;
+            listContainer.appendChild(card);
         });
-    } catch (err) {
-        listContainer.innerHTML = '<p>Tactical Scan Failed. Try again.</p>';
+
+    } catch (error) {
+        console.error("Uplink Failed:", error);
+        listContainer.innerHTML = '<p style="color: var(--color-accent-danger);">⚠️ Tactical Scan Failed. Check console.</p>';
     }
 }
