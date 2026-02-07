@@ -1209,3 +1209,19 @@ window.handleLeave = (squadId, name) => {
         leaveSquad(squadId, name);
     }
 };
+
+window.viewSquadIntel = (squadId) => {
+    console.log("Uplink Initiated for Squad ID:", squadId); // Tactical Debug
+    
+    // 1. Flip the UI to the Intel page
+    if (typeof switchSquadView === 'function') {
+        switchSquadView('intel');
+    }
+    
+    // 2. Immediately start downloading the dossier
+    if (typeof fetchSquadDetails === 'function') {
+        fetchSquadDetails(squadId);
+    } else {
+        console.error("Critical Failure: fetchSquadDetails is not defined in community.js");
+    }
+};
