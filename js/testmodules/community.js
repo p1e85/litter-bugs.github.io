@@ -1487,45 +1487,44 @@ export async function fetchLocalSquads() {
     const listContainer = document.getElementById('localSquadsList');
     if (!listContainer) return;
 
-    // Show a loading state while we talk to Firebase
-    listContainer.innerHTML = '<p class="loading-text">📡 Establishing uplink with Sector Command...</p>';
+    // Show loading state
+    listContainer.innerHTML = '<p class="loading-text" style="text-align: center; padding: 20px;">📡 Establishing uplink with Sector Command...</p>';
 
     try {
         const squadsRef = collection(db, "squads");
-        // Optional: Filter by the user's current sector if you want it localized
         const q = query(squadsRef, orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-            // Only show the message here, not the button
             listContainer.innerHTML = `
                 <p style="text-align: center; padding: 20px; color: #777;">
                     No active units found in this sector.
                 </p>`;
-        return;
-}
-        
-        // Clear the "Scanning" text
+            return;
+        }
+
         listContainer.innerHTML = '';
 
-        // Loop through the database results
         querySnapshot.forEach((doc) => {
             const squad = doc.data();
             const squadId = doc.id;
             
-            // Create a row/card for each squad
             const card = document.createElement('div');
             card.className = 'hub-card';
             card.style.display = 'flex';
             card.style.justifyContent = 'space-between';
             card.style.alignItems = 'center';
+            card.style.padding = '15px';
             
+            // Note: viewSquadIntel('${squadId}') ensures the ID is passed as a string
             card.innerHTML = `
-                <div class="hub-text-wrap">
-                    <h3>[${squad.callsign}] ${squad.squadName}</h3>
-                    <p>${squad.homeSector} • ${squad.memberCount || 1} Members</p>
+                <div class="hub-text-wrap" style="text-align: left;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">[${squad.callsign}] ${squad.squadName}</h3>
+                    <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #666;">
+                        ${squad.homeSector} • ${squad.memberCount || 1} Members
+                    </p>
                 </div>
-                <button class="modal-button btn-secondary" style="width: auto; padding: 8px 15px;" 
+                <button class="modal-button btn-secondary" style="width: auto; padding: 8px 15px; margin: 0;" 
                         onclick="viewSquadIntel('${squadId}')">
                     Intel
                 </button>
@@ -1535,7 +1534,7 @@ export async function fetchLocalSquads() {
 
     } catch (error) {
         console.error("Uplink Failed:", error);
-        listContainer.innerHTML = '<p style="color: var(--color-accent-danger);">⚠️ Tactical Scan Failed. Check console.</p>';
+        listContainer.innerHTML = '<p style="color: var(--color-accent-danger); text-align: center;">⚠️ Tactical Scan Failed. Check connection.</p>';
     }
 }
 
@@ -1558,8 +1557,6 @@ export async function fetchSquadDetails(squadId) {
             const isGlobalAdmin = state.currentUser && state.currentUser.role === 'admin';
             const isLeader = currentUid === squad.leaderId;
             const hasControl = isGlobalAdmin || isLeader;
-            
-            // Check if the current user is in the members array
             const isMember = squad.members && squad.members.includes(currentUid);
 
             // 3. Build the Intel UI
@@ -1573,9 +1570,9 @@ export async function fetchSquadDetails(squadId) {
                     SECTOR OPS: ${squad.homeSector}
                 </p>
                 
-                <div class="safety-disclaimer" style="background: #f0f0f0; border-left: 4px solid #4A7C59; color: #333; margin: 20px 0;">
+                <div class="safety-disclaimer" style="background: #f0f0f0; border-left: 4px solid #4A7C59; color: #333; margin: 20px 0; text-align: left;">
                     <strong>MISSION PROFILE</strong>
-                    <p style="text-align: left; margin-top: 5px; font-size: 0.95rem; line-height: 1.4;">
+                    <p style="margin-top: 5px; font-size: 0.95rem; line-height: 1.4;">
                         ${squad.bio || "No mission profile provided for this unit."}
                     </p>
                 </div>
@@ -1588,15 +1585,12 @@ export async function fetchSquadDetails(squadId) {
                 </div>
 
                 <div id="squadRosterList" style="min-height: 100px;">
-                    <p style="font-size: 0.8rem; color: #888; text-align: center; padding: 10px;">
-                        Scanning for active member profiles...
-                    </p>
-                </div>
+                    </div>
 
                 <div class="squad-action-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; padding-bottom: 20px;">
                     ${hasControl ? `
                         <div style="background: rgba(220, 53, 69, 0.05); border: 1px dashed #dc3545; padding: 15px; border-radius: 8px;">
-                            <p style="color: #dc3545; font-size: 0.8rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">
+                            <p style="color: #dc3545; font-size: 0.8rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase;">
                                 ⚠️ COMMAND OVERRIDE: ${isGlobalAdmin ? 'SYSTEM ADMIN' : 'UNIT LEADER'}
                             </p>
                             <button class="modal-button btn-danger" onclick="handleDisband('${squadId}', '${squad.squadName}')" style="margin: 0;">
@@ -1618,13 +1612,9 @@ export async function fetchSquadDetails(squadId) {
                 </div>
             `;
             
-            // 4. Trigger the Roster Scan
+            // 4. Trigger the Roster Scan (Pass the Leader ID for the Star)
             if (squad.members && squad.members.length > 0) {
-                if (typeof renderRoster === 'function') {
-                    renderRoster(squad.members);
-                }
-            } else {
-                document.getElementById('squadRosterList').innerHTML = '<p style="text-align: center; color: #999;">No members found.</p>';
+                renderRoster(squad.members, squad.leaderId);
             }
 
         } else {
@@ -1634,14 +1624,6 @@ export async function fetchSquadDetails(squadId) {
         console.error("Intel Retrieval Failed:", error);
         intelView.innerHTML = '<p style="text-align: center; padding: 40px; color: #dc3545;">⚠️ UPLINK ERROR</p>';
     }
-
-    if (squad.members && squad.members.length > 0) {
-        if (typeof renderRoster === 'function') {
-            // We pass both the list of members AND the leader's ID
-            renderRoster(squad.members, squad.leaderId); 
-        }
-    }    
-    
 }
 
 export async function disbandSquad(squadId, squadName) {
