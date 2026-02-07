@@ -1,5 +1,5 @@
 import { 
-    db, serverTimestamp, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL, runTransaction 
+    db, serverTimestamp, arrayRemove, increment, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL, runTransaction 
 } from './firebase.js';
 import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
@@ -1699,5 +1699,31 @@ async function renderRoster(memberIds) {
     } catch (err) {
         console.error("Roster Scan Failed:", err);
         rosterContainer.innerHTML = '<p style="text-align: center; color: #dc3545;">⚠️ Failed to load member profiles.</p>';
+    }
+}
+
+export async function leaveSquad(squadId, squadName) {
+    if (!state.currentUser) return;
+
+    const confirmed = confirm(`Are you sure you want to exit [${squadName}]?`);
+    if (!confirmed) return;
+
+    try {
+        const squadRef = doc(db, "squads", squadId);
+        
+        // Update Firebase: Remove UID and drop the count by 1
+        await updateDoc(squadRef, {
+            members: arrayRemove(state.currentUser.uid),
+            memberCount: increment(-1)
+        });
+
+        alert(`You have officially left [${squadName}].`);
+
+        // Refresh the view to show the "Join" button again
+        fetchSquadDetails(squadId);
+
+    } catch (error) {
+        console.error("Extraction Failed:", error);
+        alert("Tactical Error: Could not process unit departure.");
     }
 }
