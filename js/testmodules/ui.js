@@ -1203,3 +1203,9 @@ window.viewSquadIntel = (squadId) => {
     if (typeof switchSquadView === 'function') switchSquadView('intel');
     if (typeof fetchSquadDetails === 'function') fetchSquadDetails(squadId);
 };
+
+window.handleLeave = (squadId, name) => {
+    if (typeof leaveSquad === 'function') {
+        leaveSquad(squadId, name);
+    }
+};
