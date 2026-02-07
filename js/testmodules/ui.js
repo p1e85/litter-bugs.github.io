@@ -959,7 +959,7 @@ async function loadPastChallenges(filterType) {
     const listContainer = elements.pastChallengesContent;
     if (!listContainer) return;
 
-    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Syncing mission history...</p>";
+    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Retrieving mission history...</p>";
 
     try {
         if (!state.currentUser) {
@@ -969,7 +969,7 @@ async function loadPastChallenges(filterType) {
 
         const now = new Date();
         const myQuests = await getUserQuests(state.currentUser.uid);
-        const activeChallenges = await getAdminChallenges();
+        const activeChallenges = await getAdminChallenges(); 
         
         listContainer.innerHTML = ""; 
         let count = 0;
@@ -987,7 +987,6 @@ async function loadPastChallenges(filterType) {
             const title = originalData?.title || userProgress.title || "Unknown Quest";
             const goal = originalData?.goal_miles || "??";
             
-            // Fix: Capture more date field variations
             let expireDate = null;
             if (originalData?.expires_at) {
                 expireDate = originalData.expires_at.toDate ? originalData.expires_at.toDate() : new Date(originalData.expires_at.seconds * 1000);
@@ -997,16 +996,13 @@ async function loadPastChallenges(filterType) {
                 expireDate = new Date(originalData.adminChalExpire);
             }
 
-            // --- BUG FIX STATUS LOGIC ---
             let currentStatus = userProgress.status || 'in-progress';
-            
-            // If it's 'active' or 'in-progress' but the date has passed, it is EXPIRED.
             const isStale = (currentStatus === 'in-progress' || currentStatus === 'active');
+            
             if (isStale && expireDate && expireDate < now) {
                 currentStatus = 'expired';
             }
             
-            // Fallback: If no date found but it's not completed, treat as expired if it's old
             if (isStale && !expireDate && !originalData) {
                 currentStatus = 'expired'; 
             }
@@ -1014,7 +1010,6 @@ async function loadPastChallenges(filterType) {
             const isCompleted = currentStatus === 'completed';
             const isExpired = currentStatus === 'expired';
 
-            // Filter for Tabs
             let showIt = false;
             if (filterType === 'completed' && isCompleted) showIt = true;
             if (filterType === 'uncompleted' && !isCompleted) showIt = true;
@@ -1047,25 +1042,15 @@ async function loadPastChallenges(filterType) {
                             </small>
                         </div>
                         
-                        <div style="text-align:right; min-width: 110px;">
+                        <div style="text-align:right; min-width: 50px;">
                             <strong style="color:${statusColor}; font-size:0.7rem; letter-spacing:0.5px; display:block; margin-bottom:8px;">${statusText}</strong>
                             
-                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                                ${isExpired ? `
-                                    <button class="modal-button" 
-                                            style="margin:0; padding:6px 12px; font-size:0.65rem; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;" 
-                                            onclick="handleReattempt('${chalId}', '${title}')">
-                                        RE-ATTEMPT
-                                    </button>
-                                ` : ''}
-                                
-                                <button class="delete-btn" 
-                                        style="background: #f8d7da; border: none; padding: 5px 8px; border-radius: 4px; color: #721c24; cursor: pointer; font-size: 0.8rem;" 
-                                        onclick="handleDeleteMission('${chalId}')"
-                                        title="Delete Mission Record">
-                                    🗑️
-                                </button>
-                            </div>
+                            <button class="delete-btn" 
+                                    style="background: #f8d7da; border: none; padding: 6px 10px; border-radius: 4px; color: #721c24; cursor: pointer; font-size: 0.9rem;" 
+                                    onclick="handleDeleteMission('${chalId}')"
+                                    title="Delete Entry">
+                                🗑️
+                            </button>
                         </div>
                     </div>
                 `;
@@ -1074,12 +1059,12 @@ async function loadPastChallenges(filterType) {
         }
 
         if (count === 0) {
-            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">No ${filterType} mission records found.</p>`;
+            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">No ${filterType} records found.</p>`;
         }
 
     } catch (e) {
         console.error("Archive Sync Failed:", e);
-        listContainer.innerHTML = "<p style='text-align:center; padding:20px; color:#dc3545;'>⚠️ Error: Could not synchronize with mission archives.</p>";
+        listContainer.innerHTML = "<p style='text-align:center; padding:20px; color:#dc3545;'>⚠️ Uplink Error: Archives inaccessible.</p>";
     }
 }
 
