@@ -1303,49 +1303,6 @@ export async function cleanupExpiredChallenges() {
 // Add to your window bridge so you can trigger it from the Admin Panel
 window.runGlobalCleanup = cleanupExpiredChallenges;
 
-// Add this to your logic
-export async function reattemptChallenge(challengeId, title) {
-    if (!state.currentUser) return;
-
-    const confirmed = confirm(`Do you wish to re-deploy for [${title}]? Your previous progress on this mission will be reset.`);
-    if (!confirmed) return;
-
-    try {
-        // We look for the user's specific progress document for this challenge
-        // Note: This assumes your user_challenges documents are ID'd by "uid_challengeId" 
-        // or found via a query. Using a query for safety:
-        const q = query(
-            collection(db, "user_challenges"), 
-            where("uid", "==", state.currentUser.uid),
-            where("challengeId", "==", challengeId)
-        );
-        const snap = await getDocs(q);
-
-        if (!snap.empty) {
-            const userChallengeDocId = snap.docs[0].id;
-            
-            await updateDoc(doc(db, "user_challenges", userChallengeDocId), {
-                status: "in-progress",
-                progress: 0,
-                joined_at: serverTimestamp(),
-                completed_at: null // Clear any old completion dates
-            });
-
-            alert(`Mission Re-Activated: Good luck, Trooper.`);
-            
-            // Refresh the History view
-            if (typeof loadPastChallenges === 'function') loadPastChallenges('uncompleted');
-        }
-
-    } catch (err) {
-        console.error("Re-deployment Failed:", err);
-        alert("Tactical Error: Could not re-initialize mission profile.");
-    }
-}
-
-// Add to window bridge
-window.handleReattempt = (id, title) => reattemptChallenge(id, title);
-
 window.handleReattempt = async (challengeId, title) => {
     const confirmed = confirm(`Redeploy for [${title}]? Your progress will reset to 0.`);
     if (!confirmed) return;
