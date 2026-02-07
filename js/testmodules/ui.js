@@ -959,7 +959,7 @@ async function loadPastChallenges(filterType) {
     const listContainer = elements.pastChallengesContent;
     if (!listContainer) return;
 
-    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Establishing uplink with mission archives...</p>";
+    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Retrieving mission archives...</p>";
 
     try {
         if (!state.currentUser) {
@@ -969,14 +969,6 @@ async function loadPastChallenges(filterType) {
 
         const now = new Date();
         const myQuests = await getUserQuests(state.currentUser.uid);
-        const questIds = Object.keys(myQuests);
-
-        if (questIds.length === 0) {
-            listContainer.innerHTML = "<p style='text-align:center; padding:20px; color:#888;'>No challenge history found.</p>";
-            return;
-        }
-
-        // We fetch all challenges to compare current progress against the original goals/expiry
         const allChallenges = await getAdminChallenges();
         
         listContainer.innerHTML = ""; 
@@ -984,14 +976,10 @@ async function loadPastChallenges(filterType) {
 
         for (const [chalId, userProgress] of Object.entries(myQuests)) {
             const originalData = allChallenges.find(c => c.id === chalId) || {};
-            
-            // 1. DATA MAPPING
             const title = originalData.title || userProgress.title || "Unknown Quest";
             const goal = originalData.goal_miles || "??";
             const expireDate = originalData.expires_at ? new Date(originalData.expires_at.seconds * 1000) : null;
             
-            // 2. DYNAMIC STATUS LOGIC
-            // Even if the DB says 'in-progress', if the time is up, it's 'expired'
             let currentStatus = userProgress.status || 'in-progress';
             if (currentStatus === 'in-progress' && expireDate && expireDate < now) {
                 currentStatus = 'expired';
@@ -999,10 +987,7 @@ async function loadPastChallenges(filterType) {
 
             const isCompleted = currentStatus === 'completed';
             const isExpired = currentStatus === 'expired';
-            const isInProgress = currentStatus === 'in-progress';
 
-            // 3. FILTERING
-            // 'completed' shows finished ones. 'uncompleted' shows expired OR stalled in-progress ones.
             let showIt = false;
             if (filterType === 'completed' && isCompleted) showIt = true;
             if (filterType === 'uncompleted' && !isCompleted) showIt = true;
@@ -1011,36 +996,38 @@ async function loadPastChallenges(filterType) {
                 count++;
                 const card = document.createElement('div');
                 card.className = "hub-card";
-                card.style.marginBottom = "10px";
-                card.style.textAlign = "left";
+                card.style.marginBottom = "12px";
+                card.style.padding = "15px";
                 
-                // 4. VISUAL STYLING BASED ON STATUS
-                const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#dc3545" : "#4A7C59");
-                const statusText = isCompleted ? "🏆 COMPLETED" : (isExpired ? "⌛ EXPIRED" : "🏃 IN PROGRESS");
-                const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#dc3545" : "#4A7C59");
-                const backgroundColor = isCompleted ? "#fff9db" : (isExpired ? "#fff5f5" : "#fff");
+                // Visual indicators
+                const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#666" : "#4A7C59");
+                const statusIcon = isCompleted ? "🏆" : (isExpired ? "📁" : "🏃");
+                const statusText = isCompleted ? "COMPLETED" : (isExpired ? "ARCHIVED" : "IN PROGRESS");
+                const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#777" : "#4A7C59");
 
-                let dateStr = "";
-                if (userProgress.completed_at) {
-                    dateStr = `Done: ${new Date(userProgress.completed_at.seconds * 1000).toLocaleDateString()}`;
-                } else if (userProgress.joined_at) {
-                    dateStr = `Joined: ${new Date(userProgress.joined_at.seconds * 1000).toLocaleDateString()}`;
-                }
-
-                card.style.borderLeft = `5px solid ${borderColor}`;
-                card.style.backgroundColor = backgroundColor;
+                card.style.borderLeft = `6px solid ${borderColor}`;
+                card.style.backgroundColor = isCompleted ? "#fff9db" : (isExpired ? "#f2f2f2" : "#fff");
                 
                 card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 5px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div style="flex-grow: 1;">
-                            <h4 style="margin:0; font-size: 1.1rem; color: #333;">${title}</h4>
-                            <small style="color:#666;">${dateStr}</small>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:1.2rem;">${statusIcon}</span>
+                                <h4 style="margin:0; font-size:1.05rem;">${title}</h4>
+                            </div>
+                            <small style="color:#888; display:block; margin-top:4px;">
+                                Goal: ${goal} mi • Progress: ${Number(userProgress.progress || 0).toFixed(1)} mi
+                            </small>
                         </div>
-                        <div style="text-align:right; min-width: 100px;">
-                            <strong style="color:${statusColor}; display:block; font-size: 0.8rem; letter-spacing: 0.5px;">${statusText}</strong>
-                            <span style="font-size:0.9em; font-weight: bold; color: #444;">
-                                ${Number(userProgress.progress || 0).toFixed(1)} / ${goal} mi
-                            </span>
+                        <div style="text-align:right;">
+                            <strong style="color:${statusColor}; font-size:0.75rem; letter-spacing:1px;">${statusText}</strong>
+                            ${isExpired ? `
+                                <button class="modal-button primary" 
+                                        style="margin-top:8px; padding:4px 10px; font-size:0.7rem; background:#4A7C59;" 
+                                        onclick="handleReattempt('${chalId}', '${title}')">
+                                    RE-ATTEMPT
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -1049,12 +1036,12 @@ async function loadPastChallenges(filterType) {
         }
 
         if (count === 0) {
-            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#888;">No ${filterType} missions found in archives.</p>`;
+            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">Archive empty for ${filterType} missions.</p>`;
         }
 
     } catch (e) {
-        console.error("Critical Failure Loading Challenge History:", e);
-        listContainer.innerHTML = "<p style='text-align:center; color:#dc3545;'>⚠️ Error: Could not synchronize with mission archives.</p>";
+        console.error("Archive Sync Failed:", e);
+        listContainer.innerHTML = "<p>Error accessing archives.</p>";
     }
 }
 
@@ -1238,3 +1225,86 @@ window.handleViewProfile = (uid) => {
         showPublicProfile(uid);
     }
 };
+
+export async function cleanupExpiredChallenges() {
+    const now = new Date();
+    console.log("🚀 Starting Global Mission Cleanup...");
+
+    try {
+        const challengesRef = collection(db, "challenges");
+        // Only pull challenges that think they are still 'active'
+        const q = query(challengesRef, where("status", "==", "active"));
+        const snap = await getDocs(q);
+
+        let count = 0;
+        for (const docSnap of snap.docs) {
+            const data = docSnap.data();
+            const expireDate = data.expires_at ? new Date(data.expires_at.seconds * 1000) : null;
+
+            if (expireDate && expireDate < now) {
+                await updateDoc(doc(db, "challenges", docSnap.id), {
+                    status: "expired"
+                });
+                count++;
+            }
+        }
+        
+        console.log(`✅ Cleanup Complete. ${count} ghost missions decommissioned.`);
+        alert(`Strategic Cleanup: ${count} expired missions moved to archives.`);
+        
+        // Refresh the UI lists
+        if (typeof loadPublicChallenges === 'function') loadPublicChallenges();
+        if (typeof loadAdminChallengeList === 'function') loadAdminChallengeList();
+
+    } catch (err) {
+        console.error("Cleanup Interrupted:", err);
+        alert("Cleanup Failed: Could not synchronize with sector database.");
+    }
+}
+
+// Add to your window bridge so you can trigger it from the Admin Panel
+window.runGlobalCleanup = cleanupExpiredChallenges;
+
+// Add this to your logic
+export async function reattemptChallenge(challengeId, title) {
+    if (!state.currentUser) return;
+
+    const confirmed = confirm(`Do you wish to re-deploy for [${title}]? Your previous progress on this mission will be reset.`);
+    if (!confirmed) return;
+
+    try {
+        // We look for the user's specific progress document for this challenge
+        // Note: This assumes your user_challenges documents are ID'd by "uid_challengeId" 
+        // or found via a query. Using a query for safety:
+        const q = query(
+            collection(db, "user_challenges"), 
+            where("uid", "==", state.currentUser.uid),
+            where("challengeId", "==", challengeId)
+        );
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+            const userChallengeDocId = snap.docs[0].id;
+            
+            await updateDoc(doc(db, "user_challenges", userChallengeDocId), {
+                status: "in-progress",
+                progress: 0,
+                joined_at: serverTimestamp(),
+                completed_at: null // Clear any old completion dates
+            });
+
+            alert(`Mission Re-Activated: Good luck, Trooper.`);
+            
+            // Refresh the History view
+            if (typeof loadPastChallenges === 'function') loadPastChallenges('uncompleted');
+        }
+
+    } catch (err) {
+        console.error("Re-deployment Failed:", err);
+        alert("Tactical Error: Could not re-initialize mission profile.");
+    }
+}
+
+// Add to window bridge
+window.handleReattempt = (id, title) => reattemptChallenge(id, title);
+
