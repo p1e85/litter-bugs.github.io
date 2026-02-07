@@ -8,31 +8,35 @@ import { showPublicProfile } from './ui.js';
  */
 export function initializeMap() {
     mapboxgl.accessToken = 'pk.eyJ1IjoicDFjcmVhdGlvbnMiLCJhIjoiY2p6ajZvejJmMDZhaTNkcWpiN294dm12eCJ9.8ckNT6kfuJry7K7GAeIuxw';
+    
+    // 1. Initialize the Map
     state.map = new mapboxgl.Map({
         container: 'map',
         style: mapStyles[state.currentStyleIndex].url,
-        center: [-87.6298, 41.8781], // Default center
-        zoom: 10
+        center: [-87.66, 42.01], // Centered on Rogers Park
+        zoom: 13
     });
 
+    // 2. Initialize the Geocoder
     const geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
-        mapboxgl: mapboxgl,
-        // Add 'poi' and 'address' to broaden the search
+        mapboxgl: mapboxgl, // CRITICAL: Fixes the getZoom error
         types: 'country,region,place,postcode,locality,neighborhood,address,poi', 
-        // Optional: Limit results to a specific area (like Chicago/Rogers Park)
-        // bbox: [-87.70, 42.00, -87.65, 42.03], 
         proximity: {
-        longitude: state.map.getCenter().lng,
-        latitude: state.map.getCenter().lat
+            longitude: state.map.getCenter().lng,
+            latitude: state.map.getCenter().lat
         },
         placeholder: 'Search for parks, addresses, or landmarks...',
-        marker: { color: '#4A7C59' }
+        marker: false // Set to false because we are adding a custom Target marker below
     });
     
-    document.getElementById('geocoder-container').appendChild(geocoder.onAdd(map));
+    // Append Geocoder to your UI container
+    const geocoderContainer = document.getElementById('geocoder-container');
+    if (geocoderContainer) {
+        geocoderContainer.appendChild(geocoder.onAdd(state.map));
+    }
 
-    // 2. THE FLY-TO LOGIC
+    // 3. THE FLY-TO LOGIC
     geocoder.on('result', (event) => {
         const coords = event.result.geometry.coordinates;
         const name = event.result.text;
@@ -41,21 +45,21 @@ export function initializeMap() {
 
         state.map.flyTo({
             center: coords,
-            zoom: 15.5,      // Tactical zoom level
-            pitch: 45,        // Tilt the map for a 3D perspective
+            zoom: 15.5,       // Tactical zoom level
+            pitch: 45,         // Tilt the map for a 3D perspective
             bearing: 0,
-            essential: true,  // This animation is considered essential with respect to prefers-reduced-motion
-            duration: 3000    // 3 seconds for a smooth "glide"
+            essential: true,   // Respects motion preferences
+            duration: 3000     // 3 seconds for a smooth "glide"
         });
 
-        // Optional: Add a temporary "Target" marker at the searched POI
+        // Add a temporary "Target" marker at the searched POI
         const targetMarker = new mapboxgl.Marker({ color: '#dc3545' }) // Red for Target
             .setLngLat(coords)
-            .setPopup(new mapboxgl.Popup().setHTML(`<h4>Target: ${name}</h4><p>Scout this area for litter.</p>`))
+            .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>Target: ${name}</h3><p>Scout this area for litter.</p>`))
             .addTo(state.map);
     });
     
-    // 3. THE MAGIC: Update proximity as the user moves the map
+    // 4. Update proximity as the user moves the map
     state.map.on('moveend', () => {
         const newCenter = state.map.getCenter();
         geocoder.setProximity({
@@ -65,10 +69,8 @@ export function initializeMap() {
         console.log("Geocoder proximity updated to map center:", newCenter);
     });
 
+    // Handle Search Input focus (Mobile Keyboard Fix)
     const searchInput = document.querySelector('#geocoder-container .mapboxgl-ctrl-geocoder--input');
-
-    // This code makes the input readonly initially, then removes that attribute
-    // as soon as the user focuses on it (by clicking or tabbing).
     if (searchInput) {
         searchInput.setAttribute('readonly', 'readonly');
         searchInput.onfocus = () => {
@@ -76,9 +78,11 @@ export function initializeMap() {
         };
     }
 
+    // Map Load Logic
     state.map.on('load', () => {
         initializeMapLayers();
         setupPoiClickListeners(); // From community.js
+        setupSectorVisuals();     // Ensure sectors are ready
     });
 
     state.map.on('zoom', toggleMarkerVisibility);
@@ -87,11 +91,7 @@ export function initializeMap() {
 /**
  * Sets up the initial GeoJSON sources and layers for routes and pins.
  */
-// In js/modules/map.js
-
 function initializeMapLayers() {
-  // --- User-Specific Layers ---
-
   // User's route line
   if (!state.map.getSource('user-route')) {
     state.map.addSource('user-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
@@ -126,7 +126,6 @@ export function changeMapStyle() {
     state.map.setStyle(mapStyles[state.currentStyleIndex].url);
     
     state.map.once('style.load', () => {
-        // --- 1. Restore the standard stuff ---
         initializeMapLayers();
         state.userMarkers.forEach(marker => marker.addTo(state.map));
         state.communityMarkers.forEach(marker => marker.addTo(state.map));
@@ -137,12 +136,10 @@ export function changeMapStyle() {
         }
         updateUserPinsSource();
 
-        // --- 2. RESTORE THE SECTORS (The Fix) ---
-        setupSectorVisuals(); // Re-creates the polygon geometry
-        updateSwarmPulse();   // Re-applies the 'glow' opacities
+        setupSectorVisuals(); 
+        updateSwarmPulse();   
         
-        // --- 3. RESPECT THE TOGGLE STATE ---
-        // Check if the button is currently 'active' (meaning sectors should be visible)
+        // Respect the Sector Toggle state
         const sectorBtn = document.getElementById('toggleSectorsBtn');
         const isSectorsActive = sectorBtn && sectorBtn.classList.contains('active');
         
@@ -168,17 +165,11 @@ function toggleMarkerVisibility() {
 
 /**
  * Creates a photo marker with a popup and adds it to the map.
- * @param {object} pinInfo - The data for the pin.
- * @param {string} type - 'user' or 'community'.
- * @param {object} routeInfo - Additional data for community pins.
- * @returns {mapboxgl.Marker} The created marker instance.
  */
 export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
     const el = document.createElement('div');
     el.className = 'photo-marker';
-    //el.style.backgroundImage = `url(${pinInfo.imageURL || pinInfo.image})`;
     el.style.backgroundImage = `url(${pinInfo.thumbnailURL || pinInfo.imageURL || pinInfo.image})`;
-    //el.style.display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
 
     const popup = createPinPopup(pinInfo, type, routeInfo);
     const marker = new mapboxgl.Marker(el).setLngLat(pinInfo.coords).setPopup(popup).addTo(state.map);
@@ -186,7 +177,7 @@ export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
     if (type === 'user') {
         state.userMarkers.push(marker);
     } else {
-        el.style.borderColor = '#28a745'; // Community marker color
+        el.style.borderColor = '#28a745'; 
         state.communityMarkers.push(marker);
     }
     return marker;
@@ -198,14 +189,12 @@ export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
 function createPinPopup(pinInfo, type, routeInfo = {}) {
     let popupHTML;
 
-    // --- HTML for User's Own Pin (Editable) ---
     if (type === 'user') {
         const mainCategories = Object.keys(pinCategories);
         let mainOptionsHTML = mainCategories.map(cat =>
             `<option value="${cat}" ${pinInfo.category === cat ? 'selected' : ''}>${cat}</option>`
         ).join('');
 
-        // Determine initial sub-categories based on saved data or default
         const currentCategory = pinInfo.category && pinCategories[pinInfo.category] ? pinInfo.category : 'Other';
         let subOptionsHTML = pinCategories[currentCategory].map(subCat =>
             `<option value="${subCat}" ${pinInfo.subCategory === subCat ? 'selected' : ''}>${subCat}</option>`
@@ -216,24 +205,18 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                 <img src="${pinInfo.imageURL || pinInfo.image}" alt="User photo" style="width:100%; height:auto; border-radius: 4px;"/>
                 <div class="pin-popup-form">
                     <input type="text" id="title-${pinInfo.id}" value="${pinInfo.title || ''}" placeholder="Enter a title">
-
                     <label for="category-${pinInfo.id}">Category:</label>
                     <select id="category-${pinInfo.id}">${mainOptionsHTML}</select>
-
                     <label for="subCategory-${pinInfo.id}">Sub-Category:</label>
                     <select id="subCategory-${pinInfo.id}">${subOptionsHTML}</select>
-
                     <label for="brand-${pinInfo.id}">Brand (Optional):</label>
                     <input type="text" id="brand-${pinInfo.id}" value="${pinInfo.brand || ''}" placeholder="e.g., Coca-Cola">
-
                     <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
                         <button id="update-${pinInfo.id}" class="modal-button btn-primary">Update</button>
                         <button id="delete-${pinInfo.id}" class="modal-button btn-danger">Delete</button>
                     </div>
                 </div>
             </div>`;
-
-    // --- HTML for Community Pin (Read-only) ---
     } else {
         popupHTML = `
             <div>
@@ -248,16 +231,13 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
         `;
     }
 
-    // --- Create Popup and Add Event Listeners ---
     const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(popupHTML);
 
     popup.on('open', () => {
-        // --- Logic for User's Own Pin ---
         if (type === 'user') {
             const categorySelect = document.getElementById(`category-${pinInfo.id}`);
             const subCategorySelect = document.getElementById(`subCategory-${pinInfo.id}`);
 
-            // Update sub-category dropdown when main category changes
             categorySelect?.addEventListener('change', (e) => {
                 const selectedCategory = e.target.value;
                 const subCategories = pinCategories[selectedCategory] || [];
@@ -266,7 +246,6 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                 ).join('');
             });
 
-            // "Update" button listener
             document.getElementById(`update-${pinInfo.id}`)?.addEventListener('click', () => {
                 const pin = state.photoPins.find(p => p.id === pinInfo.id);
                 if (pin) {
@@ -279,34 +258,23 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                 alert("Pin updated! Remember to save your session.");
             });
 
-            // "Delete" button listener
             document.getElementById(`delete-${pinInfo.id}`)?.addEventListener('click', () => {
                 if (confirm("Are you sure?")) {
-                    // Filter out the deleted pin from the state
                     state.photoPins = state.photoPins.filter(p => p.id !== pinInfo.id);
-                    // Find and remove the corresponding marker from the map and state
                     const markerToRemove = state.userMarkers.find(m => {
                         const lngLat = m.getLngLat();
-                        const markerCoords = [lngLat.lng, lngLat.lat];
-                        const pinCoords = Array.isArray(pinInfo.coords) ? pinInfo.coords : [pinInfo.coords.lng, pinInfo.coords.lat];
-                        return markerCoords[0] === pinCoords[0] && markerCoords[1] === pinCoords[1];
+                        return lngLat.lng === pinInfo.coords[0] && lngLat.lat === pinInfo.coords[1];
                     });
                     if (markerToRemove) {
                         markerToRemove.remove();
                         state.userMarkers = state.userMarkers.filter(m => m !== markerToRemove);
                     }
-                    // Update the underlying map source if it exists
                     if (typeof updateUserPinsSource === 'function') { updateUserPinsSource(); }
                     popup.remove();
                 }
             });
-
-            // Blur the first input to prevent auto keyboard on mobile
             document.getElementById(`title-${pinInfo.id}`)?.blur();
-
-        // --- Logic for Community Pin ---
         } else {
-            // Add click listener for the profile link
             popup.getElement().querySelector(`.profile-link[data-userid="${routeInfo.userId}"]`)?.addEventListener('click', (e) => {
                 e.preventDefault();
                 showPublicProfile(routeInfo.userId);
@@ -316,9 +284,6 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
     return popup;
 }
 
-/**
- * Updates the 'user-pins-source' GeoJSON with the current pins.
- */
 export function updateUserPinsSource() {
     const features = state.photoPins.map(pin => ({
         type: 'Feature',
@@ -330,9 +295,6 @@ export function updateUserPinsSource() {
     }
 }
 
-/**
- * Fits the map view to the bounds of the current route and pins.
- */
 export function centerOnRoute() {
     if (state.routeCoordinates.length < 1 && state.photoPins.length < 1) {
         alert("No route is currently loaded to center on.");
@@ -348,41 +310,6 @@ export function centerOnRoute() {
     });
 }
 
-export function addSectorLayers() {
-    Object.entries(RP_SECTORS).forEach(([id, bounds]) => {
-        const sourceId = `source-${id}`;
-        
-        state.map.addSource(sourceId, {
-            'type': 'geojson',
-            'data': {
-                'type': 'Feature',
-                'geometry': {
-                    'type': 'Polygon',
-                    'coordinates': [[
-                        [bounds.minLon, bounds.minLat],
-                        [bounds.maxLon, bounds.minLat],
-                        [bounds.maxLon, bounds.maxLat],
-                        [bounds.minLon, bounds.maxLat],
-                        [bounds.minLon, bounds.minLat]
-                    ]]
-                }
-            }
-        });
-
-        state.map.addLayer({
-            'id': `layer-${id}`,
-            'type': 'fill',
-            'source': sourceId,
-            'layout': { 'visibility': 'none' }, // Start hidden
-            'paint': {
-                'fill-color': id === 'RP-01' ? '#ff0000' : id === 'RP-02' ? '#00ff00' : '#0000ff', // Different colors per sector
-                'fill-opacity': 0.1,
-                'fill-outline-color': '#000'
-            }
-        });
-    });
-}
-
 export function setupSectorVisuals() {
     if (!state.map) return;
 
@@ -391,12 +318,9 @@ export function setupSectorVisuals() {
         const layerId = `layer-${id}`;
 
         let polygonCoords;
-
         if (sector.isPolygon) {
-            // Use the custom diagonal path defined in config.js
             polygonCoords = [sector.path];
         } else {
-            // Build the standard rectangular box path
             polygonCoords = [[
                 [sector.minLon, sector.minLat],
                 [sector.maxLon, sector.minLat],
@@ -406,46 +330,44 @@ export function setupSectorVisuals() {
             ]];
         }
 
-        // 1. Add the Source (the geometry data)
-        state.map.addSource(sourceId, {
-            'type': 'geojson',
-            'data': {
-                'type': 'Feature',
-                'geometry': {
-                    'type': 'Polygon',
-                    'coordinates': polygonCoords
+        if (!state.map.getSource(sourceId)) {
+            state.map.addSource(sourceId, {
+                'type': 'geojson',
+                'data': {
+                    'type': 'Feature',
+                    'geometry': { 'type': 'Polygon', 'coordinates': polygonCoords }
                 }
-            }
-        });
+            });
+        }
 
-        // 2. Add the Fill Layer (the colored shape)
-        state.map.addLayer({
-            'id': layerId,
-            'type': 'fill',
-            'source': sourceId,
-            'layout': { 'visibility': 'none' }, // Toggleable via UI
-            'paint': {
-                'fill-color': sector.color,
-                'fill-opacity': 0.15,
-                'fill-outline-color': sector.color
-            }
-        });
+        if (!state.map.getLayer(layerId)) {
+            state.map.addLayer({
+                'id': layerId,
+                'type': 'fill',
+                'source': sourceId,
+                'layout': { 'visibility': 'none' },
+                'paint': {
+                    'fill-color': sector.color,
+                    'fill-opacity': 0.15,
+                    'fill-outline-color': sector.color
+                }
+            });
 
-        // 3. Add a Label Layer (optional: shows the sector name)
-        state.map.addLayer({
-            'id': `label-${id}`,
-            'type': 'symbol',
-            'source': sourceId,
-            'layout': {
-                'text-field': id, // Displays "RP-01", "RP-05", etc.
-                'text-size': 14,
-                'visibility': 'none'
-            },
-            'paint': {
-                'text-color': sector.color,
-                'text-halo-color': '#ffffff',
-                'text-halo-width': 2
-            }
-        });
+            state.map.addLayer({
+                'id': `label-${id}`,
+                'type': 'symbol',
+                'source': sourceId,
+                'layout': {
+                    'text-field': id,
+                    'text-size': 14,
+                    'visibility': 'none'
+                },
+                'paint': {
+                    'text-color': sector.color,
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 2
+                }
+            });
+        }
     });
 }
