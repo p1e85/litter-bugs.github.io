@@ -1433,7 +1433,6 @@ export async function initializeSquad() {
     const bio = document.getElementById('newSquadBio').value.trim();
 
     // 2. Tactical Validation
-    // Ensures we don't save empty squads or invalid callsigns
     if (!name || callsign.length < 3) {
         alert("Initialization Failed: Please provide a Squad Name and a 3-4 character Callsign.");
         return;
@@ -1441,22 +1440,26 @@ export async function initializeSquad() {
 
     try {
         // 3. Construct the squad document
+        // Adding leaderId and members array now so the "Roster" works later
         const squadData = {
             squadName: name,
             callsign: callsign,
             homeSector: sector,
             bio: bio,
-            createdAt: new Date(),
-            memberCount: 1, // The creator starts as the first member
+            leaderId: state.currentUser ? state.currentUser.uid : 'anonymous', 
+            members: state.currentUser ? [state.currentUser.uid] : [],
+            memberCount: 1,
             totalPins: 0,
-            status: "active"
+            status: "active",
+            createdAt: new Date()
         };
 
         // 4. Save to the database
-        // Replace this console.log with your actual Firebase addDoc call
         console.log("Registering new unit with command...", squadData);
         
-        await addDoc(collection(db, "squads"), squadData);
+        // This adds the document and returns the new Doc Reference
+        const docRef = await addDoc(collection(db, "squads"), squadData);
+        console.log("Squad documented with ID:", docRef.id);
 
         alert(`Unit [${callsign}] ${name} has been officially initialized.`);
 
@@ -1465,13 +1468,13 @@ export async function initializeSquad() {
             window.showSquadRegistry();
         }
 
-        // 2. TRIGGER THE REFRESH (This is the key)
-        // This forces the app to scan Firebase again so the new squad shows up
+        // 6. TRIGGER THE REFRESH
+        // Re-scans Firebase so the new squad appears in the list immediately
         fetchLocalSquads();
         
     } catch (error) {
         console.error("Critical Failure during initialization:", error);
-        alert("Tactical Error: Could not reach the database. Check connection.");
+        alert("Tactical Error: Could not reach the database. Check permissions or connection.");
     }
 }
 
