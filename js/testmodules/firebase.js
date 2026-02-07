@@ -67,7 +67,5 @@ export {
     arrayRemove,
     runTransaction,
     sendPasswordResetEmail,
-    increment,
-    arrayRemove,
-    arrayUnion
+    increment
 };
