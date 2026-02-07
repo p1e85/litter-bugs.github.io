@@ -959,7 +959,7 @@ async function loadPastChallenges(filterType) {
     const listContainer = elements.pastChallengesContent;
     if (!listContainer) return;
 
-    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Retrieving mission history...</p>";
+    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Syncing mission history...</p>";
 
     try {
         if (!state.currentUser) {
@@ -969,44 +969,39 @@ async function loadPastChallenges(filterType) {
 
         const now = new Date();
         const myQuests = await getUserQuests(state.currentUser.uid);
-        
-        // This usually only returns 'active' challenges
-        const activeChallenges = await getAdminChallenges();
+        const activeChallenges = await getAdminChallenges(); // Likely only active ones
         
         listContainer.innerHTML = ""; 
         let count = 0;
 
         for (const [chalId, userProgress] of Object.entries(myQuests)) {
-            // 1. Find challenge data (either from active list or direct fetch)
+            // 1. Try to find the challenge in our active list first
             let originalData = activeChallenges.find(c => c.id === chalId);
 
+            // 2. DEEP FETCH: If not active, we fetch it directly from the database
+            // This is the fix for the "In Progress" bug.
             if (!originalData) {
-                // DEEP FETCH: If it's not active, we must get it from the main collection
                 const chalDoc = await getDoc(doc(db, "challenges", chalId));
                 if (chalDoc.exists()) {
                     originalData = { id: chalDoc.id, ...chalDoc.data() };
                 }
             }
 
-            // 2. DATA MAPPING
             const title = originalData?.title || userProgress.title || "Unknown Quest";
             const goal = originalData?.goal_miles || "??";
             
-            // Handle different potential date formats (Timestamp vs Date)
+            // Handle Timestamp conversion
             let expireDate = null;
             if (originalData?.expires_at) {
                 expireDate = originalData.expires_at.seconds ? new Date(originalData.expires_at.seconds * 1000) : new Date(originalData.expires_at);
-            } else if (originalData?.expire) {
-                expireDate = new Date(originalData.expire);
+            } else if (originalData?.adminChalExpire) {
+                 expireDate = new Date(originalData.adminChalExpire);
             }
 
-            // 3. DYNAMIC STATUS LOGIC
+            // 3. STATUS LOGIC
             let currentStatus = userProgress.status || 'in-progress';
             
-            // DEBUG LOG: See why it's not expiring
-            console.log(`Checking [${title}]: Status: ${currentStatus}, Expire: ${expireDate}, Now: ${now}`);
-
-            // FORCE EXPIRE: If the date has passed, override 'in-progress'
+            // Force Expire if date passed
             if (currentStatus === 'in-progress' && expireDate && expireDate < now) {
                 currentStatus = 'expired';
             }
@@ -1023,15 +1018,15 @@ async function loadPastChallenges(filterType) {
                 count++;
                 const card = document.createElement('div');
                 card.className = "hub-card";
-                card.style.marginBottom = "12px";
+                card.style.marginBottom = "15px";
                 card.style.padding = "15px";
+                card.style.position = "relative"; // For positioning delete button
                 
-                // Styles
                 const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#dc3545" : "#4A7C59");
                 const statusIcon = isCompleted ? "🏆" : (isExpired ? "📁" : "🏃");
-                const statusText = isCompleted ? "COMPLETED" : (isExpired ? "EXPIRED / ARCHIVED" : "IN PROGRESS");
+                const statusText = isCompleted ? "COMPLETED" : (isExpired ? "EXPIRED MISSION" : "IN PROGRESS");
                 const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#dc3545" : "#4A7C59");
-                const bgColor = isCompleted ? "#fff9db" : (isExpired ? "#f9f9f9" : "#fff");
+                const bgColor = isCompleted ? "#fff9db" : (isExpired ? "#fcfcfc" : "#fff");
 
                 card.style.borderLeft = `6px solid ${borderColor}`;
                 card.style.backgroundColor = bgColor;
@@ -1041,21 +1036,32 @@ async function loadPastChallenges(filterType) {
                         <div style="flex-grow: 1; text-align: left;">
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="font-size:1.2rem;">${statusIcon}</span>
-                                <h4 style="margin:0; font-size:1rem; color: #333;">${title}</h4>
+                                <h4 style="margin:0; font-size:1rem; color: #222;">${title}</h4>
                             </div>
-                            <small style="color:#777; display:block; margin-top:4px;">
+                            <small style="color:#666; display:block; margin-top:4px;">
                                 Progress: <strong>${Number(userProgress.progress || 0).toFixed(1)}</strong> / ${goal} mi
                             </small>
                         </div>
-                        <div style="text-align:right; min-width: 100px;">
-                            <strong style="color:${statusColor}; font-size:0.7rem; letter-spacing:0.5px; display:block; margin-bottom:5px;">${statusText}</strong>
-                            ${isExpired ? `
-                                <button class="modal-button primary" 
-                                        style="margin:0; padding:4px 8px; font-size:0.65rem; background:#4A7C59; color:white; border:none; border-radius:4px; cursor:pointer;" 
-                                        onclick="handleReattempt('${chalId}', '${title}')">
-                                    RE-ATTEMPT
+                        
+                        <div style="text-align:right; min-width: 110px;">
+                            <strong style="color:${statusColor}; font-size:0.7rem; letter-spacing:0.5px; display:block; margin-bottom:8px;">${statusText}</strong>
+                            
+                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                ${isExpired ? `
+                                    <button class="modal-button" 
+                                            style="margin:0; padding:6px 12px; font-size:0.65rem; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer; box-shadow: 0 2px 5px rgba(40,167,69,0.3);" 
+                                            onclick="handleReattempt('${chalId}', '${title}')">
+                                        RE-ATTEMPT
+                                    </button>
+                                ` : ''}
+                                
+                                <button class="delete-btn" 
+                                        style="background: #f8d7da; border: none; padding: 5px 8px; border-radius: 4px; color: #721c24; cursor: pointer; font-size: 0.8rem;" 
+                                        onclick="handleDeleteMission('${chalId}')"
+                                        title="Delete Mission">
+                                    🗑️
                                 </button>
-                            ` : ''}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1064,14 +1070,15 @@ async function loadPastChallenges(filterType) {
         }
 
         if (count === 0) {
-            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">No ${filterType} missions found.</p>`;
+            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">No ${filterType} records in the archives.</p>`;
         }
 
     } catch (e) {
         console.error("Archive Sync Failed:", e);
-        listContainer.innerHTML = "<p style='text-align:center; padding:20px; color:#dc3545;'>⚠️ Uplink Error: Archives inaccessible.</p>";
+        listContainer.innerHTML = "<p style='text-align:center; padding:20px; color:#dc3545;'>⚠️ Error: Could not synchronize with mission archives.</p>";
     }
 }
+
 // --- PUBLIC PROFILE FUNCTION ---
 export async function showPublicProfile(userId) {
     const modal = document.getElementById('publicProfileModal');
@@ -1362,3 +1369,76 @@ window.handleReattempt = async (challengeId, title) => {
         alert("Failed to redeploy.");
     }
 };
+
+export async function deleteUserChallenge(challengeId) {
+    if (!state.currentUser) return;
+
+    const confirmed = confirm("Are you sure you want to delete this mission from your history? This cannot be undone.");
+    if (!confirmed) return;
+
+    try {
+        // Find the specific progress document for this user and challenge
+        const q = query(
+            collection(db, "user_challenges"),
+            where("uid", "==", state.currentUser.uid),
+            where("challengeId", "==", challengeId)
+        );
+        
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+            // Delete the document from Firebase
+            await deleteDoc(doc(db, "user_challenges", snap.docs[0].id));
+            
+            alert("Mission record purged from archives.");
+            
+            // Refresh the current view
+            const activeTab = document.getElementById('tabCompleted').classList.contains('active') ? 'completed' : 'uncompleted';
+            loadPastChallenges(activeTab);
+        } else {
+            alert("Record not found.");
+        }
+    } catch (err) {
+        console.error("Purge Failed:", err);
+        alert("Tactical Error: Could not delete record.");
+    }
+}
+
+// Bridge for HTML
+window.handleDeleteMission = (id) => deleteUserChallenge(id);
+
+export async function reattemptChallenge(challengeId, title) {
+    if (!state.currentUser) return;
+
+    const confirmed = confirm(`Redeploy for [${title}]? Your progress will be reset to 0.0 miles.`);
+    if (!confirmed) return;
+
+    try {
+        const q = query(
+            collection(db, "user_challenges"),
+            where("uid", "==", state.currentUser.uid),
+            where("challengeId", "==", challengeId)
+        );
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+            await updateDoc(doc(db, "user_challenges", snap.docs[0].id), {
+                status: "in-progress",
+                progress: 0,
+                joined_at: serverTimestamp(),
+                completed_at: null
+            });
+
+            alert("Mission Re-Activated! Check your 'Current Challenges' list.");
+            
+            // Refresh the archive view to show it's gone from here
+            loadPastChallenges('uncompleted');
+        }
+    } catch (err) {
+        console.error("Re-activation failed:", err);
+        alert("Failed to re-initialize mission.");
+    }
+}
+
+// Bridge for HTML
+window.handleReattempt = (id, title) => reattemptChallenge(id, title);
