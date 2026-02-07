@@ -32,6 +32,29 @@ export function initializeMap() {
     
     document.getElementById('geocoder-container').appendChild(geocoder.onAdd(map));
 
+    // 2. THE FLY-TO LOGIC
+    geocoder.on('result', (event) => {
+        const coords = event.result.geometry.coordinates;
+        const name = event.result.text;
+
+        console.log(`🚀 Deploying to: ${name}`, coords);
+
+        state.map.flyTo({
+            center: coords,
+            zoom: 15.5,      // Tactical zoom level
+            pitch: 45,        // Tilt the map for a 3D perspective
+            bearing: 0,
+            essential: true,  // This animation is considered essential with respect to prefers-reduced-motion
+            duration: 3000    // 3 seconds for a smooth "glide"
+        });
+
+        // Optional: Add a temporary "Target" marker at the searched POI
+        const targetMarker = new mapboxgl.Marker({ color: '#dc3545' }) // Red for Target
+            .setLngLat(coords)
+            .setPopup(new mapboxgl.Popup().setHTML(`<h4>Target: ${name}</h4><p>Scout this area for litter.</p>`))
+            .addTo(state.map);
+    });
+    
     // 3. THE MAGIC: Update proximity as the user moves the map
     state.map.on('moveend', () => {
         const newCenter = state.map.getCenter();
