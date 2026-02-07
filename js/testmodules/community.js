@@ -1538,8 +1538,8 @@ export async function fetchSquadDetails(squadId) {
     const intelView = document.getElementById('squadIntelView');
     if (!intelView) return;
 
-    // Loading state
-    intelView.innerHTML = '<p>🛰️ Downloading unit dossiers...</p>';
+    // 1. Loading State
+    intelView.innerHTML = '<p style="text-align: center; padding: 20px;">🛰️ Downloading unit dossiers...</p>';
 
     try {
         const squadRef = doc(db, "squads", squadId);
@@ -1548,34 +1548,111 @@ export async function fetchSquadDetails(squadId) {
         if (squadSnap.exists()) {
             const squad = squadSnap.data();
             
-            // Build the Intel UI
+            // 2. Security Check: Admin or Leader?
+            // isGlobalAdmin looks for the "admin" role you've assigned in your users collection
+            const isGlobalAdmin = state.currentUser && state.currentUser.role === 'admin';
+            const isLeader = state.currentUser && (state.currentUser.uid === squad.leaderId);
+            const hasControl = isGlobalAdmin || isLeader;
+
+            // 3. Build the Intel UI
             intelView.innerHTML = `
-                <button class="modal-button secondary" onclick="showSquadRegistry()" style="width: auto; padding: 5px 10px; font-size: 0.8rem;">
+                <button class="modal-button secondary" onclick="showSquadRegistry()" style="width: auto; padding: 5px 10px; font-size: 0.8rem; margin-bottom: 15px;">
                     ← Back to Registry
                 </button>
                 
-                <h2 style="margin-top: 15px;">[${squad.callsign}] ${squad.squadName}</h2>
-                <p style="text-align: left; color: #4A7C59; font-weight: bold;">Sector: ${squad.homeSector}</p>
+                <h2 style="margin: 0; font-size: 1.8rem;">[${squad.callsign}] ${squad.squadName}</h2>
+                <p style="text-align: left; color: #4A7C59; font-weight: bold; margin-top: 5px;">
+                    SECTOR OPS: ${squad.homeSector}
+                </p>
                 
-                <div class="safety-disclaimer" style="background: #f0f0f0; border-left: 4px solid #4A7C59; color: #333;">
-                    <strong>MISSION STATEMENT</strong>
-                    ${squad.bio || "No mission profile provided."}
+                <div class="safety-disclaimer" style="background: #f0f0f0; border-left: 4px solid #4A7C59; color: #333; margin: 20px 0;">
+                    <strong>MISSION PROFILE</strong>
+                    <p style="text-align: left; margin-top: 5px; font-size: 0.95rem; line-height: 1.4;">
+                        ${squad.bio || "No mission profile provided for this unit."}
+                    </p>
                 </div>
 
-                <h4>UNIT ROSTER (${squad.memberCount || 1})</h4>
-                <div id="squadRosterList">
-                    <p style="font-size: 0.8rem; color: #888;">Scanning for active member profiles...</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="margin: 0;">UNIT ROSTER</h4>
+                    <span style="background: #eee; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">
+                        ${squad.memberCount || 1} ACTIVE
+                    </span>
                 </div>
 
-                <button id="btnJoinSquad" class="launch-btn" style="margin-top: 20px;">
-                    ⚡ REQUEST TO JOIN
-                </button>
+                <div id="squadRosterList" style="min-height: 100px;">
+                    <p style="font-size: 0.8rem; color: #888; text-align: center; padding: 10px;">
+                        Scanning for active member profiles...
+                    </p>
+                </div>
+
+                <div class="squad-action-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; padding-bottom: 20px;">
+                    ${hasControl ? `
+                        <div style="background: rgba(220, 53, 69, 0.05); border: 1px dashed #dc3545; padding: 15px; border-radius: 8px;">
+                            <p style="color: #dc3545; font-size: 0.8rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">
+                                ⚠️ COMMAND OVERRIDE: ${isGlobalAdmin ? 'SYSTEM ADMIN' : 'UNIT LEADER'}
+                            </p>
+                            <button class="modal-button btn-danger" onclick="handleDisband('${squadId}', '${squad.squadName}')" style="margin: 0;">
+                                ☢️ DISBAND UNIT
+                            </button>
+                        </div>
+                    ` : `
+                        <button id="btnJoinSquad" class="launch-btn" onclick="requestToJoinSquad('${squadId}')" style="width: 100%; margin: 0;">
+                            ⚡ REQUEST TO JOIN UNIT
+                        </button>
+                    `}
+                </div>
             `;
             
-            // We'll handle pulling member names (usernames) in the next step
+            // 4. Trigger the Roster Scan (Lookup Usernames)
+            if (squad.members && squad.members.length > 0) {
+                // Ensure renderRoster is defined in community.js
+                if (typeof renderRoster === 'function') {
+                    renderRoster(squad.members);
+                }
+            } else {
+                document.getElementById('squadRosterList').innerHTML = '<p style="text-align: center; color: #999;">No members found.</p>';
+            }
+
+        } else {
+            intelView.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <p style="font-size: 1.2rem;">⚠️ UNIT NOT FOUND</p>
+                    <p style="color: #666; margin-bottom: 20px;">This squad may have been disbanded or moved.</p>
+                    <button class="modal-button btn-primary" onclick="showSquadRegistry()">Return to Registry</button>
+                </div>
+            `;
         }
     } catch (error) {
         console.error("Intel Retrieval Failed:", error);
-        intelView.innerHTML = '<p>⚠️ Error: Could not decrypt unit data.</p>';
+        intelView.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #dc3545;">
+                <p><strong>CRITICAL UPLINK ERROR</strong></p>
+                <p style="font-size: 0.8rem;">Could not decrypt squad data. Check your connection.</p>
+                <button class="modal-button secondary" onclick="showSquadRegistry()" style="margin-top: 20px;">Try Again</button>
+            </div>
+        `;
+    }
+}
+
+export async function disbandSquad(squadId, squadName) {
+    // 1. Double-Check Confirmation
+    const confirmed = confirm(`DANGER: Are you sure you want to permanently disband [${squadName}]? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+        const squadRef = doc(db, "squads", squadId);
+        
+        // 2. Remove from Firebase
+        await deleteDoc(squadRef);
+        
+        alert(`Unit [${squadName}] has been decommissioned.`);
+
+        // 3. Return to Registry and Refresh
+        showSquadRegistry();
+        fetchLocalSquads();
+
+    } catch (error) {
+        console.error("Decommission Failed:", error);
+        alert("Tactical Error: Could not delete unit. Check permissions.");
     }
 }
