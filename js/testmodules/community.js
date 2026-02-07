@@ -1656,3 +1656,48 @@ export async function disbandSquad(squadId, squadName) {
         alert("Tactical Error: Could not delete unit. Check permissions.");
     }
 }
+
+// Add this to community.js
+async function renderRoster(memberIds) {
+    const rosterContainer = document.getElementById('squadRosterList');
+    if (!rosterContainer) return;
+
+    try {
+        let rosterHTML = '';
+
+        // Loop through each ID in the squad's member list
+        for (const uid of memberIds) {
+            const userRef = doc(db, "users", uid);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                
+                // Check if this specific member is an admin or the squad leader
+                const isMemberAdmin = userData.role === 'admin';
+                
+                rosterHTML += `
+                    <div class="member-bio-card" style="display: flex; align-items: center; gap: 12px; padding: 10px; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee;">
+                        <div class="member-rank-icon" style="font-size: 1.2rem; background: white; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid var(--color-primary-green);">
+                            ${isMemberAdmin ? '⭐' : '👤'}
+                        </div>
+                        <div class="member-info">
+                            <h5 style="margin: 0; font-size: 0.95rem;">
+                                ${userData.displayName || 'Unknown Trooper'} 
+                                ${isMemberAdmin ? '<span style="color: var(--color-support-gold); font-size: 0.7rem;">[ADMIN]</span>' : ''}
+                            </h5>
+                            <p style="margin: 0; font-size: 0.8rem; color: #777;">
+                                Rank: ${userData.title || 'Recruit'} • Level ${userData.level || 1}
+                            </p>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        rosterContainer.innerHTML = rosterHTML || '<p style="text-align: center; color: #999;">No active profiles found.</p>';
+
+    } catch (err) {
+        console.error("Roster Scan Failed:", err);
+        rosterContainer.innerHTML = '<p style="text-align: center; color: #dc3545;">⚠️ Failed to load member profiles.</p>';
+    }
+}
