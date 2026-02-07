@@ -969,17 +969,14 @@ async function loadPastChallenges(filterType) {
 
         const now = new Date();
         const myQuests = await getUserQuests(state.currentUser.uid);
-        const activeChallenges = await getAdminChallenges(); // Likely only active ones
+        const activeChallenges = await getAdminChallenges();
         
         listContainer.innerHTML = ""; 
         let count = 0;
 
         for (const [chalId, userProgress] of Object.entries(myQuests)) {
-            // 1. Try to find the challenge in our active list first
             let originalData = activeChallenges.find(c => c.id === chalId);
 
-            // 2. DEEP FETCH: If not active, we fetch it directly from the database
-            // This is the fix for the "In Progress" bug.
             if (!originalData) {
                 const chalDoc = await getDoc(doc(db, "challenges", chalId));
                 if (chalDoc.exists()) {
@@ -990,26 +987,34 @@ async function loadPastChallenges(filterType) {
             const title = originalData?.title || userProgress.title || "Unknown Quest";
             const goal = originalData?.goal_miles || "??";
             
-            // Handle Timestamp conversion
+            // Fix: Capture more date field variations
             let expireDate = null;
             if (originalData?.expires_at) {
-                expireDate = originalData.expires_at.seconds ? new Date(originalData.expires_at.seconds * 1000) : new Date(originalData.expires_at);
+                expireDate = originalData.expires_at.toDate ? originalData.expires_at.toDate() : new Date(originalData.expires_at.seconds * 1000);
+            } else if (originalData?.expire) {
+                expireDate = new Date(originalData.expire);
             } else if (originalData?.adminChalExpire) {
-                 expireDate = new Date(originalData.adminChalExpire);
+                expireDate = new Date(originalData.adminChalExpire);
             }
 
-            // 3. STATUS LOGIC
+            // --- BUG FIX STATUS LOGIC ---
             let currentStatus = userProgress.status || 'in-progress';
             
-            // Force Expire if date passed
-            if (currentStatus === 'in-progress' && expireDate && expireDate < now) {
+            // If it's 'active' or 'in-progress' but the date has passed, it is EXPIRED.
+            const isStale = (currentStatus === 'in-progress' || currentStatus === 'active');
+            if (isStale && expireDate && expireDate < now) {
                 currentStatus = 'expired';
+            }
+            
+            // Fallback: If no date found but it's not completed, treat as expired if it's old
+            if (isStale && !expireDate && !originalData) {
+                currentStatus = 'expired'; 
             }
 
             const isCompleted = currentStatus === 'completed';
             const isExpired = currentStatus === 'expired';
 
-            // 4. TAB FILTERING
+            // Filter for Tabs
             let showIt = false;
             if (filterType === 'completed' && isCompleted) showIt = true;
             if (filterType === 'uncompleted' && !isCompleted) showIt = true;
@@ -1020,7 +1025,6 @@ async function loadPastChallenges(filterType) {
                 card.className = "hub-card";
                 card.style.marginBottom = "15px";
                 card.style.padding = "15px";
-                card.style.position = "relative"; // For positioning delete button
                 
                 const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#dc3545" : "#4A7C59");
                 const statusIcon = isCompleted ? "🏆" : (isExpired ? "📁" : "🏃");
@@ -1049,7 +1053,7 @@ async function loadPastChallenges(filterType) {
                             <div style="display: flex; gap: 8px; justify-content: flex-end;">
                                 ${isExpired ? `
                                     <button class="modal-button" 
-                                            style="margin:0; padding:6px 12px; font-size:0.65rem; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer; box-shadow: 0 2px 5px rgba(40,167,69,0.3);" 
+                                            style="margin:0; padding:6px 12px; font-size:0.65rem; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;" 
                                             onclick="handleReattempt('${chalId}', '${title}')">
                                         RE-ATTEMPT
                                     </button>
@@ -1058,7 +1062,7 @@ async function loadPastChallenges(filterType) {
                                 <button class="delete-btn" 
                                         style="background: #f8d7da; border: none; padding: 5px 8px; border-radius: 4px; color: #721c24; cursor: pointer; font-size: 0.8rem;" 
                                         onclick="handleDeleteMission('${chalId}')"
-                                        title="Delete Mission">
+                                        title="Delete Mission Record">
                                     🗑️
                                 </button>
                             </div>
@@ -1070,7 +1074,7 @@ async function loadPastChallenges(filterType) {
         }
 
         if (count === 0) {
-            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">No ${filterType} records in the archives.</p>`;
+            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">No ${filterType} mission records found.</p>`;
         }
 
     } catch (e) {
