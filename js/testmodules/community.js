@@ -1548,11 +1548,14 @@ export async function fetchSquadDetails(squadId) {
         if (squadSnap.exists()) {
             const squad = squadSnap.data();
             
-            // 2. Security Check: Admin or Leader?
-            // isGlobalAdmin looks for the "admin" role you've assigned in your users collection
+            // 2. Security & Membership Checks
+            const currentUid = state.currentUser?.uid;
             const isGlobalAdmin = state.currentUser && state.currentUser.role === 'admin';
-            const isLeader = state.currentUser && (state.currentUser.uid === squad.leaderId);
+            const isLeader = currentUid === squad.leaderId;
             const hasControl = isGlobalAdmin || isLeader;
+            
+            // Check if the current user is in the members array
+            const isMember = squad.members && squad.members.includes(currentUid);
 
             // 3. Build the Intel UI
             intelView.innerHTML = `
@@ -1595,6 +1598,13 @@ export async function fetchSquadDetails(squadId) {
                                 ☢️ DISBAND UNIT
                             </button>
                         </div>
+                    ` : isMember ? `
+                        <p style="color: #4A7C59; font-size: 0.8rem; font-weight: bold; text-align: center; margin-bottom: 10px;">
+                            CURRENT ASSIGNMENT: ACTIVE DUTY
+                        </p>
+                        <button class="modal-button btn-secondary" onclick="handleLeave('${squadId}', '${squad.squadName}')" style="margin: 0;">
+                            🚶 LEAVE SQUAD
+                        </button>
                     ` : `
                         <button id="btnJoinSquad" class="launch-btn" onclick="requestToJoinSquad('${squadId}')" style="width: 100%; margin: 0;">
                             ⚡ REQUEST TO JOIN UNIT
@@ -1603,9 +1613,8 @@ export async function fetchSquadDetails(squadId) {
                 </div>
             `;
             
-            // 4. Trigger the Roster Scan (Lookup Usernames)
+            // 4. Trigger the Roster Scan
             if (squad.members && squad.members.length > 0) {
-                // Ensure renderRoster is defined in community.js
                 if (typeof renderRoster === 'function') {
                     renderRoster(squad.members);
                 }
@@ -1614,23 +1623,11 @@ export async function fetchSquadDetails(squadId) {
             }
 
         } else {
-            intelView.innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <p style="font-size: 1.2rem;">⚠️ UNIT NOT FOUND</p>
-                    <p style="color: #666; margin-bottom: 20px;">This squad may have been disbanded or moved.</p>
-                    <button class="modal-button btn-primary" onclick="showSquadRegistry()">Return to Registry</button>
-                </div>
-            `;
+            intelView.innerHTML = '<p style="text-align: center; padding: 40px;">⚠️ UNIT NOT FOUND</p>';
         }
     } catch (error) {
         console.error("Intel Retrieval Failed:", error);
-        intelView.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #dc3545;">
-                <p><strong>CRITICAL UPLINK ERROR</strong></p>
-                <p style="font-size: 0.8rem;">Could not decrypt squad data. Check your connection.</p>
-                <button class="modal-button secondary" onclick="showSquadRegistry()" style="margin-top: 20px;">Try Again</button>
-            </div>
-        `;
+        intelView.innerHTML = '<p style="text-align: center; padding: 40px; color: #dc3545;">⚠️ UPLINK ERROR</p>';
     }
 }
 
