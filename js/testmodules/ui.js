@@ -1,4 +1,4 @@
-import { db, collection, query, orderBy, limit, getDocs, doc, getDoc } from './firebase.js'; 
+import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, updateDoc, serverTimestamp } from './firebase.js'; 
 import { state, allTitles } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute, setupSectorVisuals } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
@@ -879,6 +879,7 @@ async function loadPublicChallenges() {
 
     try {
         const challenges = await getAdminChallenges();
+        const now = new Date(); // Current time
         let myQuests = {};
         if (state.currentUser) {
             myQuests = await getUserQuests(state.currentUser.uid);
@@ -891,59 +892,44 @@ async function loadPublicChallenges() {
             return;
         }
 
-        // Sort: Active first, Completed last
-        challenges.sort((a, b) => {
-            const statA = myQuests[a.id] ? myQuests[a.id].status : 'new';
-            const statB = myQuests[b.id] ? myQuests[b.id].status : 'new';
-            if (statA === 'completed' && statB !== 'completed') return 1;
-            if (statA !== 'completed' && statB === 'completed') return -1;
-            return 0;
-        });
-
-        challenges.forEach(chal => {
-            const card = document.createElement('div');
-            card.className = "hub-card"; 
-            card.style.marginBottom = "15px";
-            card.style.textAlign = "left";
-            card.style.display = "flex"; 
-            card.style.justifyContent = "space-between";
-            card.style.alignItems = "center";
-
+        for (const chal of challenges) {
             const expireDate = new Date(chal.expires_at.seconds * 1000);
-            const diffDays = Math.ceil((expireDate - new Date()) / (1000 * 60 * 60 * 24)); 
+            
+            // --- THE EXPIRATION CHECK ---
+            if (expireDate < now) {
+                console.log(`Mission ${chal.title} has expired. Updating database...`);
+                // Update the main challenge status so it stops appearing for everyone
+                await updateDoc(doc(db, "challenges", chal.id), { status: "expired" });
+                continue; // Skip rendering this one
+            }
+
+            const diffDays = Math.ceil((expireDate - now) / (1000 * 60 * 60 * 24)); 
             
             const questData = myQuests[chal.id];
             const isJoined = !!questData;
             const isCompleted = questData && questData.status === 'completed';
             const userProgress = isJoined ? questData.progress : 0;
 
-            let statusColor = "#333";
             let buttonHtml = "";
-
             if (isCompleted) {
-                card.style.border = "2px solid #FFD700"; 
-                card.style.backgroundColor = "#fff9db"; 
-                buttonHtml = `
-                    <div style="text-align: right;">
-                        <span style="font-size:1.2em;">🏆</span>
-                        <span style="display:block; font-size:0.8em; color:#B8860B; font-weight:bold;">COMPLETED</span>
-                    </div>`;
+                buttonHtml = `<div style="text-align: right;"><span style="font-size:1.2em;">🏆</span><span style="display:block; font-size:0.8em; color:#B8860B; font-weight:bold;">COMPLETED</span></div>`;
             } else if (isJoined) {
-                card.style.border = "1px solid #4A7C59"; 
-                buttonHtml = `
-                    <div style="text-align: right;">
-                        <span style="display:block; font-size:0.8em; color:#4A7C59; font-weight:bold;">✅ Active</span>
-                        <small style="color:#666;">${userProgress.toFixed(1)} / ${chal.goal_miles} mi</small>
-                    </div>`;
+                buttonHtml = `<div style="text-align: right;"><span style="display:block; font-size:0.8em; color:#4A7C59; font-weight:bold;">✅ Active</span><small style="color:#666;">${userProgress.toFixed(1)} / ${chal.goal_miles} mi</small></div>`;
             } else {
                 buttonHtml = `<button class="modal-button primary start-btn" data-id="${chal.id}">Start</button>`;
             }
 
+            const card = document.createElement('div');
+            card.className = "hub-card"; 
+            card.style.marginBottom = "15px";
+            card.style.display = "flex"; 
+            card.style.justifyContent = "space-between";
+            card.style.alignItems = "center";
             card.innerHTML = `
                 <div>
                     <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
                     <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${chal.description}</p>
-                    <div style="font-size: 0.85em; font-weight: bold; color: ${statusColor};">
+                    <div style="font-size: 0.85em; font-weight: bold;">
                         🎯 Goal: ${chal.goal_miles} Miles <br>
                         ⏳ Ends in: ${diffDays} days
                     </div>
@@ -951,17 +937,17 @@ async function loadPublicChallenges() {
                 ${buttonHtml}
             `;
             
-            if (!isJoined) {
+            if (!isJoined && !isCompleted) {
                 const btn = card.querySelector('.start-btn');
                 btn.addEventListener('click', async () => {
                     if (!state.currentUser) { alert("Please login first!"); return; }
                     btn.innerText = "Joining...";
                     await joinChallenge(chal.id, chal.title, state.currentUser.uid);
-                    loadPublicChallenges(); // Refresh
+                    loadPublicChallenges(); 
                 });
             }
             listContainer.appendChild(card);
-        });
+        }
     } catch (e) {
         console.error("Error loading challenges:", e);
         listContainer.innerHTML = "<p>Error loading content.</p>";
@@ -973,7 +959,7 @@ async function loadPastChallenges(filterType) {
     const listContainer = elements.pastChallengesContent;
     if (!listContainer) return;
 
-    listContainer.innerHTML = "<p>Loading history...</p>";
+    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Establishing uplink with mission archives...</p>";
 
     try {
         if (!state.currentUser) {
@@ -981,14 +967,16 @@ async function loadPastChallenges(filterType) {
             return;
         }
 
+        const now = new Date();
         const myQuests = await getUserQuests(state.currentUser.uid);
         const questIds = Object.keys(myQuests);
 
         if (questIds.length === 0) {
-            listContainer.innerHTML = "<p>No challenge history found.</p>";
+            listContainer.innerHTML = "<p style='text-align:center; padding:20px; color:#888;'>No challenge history found.</p>";
             return;
         }
 
+        // We fetch all challenges to compare current progress against the original goals/expiry
         const allChallenges = await getAdminChallenges();
         
         listContainer.innerHTML = ""; 
@@ -996,12 +984,25 @@ async function loadPastChallenges(filterType) {
 
         for (const [chalId, userProgress] of Object.entries(myQuests)) {
             const originalData = allChallenges.find(c => c.id === chalId) || {};
+            
+            // 1. DATA MAPPING
             const title = originalData.title || userProgress.title || "Unknown Quest";
             const goal = originalData.goal_miles || "??";
+            const expireDate = originalData.expires_at ? new Date(originalData.expires_at.seconds * 1000) : null;
             
-            const isCompleted = userProgress.status === 'completed';
-            const isExpired = userProgress.status === 'expired'; 
-            
+            // 2. DYNAMIC STATUS LOGIC
+            // Even if the DB says 'in-progress', if the time is up, it's 'expired'
+            let currentStatus = userProgress.status || 'in-progress';
+            if (currentStatus === 'in-progress' && expireDate && expireDate < now) {
+                currentStatus = 'expired';
+            }
+
+            const isCompleted = currentStatus === 'completed';
+            const isExpired = currentStatus === 'expired';
+            const isInProgress = currentStatus === 'in-progress';
+
+            // 3. FILTERING
+            // 'completed' shows finished ones. 'uncompleted' shows expired OR stalled in-progress ones.
             let showIt = false;
             if (filterType === 'completed' && isCompleted) showIt = true;
             if (filterType === 'uncompleted' && !isCompleted) showIt = true;
@@ -1013,9 +1014,11 @@ async function loadPastChallenges(filterType) {
                 card.style.marginBottom = "10px";
                 card.style.textAlign = "left";
                 
-                const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#ccc" : "#4A7C59");
+                // 4. VISUAL STYLING BASED ON STATUS
+                const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#dc3545" : "#4A7C59");
                 const statusText = isCompleted ? "🏆 COMPLETED" : (isExpired ? "⌛ EXPIRED" : "🏃 IN PROGRESS");
-                const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#999" : "#4A7C59");
+                const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#dc3545" : "#4A7C59");
+                const backgroundColor = isCompleted ? "#fff9db" : (isExpired ? "#fff5f5" : "#fff");
 
                 let dateStr = "";
                 if (userProgress.completed_at) {
@@ -1025,16 +1028,19 @@ async function loadPastChallenges(filterType) {
                 }
 
                 card.style.borderLeft = `5px solid ${borderColor}`;
+                card.style.backgroundColor = backgroundColor;
                 
                 card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <h4 style="margin:0;">${title}</h4>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 5px;">
+                        <div style="flex-grow: 1;">
+                            <h4 style="margin:0; font-size: 1.1rem; color: #333;">${title}</h4>
                             <small style="color:#666;">${dateStr}</small>
                         </div>
-                        <div style="text-align:right;">
-                            <strong style="color:${statusColor}; display:block;">${statusText}</strong>
-                            <span style="font-size:0.9em;">${userProgress.progress.toFixed(1)} / ${goal} mi</span>
+                        <div style="text-align:right; min-width: 100px;">
+                            <strong style="color:${statusColor}; display:block; font-size: 0.8rem; letter-spacing: 0.5px;">${statusText}</strong>
+                            <span style="font-size:0.9em; font-weight: bold; color: #444;">
+                                ${Number(userProgress.progress || 0).toFixed(1)} / ${goal} mi
+                            </span>
                         </div>
                     </div>
                 `;
@@ -1043,12 +1049,12 @@ async function loadPastChallenges(filterType) {
         }
 
         if (count === 0) {
-            listContainer.innerHTML = `<p style="color:#888;">No ${filterType} challenges found.</p>`;
+            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#888;">No ${filterType} missions found in archives.</p>`;
         }
 
     } catch (e) {
-        console.error("Error loading past challenges:", e);
-        listContainer.innerHTML = "<p>Error loading content.</p>";
+        console.error("Critical Failure Loading Challenge History:", e);
+        listContainer.innerHTML = "<p style='text-align:center; color:#dc3545;'>⚠️ Error: Could not synchronize with mission archives.</p>";
     }
 }
 
