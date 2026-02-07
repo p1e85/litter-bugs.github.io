@@ -1225,3 +1225,10 @@ window.viewSquadIntel = (squadId) => {
         console.error("Critical Failure: fetchSquadDetails is not defined in community.js");
     }
 };
+
+window.handleViewProfile = (uid) => {
+    if (typeof showPublicProfile === 'function') {
+        // Close the squad modal first if needed, or just layer the profile on top
+        showPublicProfile(uid);
+    }
+};
