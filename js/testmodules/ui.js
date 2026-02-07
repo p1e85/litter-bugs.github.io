@@ -1198,3 +1198,8 @@ window.viewSquadIntel = (squadId) => {
         fetchSquadDetails(squadId);
     }
 };
+
+window.viewSquadIntel = (squadId) => {
+    if (typeof switchSquadView === 'function') switchSquadView('intel');
+    if (typeof fetchSquadDetails === 'function') fetchSquadDetails(squadId);
+};
