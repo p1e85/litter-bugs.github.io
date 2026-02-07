@@ -959,7 +959,7 @@ async function loadPastChallenges(filterType) {
     const listContainer = elements.pastChallengesContent;
     if (!listContainer) return;
 
-    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Syncing mission history...</p>";
+    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Retrieving mission history...</p>";
 
     try {
         if (!state.currentUser) {
@@ -970,32 +970,43 @@ async function loadPastChallenges(filterType) {
         const now = new Date();
         const myQuests = await getUserQuests(state.currentUser.uid);
         
-        // This likely only fetches 'active' challenges
+        // This usually only returns 'active' challenges
         const activeChallenges = await getAdminChallenges();
         
         listContainer.innerHTML = ""; 
         let count = 0;
 
         for (const [chalId, userProgress] of Object.entries(myQuests)) {
-            // 1. Try to find the challenge in our active list
+            // 1. Find challenge data (either from active list or direct fetch)
             let originalData = activeChallenges.find(c => c.id === chalId);
 
-            // 2. DEEP SCAN: If not in active list, fetch the specific doc from 'challenges'
             if (!originalData) {
+                // DEEP FETCH: If it's not active, we must get it from the main collection
                 const chalDoc = await getDoc(doc(db, "challenges", chalId));
                 if (chalDoc.exists()) {
                     originalData = { id: chalDoc.id, ...chalDoc.data() };
                 }
             }
 
+            // 2. DATA MAPPING
             const title = originalData?.title || userProgress.title || "Unknown Quest";
             const goal = originalData?.goal_miles || "??";
-            const expireDate = originalData?.expires_at ? new Date(originalData.expires_at.seconds * 1000) : (originalData?.endDate ? originalData.endDate.toDate() : null);
             
+            // Handle different potential date formats (Timestamp vs Date)
+            let expireDate = null;
+            if (originalData?.expires_at) {
+                expireDate = originalData.expires_at.seconds ? new Date(originalData.expires_at.seconds * 1000) : new Date(originalData.expires_at);
+            } else if (originalData?.expire) {
+                expireDate = new Date(originalData.expire);
+            }
+
             // 3. DYNAMIC STATUS LOGIC
             let currentStatus = userProgress.status || 'in-progress';
             
-            // If the code sees it's past the date, we treat it as expired for the UI
+            // DEBUG LOG: See why it's not expiring
+            console.log(`Checking [${title}]: Status: ${currentStatus}, Expire: ${expireDate}, Now: ${now}`);
+
+            // FORCE EXPIRE: If the date has passed, override 'in-progress'
             if (currentStatus === 'in-progress' && expireDate && expireDate < now) {
                 currentStatus = 'expired';
             }
@@ -1003,7 +1014,7 @@ async function loadPastChallenges(filterType) {
             const isCompleted = currentStatus === 'completed';
             const isExpired = currentStatus === 'expired';
 
-            // 4. FILTERING FOR TABS
+            // 4. TAB FILTERING
             let showIt = false;
             if (filterType === 'completed' && isCompleted) showIt = true;
             if (filterType === 'uncompleted' && !isCompleted) showIt = true;
@@ -1015,30 +1026,32 @@ async function loadPastChallenges(filterType) {
                 card.style.marginBottom = "12px";
                 card.style.padding = "15px";
                 
-                const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#666" : "#4A7C59");
+                // Styles
+                const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#dc3545" : "#4A7C59");
                 const statusIcon = isCompleted ? "🏆" : (isExpired ? "📁" : "🏃");
-                const statusText = isCompleted ? "COMPLETED" : (isExpired ? "ARCHIVED/EXPIRED" : "IN PROGRESS");
-                const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#777" : "#4A7C59");
+                const statusText = isCompleted ? "COMPLETED" : (isExpired ? "EXPIRED / ARCHIVED" : "IN PROGRESS");
+                const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#dc3545" : "#4A7C59");
+                const bgColor = isCompleted ? "#fff9db" : (isExpired ? "#f9f9f9" : "#fff");
 
                 card.style.borderLeft = `6px solid ${borderColor}`;
-                card.style.backgroundColor = isCompleted ? "#fff9db" : (isExpired ? "#f2f2f2" : "#fff");
+                card.style.backgroundColor = bgColor;
                 
                 card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div style="flex-grow: 1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="flex-grow: 1; text-align: left;">
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="font-size:1.2rem;">${statusIcon}</span>
-                                <h4 style="margin:0; font-size:1.05rem;">${title}</h4>
+                                <h4 style="margin:0; font-size:1rem; color: #333;">${title}</h4>
                             </div>
-                            <small style="color:#888; display:block; margin-top:4px;">
-                                Goal: ${goal} mi • Progress: ${Number(userProgress.progress || 0).toFixed(1)} mi
+                            <small style="color:#777; display:block; margin-top:4px;">
+                                Progress: <strong>${Number(userProgress.progress || 0).toFixed(1)}</strong> / ${goal} mi
                             </small>
                         </div>
-                        <div style="text-align:right;">
-                            <strong style="color:${statusColor}; font-size:0.75rem; letter-spacing:1px;">${statusText}</strong>
+                        <div style="text-align:right; min-width: 100px;">
+                            <strong style="color:${statusColor}; font-size:0.7rem; letter-spacing:0.5px; display:block; margin-bottom:5px;">${statusText}</strong>
                             ${isExpired ? `
                                 <button class="modal-button primary" 
-                                        style="margin-top:8px; padding:4px 10px; font-size:0.7rem; background:#4A7C59; border:none; color:white; border-radius:4px; cursor:pointer;" 
+                                        style="margin:0; padding:4px 8px; font-size:0.65rem; background:#4A7C59; color:white; border:none; border-radius:4px; cursor:pointer;" 
                                         onclick="handleReattempt('${chalId}', '${title}')">
                                     RE-ATTEMPT
                                 </button>
@@ -1056,7 +1069,7 @@ async function loadPastChallenges(filterType) {
 
     } catch (e) {
         console.error("Archive Sync Failed:", e);
-        listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Error accessing mission archives.</p>";
+        listContainer.innerHTML = "<p style='text-align:center; padding:20px; color:#dc3545;'>⚠️ Uplink Error: Archives inaccessible.</p>";
     }
 }
 // --- PUBLIC PROFILE FUNCTION ---
