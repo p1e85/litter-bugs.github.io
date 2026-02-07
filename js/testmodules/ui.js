@@ -959,7 +959,7 @@ async function loadPastChallenges(filterType) {
     const listContainer = elements.pastChallengesContent;
     if (!listContainer) return;
 
-    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Retrieving mission archives...</p>";
+    listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Syncing mission history...</p>";
 
     try {
         if (!state.currentUser) {
@@ -969,18 +969,33 @@ async function loadPastChallenges(filterType) {
 
         const now = new Date();
         const myQuests = await getUserQuests(state.currentUser.uid);
-        const allChallenges = await getAdminChallenges();
+        
+        // This likely only fetches 'active' challenges
+        const activeChallenges = await getAdminChallenges();
         
         listContainer.innerHTML = ""; 
         let count = 0;
 
         for (const [chalId, userProgress] of Object.entries(myQuests)) {
-            const originalData = allChallenges.find(c => c.id === chalId) || {};
-            const title = originalData.title || userProgress.title || "Unknown Quest";
-            const goal = originalData.goal_miles || "??";
-            const expireDate = originalData.expires_at ? new Date(originalData.expires_at.seconds * 1000) : null;
+            // 1. Try to find the challenge in our active list
+            let originalData = activeChallenges.find(c => c.id === chalId);
+
+            // 2. DEEP SCAN: If not in active list, fetch the specific doc from 'challenges'
+            if (!originalData) {
+                const chalDoc = await getDoc(doc(db, "challenges", chalId));
+                if (chalDoc.exists()) {
+                    originalData = { id: chalDoc.id, ...chalDoc.data() };
+                }
+            }
+
+            const title = originalData?.title || userProgress.title || "Unknown Quest";
+            const goal = originalData?.goal_miles || "??";
+            const expireDate = originalData?.expires_at ? new Date(originalData.expires_at.seconds * 1000) : (originalData?.endDate ? originalData.endDate.toDate() : null);
             
+            // 3. DYNAMIC STATUS LOGIC
             let currentStatus = userProgress.status || 'in-progress';
+            
+            // If the code sees it's past the date, we treat it as expired for the UI
             if (currentStatus === 'in-progress' && expireDate && expireDate < now) {
                 currentStatus = 'expired';
             }
@@ -988,6 +1003,7 @@ async function loadPastChallenges(filterType) {
             const isCompleted = currentStatus === 'completed';
             const isExpired = currentStatus === 'expired';
 
+            // 4. FILTERING FOR TABS
             let showIt = false;
             if (filterType === 'completed' && isCompleted) showIt = true;
             if (filterType === 'uncompleted' && !isCompleted) showIt = true;
@@ -999,10 +1015,9 @@ async function loadPastChallenges(filterType) {
                 card.style.marginBottom = "12px";
                 card.style.padding = "15px";
                 
-                // Visual indicators
                 const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#666" : "#4A7C59");
                 const statusIcon = isCompleted ? "🏆" : (isExpired ? "📁" : "🏃");
-                const statusText = isCompleted ? "COMPLETED" : (isExpired ? "ARCHIVED" : "IN PROGRESS");
+                const statusText = isCompleted ? "COMPLETED" : (isExpired ? "ARCHIVED/EXPIRED" : "IN PROGRESS");
                 const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#777" : "#4A7C59");
 
                 card.style.borderLeft = `6px solid ${borderColor}`;
@@ -1023,7 +1038,7 @@ async function loadPastChallenges(filterType) {
                             <strong style="color:${statusColor}; font-size:0.75rem; letter-spacing:1px;">${statusText}</strong>
                             ${isExpired ? `
                                 <button class="modal-button primary" 
-                                        style="margin-top:8px; padding:4px 10px; font-size:0.7rem; background:#4A7C59;" 
+                                        style="margin-top:8px; padding:4px 10px; font-size:0.7rem; background:#4A7C59; border:none; color:white; border-radius:4px; cursor:pointer;" 
                                         onclick="handleReattempt('${chalId}', '${title}')">
                                     RE-ATTEMPT
                                 </button>
@@ -1036,15 +1051,14 @@ async function loadPastChallenges(filterType) {
         }
 
         if (count === 0) {
-            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">Archive empty for ${filterType} missions.</p>`;
+            listContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">No ${filterType} missions found.</p>`;
         }
 
     } catch (e) {
         console.error("Archive Sync Failed:", e);
-        listContainer.innerHTML = "<p>Error accessing archives.</p>";
+        listContainer.innerHTML = "<p style='text-align:center; padding:20px;'>Error accessing mission archives.</p>";
     }
 }
-
 // --- PUBLIC PROFILE FUNCTION ---
 export async function showPublicProfile(userId) {
     const modal = document.getElementById('publicProfileModal');
@@ -1308,3 +1322,30 @@ export async function reattemptChallenge(challengeId, title) {
 // Add to window bridge
 window.handleReattempt = (id, title) => reattemptChallenge(id, title);
 
+window.handleReattempt = async (challengeId, title) => {
+    const confirmed = confirm(`Redeploy for [${title}]? Your progress will reset to 0.`);
+    if (!confirmed) return;
+
+    try {
+        // Find the user's progress document
+        const q = query(
+            collection(db, "user_challenges"),
+            where("uid", "==", state.currentUser.uid),
+            where("challengeId", "==", challengeId)
+        );
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+            await updateDoc(doc(db, "user_challenges", snap.docs[0].id), {
+                status: "in-progress",
+                progress: 0,
+                joined_at: serverTimestamp()
+            });
+            alert("Mission Re-Activated!");
+            loadPastChallenges('uncompleted'); // Refresh the view
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Failed to redeploy.");
+    }
+};
