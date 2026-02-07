@@ -5,7 +5,7 @@ import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
-mport { 
+import { 
     arrayRemove, // Add this
     increment    // Add this
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
