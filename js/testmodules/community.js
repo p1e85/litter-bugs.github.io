@@ -1634,6 +1634,14 @@ export async function fetchSquadDetails(squadId) {
         console.error("Intel Retrieval Failed:", error);
         intelView.innerHTML = '<p style="text-align: center; padding: 40px; color: #dc3545;">⚠️ UPLINK ERROR</p>';
     }
+
+    if (squad.members && squad.members.length > 0) {
+        if (typeof renderRoster === 'function') {
+            // We pass both the list of members AND the leader's ID
+            renderRoster(squad.members, squad.leaderId); 
+        }
+    }    
+    
 }
 
 export async function disbandSquad(squadId, squadName) {
@@ -1657,17 +1665,17 @@ export async function disbandSquad(squadId, squadName) {
         console.error("Decommission Failed:", error);
         alert("Tactical Error: Could not delete unit. Check permissions.");
     }
+
+    
 }
 
-// Add this to community.js
-async function renderRoster(memberIds) {
+async function renderRoster(memberIds, leaderId) {
     const rosterContainer = document.getElementById('squadRosterList');
     if (!rosterContainer) return;
 
     try {
         let rosterHTML = '';
 
-        // Loop through each ID in the squad's member list
         for (const uid of memberIds) {
             const userRef = doc(db, "users", uid);
             const userSnap = await getDoc(userRef);
@@ -1675,21 +1683,23 @@ async function renderRoster(memberIds) {
             if (userSnap.exists()) {
                 const userData = userSnap.data();
                 
-                // Check if this specific member is an admin or the squad leader
-                const isMemberAdmin = userData.role === 'admin';
+                // Identify Roles
+                const isLeader = uid === leaderId;
+                const isSystemAdmin = userData.role === 'admin';
                 
                 rosterHTML += `
-                    <div class="member-bio-card" style="display: flex; align-items: center; gap: 12px; padding: 10px; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee;">
-                        <div class="member-rank-icon" style="font-size: 1.2rem; background: white; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid var(--color-primary-green);">
-                            ${isMemberAdmin ? '⭐' : '👤'}
+                    <div class="member-bio-card" style="display: flex; align-items: center; gap: 12px; padding: 10px; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; border: 1px solid ${isLeader ? 'var(--color-support-gold)' : '#eee'};">
+                        <div class="member-rank-icon" style="font-size: 1.2rem; background: white; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid ${isLeader ? 'var(--color-support-gold)' : 'var(--color-primary-green)'};">
+                            ${isLeader ? '⭐' : '👤'}
                         </div>
                         <div class="member-info">
-                            <h5 style="margin: 0; font-size: 0.95rem;">
+                            <h5 style="margin: 0; font-size: 0.95rem; display: flex; align-items: center; gap: 5px;">
                                 ${userData.displayName || 'Unknown Trooper'} 
-                                ${isMemberAdmin ? '<span style="color: var(--color-support-gold); font-size: 0.7rem;">[ADMIN]</span>' : ''}
+                                ${isLeader ? '<span style="background: var(--color-support-gold); color: #fff; font-size: 0.65rem; padding: 1px 5px; border-radius: 4px; text-transform: uppercase;">Leader</span>' : ''}
+                                ${isSystemAdmin ? '<span style="color: var(--color-secondary-blue); font-size: 0.65rem;">[ADMIN]</span>' : ''}
                             </h5>
                             <p style="margin: 0; font-size: 0.8rem; color: #777;">
-                                Rank: ${userData.title || 'Recruit'} • Level ${userData.level || 1}
+                                ${userData.title || 'Recruit'} • Level ${userData.level || 1}
                             </p>
                         </div>
                     </div>`;
