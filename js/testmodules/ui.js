@@ -9,7 +9,7 @@ import {
     loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, 
     fetchAndDisplayMyStats, updateSwarmPulse,
     handleMeetupSubmit, validateMeetupForm, toggleRouteLike, 
-    openAchievementsModal, openEventBadgesModal, 
+    openAchievementsModal, openEventBadgesModal, fetchSquadDetails,
     // Logic Helpers
     getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents , initializeSquad, fetchLocalSquads
 } from './community.js';
