@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
-    getFirestore, doc, getDoc, setDoc, updateDoc, collection,
+    getFirestore, doc, getDoc, setDoc, updateDoc, collection, increment, arrayRemove,
     addDoc, getDocs, query, orderBy, where, deleteDoc, limit, onSnapshot, serverTimestamp, Timestamp, arrayUnion, arrayRemove, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { 
@@ -66,5 +66,7 @@ export {
     arrayUnion,
     arrayRemove,
     runTransaction,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    increment,
+    arrayRemove,
 };
