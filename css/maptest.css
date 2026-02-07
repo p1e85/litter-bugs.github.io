@@ -409,3 +409,78 @@ button.close-btn:hover { color: var(--color-text-dark); }
     text-align: center !important;
     width: 100% !important;
 }
+
+/* --- MAPBOX POPUP STYLING (The POI Bubble) --- */
+.mapboxgl-popup-content {
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    border: 1px solid #eee;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.mapboxgl-popup-content h3 {
+    margin: 0 0 5px 0;
+    color: #4A7C59; /* Trooper Green */
+    font-size: 1.1rem;
+}
+
+.mapboxgl-popup-content p {
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.mapboxgl-popup-close-button {
+    font-size: 1.2rem;
+    padding: 5px 8px;
+    color: #999;
+}
+
+/* --- SCHEDULE MEETUP MODAL STYLING --- */
+#meetupModal .modal-content {
+    border-top: 8px solid #4A7C59; /* Green header bar */
+    max-width: 400px;
+}
+
+#meetupModal h3 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+#meetupModal .safety-disclaimer {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    margin: 15px 0;
+    color: #856404;
+}
+
+#meetupModal input, 
+#meetupModal textarea, 
+#meetupModal select {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    box-sizing: border-box; /* Crucial for width alignment */
+}
+
+#meetupModal button.primary {
+    background: #4A7C59;
+    color: white;
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding: 14px;
+    margin-top: 10px;
+}
+
+#meetupModal button.primary:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
