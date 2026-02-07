@@ -384,3 +384,28 @@ button.close-btn:hover { color: var(--color-text-dark); }
 #squadCreateView .form-group {
     margin-bottom: 20px !important;
 }
+
+/* FORCE CENTER: Hub Icons and Calendar Icons */
+.hub-grid .hub-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;    /* Centers horizontally */
+    justify-content: center !important; /* Centers vertically */
+    text-align: center !important;
+}
+
+/* Ensure the Calendar Icon specifically behaves as a centered block */
+.calendar-icon {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-bottom: 10px !important;
+}
+
+/* Ensure the standard Hub Icons don't lean left */
+.hub-icon {
+    display: block !important;
+    margin: 0 auto 10px auto !important;
+    text-align: center !important;
+    width: 100% !important;
+}
