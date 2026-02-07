@@ -1533,3 +1533,49 @@ export async function fetchLocalSquads() {
         listContainer.innerHTML = '<p style="color: var(--color-accent-danger);">⚠️ Tactical Scan Failed. Check console.</p>';
     }
 }
+
+export async function fetchSquadDetails(squadId) {
+    const intelView = document.getElementById('squadIntelView');
+    if (!intelView) return;
+
+    // Loading state
+    intelView.innerHTML = '<p>🛰️ Downloading unit dossiers...</p>';
+
+    try {
+        const squadRef = doc(db, "squads", squadId);
+        const squadSnap = await getDoc(squadRef);
+
+        if (squadSnap.exists()) {
+            const squad = squadSnap.data();
+            
+            // Build the Intel UI
+            intelView.innerHTML = `
+                <button class="modal-button secondary" onclick="showSquadRegistry()" style="width: auto; padding: 5px 10px; font-size: 0.8rem;">
+                    ← Back to Registry
+                </button>
+                
+                <h2 style="margin-top: 15px;">[${squad.callsign}] ${squad.squadName}</h2>
+                <p style="text-align: left; color: #4A7C59; font-weight: bold;">Sector: ${squad.homeSector}</p>
+                
+                <div class="safety-disclaimer" style="background: #f0f0f0; border-left: 4px solid #4A7C59; color: #333;">
+                    <strong>MISSION STATEMENT</strong>
+                    ${squad.bio || "No mission profile provided."}
+                </div>
+
+                <h4>UNIT ROSTER (${squad.memberCount || 1})</h4>
+                <div id="squadRosterList">
+                    <p style="font-size: 0.8rem; color: #888;">Scanning for active member profiles...</p>
+                </div>
+
+                <button id="btnJoinSquad" class="launch-btn" style="margin-top: 20px;">
+                    ⚡ REQUEST TO JOIN
+                </button>
+            `;
+            
+            // We'll handle pulling member names (usernames) in the next step
+        }
+    } catch (error) {
+        console.error("Intel Retrieval Failed:", error);
+        intelView.innerHTML = '<p>⚠️ Error: Could not decrypt unit data.</p>';
+    }
+}
