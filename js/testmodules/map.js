@@ -18,14 +18,29 @@ export function initializeMap() {
     const geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
-        marker: false,
-        placeholder: 'Search for a place',
-        autocomplete: false,
-        proximity: 'ip', // Prioritize results near the user's IP address
-        types: 'country,region,place,postcode,locality,neighborhood,address,poi' // Expand search to include POIs
-
+        // Add 'poi' and 'address' to broaden the search
+        types: 'country,region,place,postcode,locality,neighborhood,address,poi', 
+        // Optional: Limit results to a specific area (like Chicago/Rogers Park)
+        // bbox: [-87.70, 42.00, -87.65, 42.03], 
+        proximity: {
+        longitude: state.map.getCenter().lng,
+        latitude: state.map.getCenter().lat
+        },
+        placeholder: 'Search for parks, addresses, or landmarks...',
+        marker: { color: '#4A7C59' }
     });
-    document.getElementById('geocoder-container').appendChild(geocoder.onAdd(state.map));
+    
+    document.getElementById('geocoder-container').appendChild(geocoder.onAdd(map));
+
+    // 3. THE MAGIC: Update proximity as the user moves the map
+    state.map.on('moveend', () => {
+        const newCenter = state.map.getCenter();
+        geocoder.setProximity({
+            longitude: newCenter.lng,
+            latitude: newCenter.lat
+        });
+        console.log("Geocoder proximity updated to map center:", newCenter);
+    });
 
     const searchInput = document.querySelector('#geocoder-container .mapboxgl-ctrl-geocoder--input');
 
