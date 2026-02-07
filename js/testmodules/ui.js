@@ -1392,8 +1392,13 @@ export async function reattemptChallenge(challengeId, title) {
 
             alert("Mission Re-Activated! Check your 'Current Challenges' list.");
             
-            // Refresh the archive view to show it's gone from here
+            // 1. Refresh the background data
             loadPastChallenges('uncompleted');
+            
+            // 2. AUTO-CLOSE: Return the user to the hub
+            if (typeof closeModal === 'function') {
+                closeModal('pastChallengesModal');
+            }
         }
     } catch (err) {
         console.error("Re-activation failed:", err);
