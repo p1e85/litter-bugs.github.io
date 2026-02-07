@@ -1670,30 +1670,34 @@ async function renderRoster(memberIds, leaderId) {
                 const isLeader = uid === leaderId;
                 const isSystemAdmin = userData.role === 'admin';
                 
-                // Individual Stats
+                // --- FIELD MAPPING FIX ---
+                // Prioritizing 'username' as per your public profile structure
+                const name = userData.username || userData.displayName || 'Unknown Trooper';
                 const pins = userData.totalPins || 0;
                 const miles = userData.totalDistance || 0;
 
-                // Add to Squad Totals
                 totalSquadPins += pins;
                 totalSquadMiles += miles;
                 
                 rosterHTML += `
-                    <div class="member-bio-card" style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${isLeader ? 'var(--color-support-gold)' : '#eee'}; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div class="member-bio-card" style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${isLeader ? 'var(--color-support-gold)' : '#eee'};">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <div class="member-rank-icon" style="font-size: 1.2rem; background: #f8f9fa; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid ${isLeader ? 'var(--color-support-gold)' : 'var(--color-primary-green)'};">
+                            <div class="member-rank-icon" style="font-size: 1.2rem; background: #f8f9fa; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid ${isLeader ? 'var(--color-support-gold)' : 'var(--color-primary-green)'}; cursor: pointer;" 
+                                 onclick="handleViewProfile('${uid}')">
                                 ${isLeader ? '⭐' : '👤'}
                             </div>
                             <div class="member-info" style="flex-grow: 1;">
-                                <h5 style="margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
-                                    ${userData.displayName || 'Unknown Trooper'} 
+                                <h5 style="margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px; cursor: pointer;" 
+                                    onclick="handleViewProfile('${uid}')">
+                                    ${name} 
                                     ${isLeader ? '<span style="background: var(--color-support-gold); color: #fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 800;">Leader</span>' : ''}
                                 </h5>
-                                <p style="margin: 0; font-size: 0.8rem; color: #666; font-style: italic;">
-                                    ${userData.title || 'Recruit'} • Level ${userData.level || 1}
+                                <p style="margin: 0; font-size: 0.8rem; color: #666;">
+                                    ${userData.title || 'Trooper'} • Level ${userData.level || 1}
                                 </p>
                             </div>
                         </div>
+                        
                         <div style="display: flex; gap: 10px; margin-top: 5px; padding-top: 8px; border-top: 1px solid #f0f0f0;">
                             <div style="flex: 1; text-align: center; background: #f8f9fa; border-radius: 6px; padding: 4px;">
                                 <span style="display: block; font-size: 0.65rem; color: #888; text-transform: uppercase;">Pins</span>
@@ -1701,16 +1705,15 @@ async function renderRoster(memberIds, leaderId) {
                             </div>
                             <div style="flex: 1; text-align: center; background: #f8f9fa; border-radius: 6px; padding: 4px;">
                                 <span style="display: block; font-size: 0.65rem; color: #888; text-transform: uppercase;">Miles</span>
-                                <span style="font-weight: bold; color: var(--color-secondary-blue);">${miles.toFixed(1)}</span>
+                                <span style="font-weight: bold; color: var(--color-secondary-blue);">${Number(miles).toFixed(1)}</span>
                             </div>
                         </div>
                     </div>`;
             }
         }
 
-        // Create the Total Stats Header
         const totalsHeader = `
-            <div style="background: linear-gradient(135deg, #4A7C59, #3e684b); color: white; border-radius: 10px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #4A7C59, #3e684b); color: white; border-radius: 10px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                 <div>
                     <span style="display: block; font-size: 0.7rem; text-transform: uppercase; opacity: 0.8;">Squad Pins</span>
                     <span style="font-size: 1.5rem; font-weight: 800;">${totalSquadPins}</span>
@@ -1727,7 +1730,6 @@ async function renderRoster(memberIds, leaderId) {
 
     } catch (err) {
         console.error("Roster Scan Failed:", err);
-        rosterContainer.innerHTML = '<p style="text-align: center; color: #dc3545;">⚠️ Failed to load member profiles.</p>';
     }
 }
 
