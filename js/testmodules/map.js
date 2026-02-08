@@ -8,93 +8,29 @@ import { showPublicProfile } from './ui.js';
  */
 export function initializeMap() {
     mapboxgl.accessToken = 'pk.eyJ1IjoicDFjcmVhdGlvbnMiLCJhIjoiY2p6ajZvejJmMDZhaTNkcWpiN294dm12eCJ9.8ckNT6kfuJry7K7GAeIuxw';
-    
-    // 1. Initialize the Map centered on Chicago
     state.map = new mapboxgl.Map({
         container: 'map',
         style: mapStyles[state.currentStyleIndex].url,
-        center: [-87.6298, 41.8781], // Chicago Loop Center
-        zoom: 10.5
+        center: [-87.6298, 41.8781], // Default center
+        zoom: 10
     });
 
-    // 2. Initialize the Geocoder
     const geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
-        types: 'country,region,place,postcode,locality,neighborhood,address,poi', 
-        proximity: {
-            longitude: -87.6298,
-            latitude: 41.8781
-        },
-        placeholder: 'Search for mission sites (parks, landmarks)...',
-        marker: false // We use our own custom tactical marker below
+        marker: false,
+        placeholder: 'Search for a place',
+        autocomplete: false,
+        proximity: 'ip', // Prioritize results near the user's IP address
+        types: 'country,region,place,postcode,locality,neighborhood,address,poi' // Expand search to include POIs
+
     });
-    
-    const geocoderContainer = document.getElementById('geocoder-container');
-    if (geocoderContainer) {
-        geocoderContainer.appendChild(geocoder.onAdd(state.map));
-    }
+    document.getElementById('geocoder-container').appendChild(geocoder.onAdd(state.map));
 
-    // 3. THE FLY-TO & TACTICAL POPUP LOGIC (REPAIRED)
-    geocoder.on('result', (event) => {
-        const coords = event.result.geometry.coordinates; // [lng, lat]
-        const name = event.result.text; // This is the "rawName"
-
-        // PHASE 3 FIX: Define the escaped name for the string-based onclick handler
-        // This handles names like "St. John's Park" without breaking the JS string.
-        const escapedName = name.replace(/'/g, "\\'");
-
-        console.log(`🚀 Mission Site Identified: ${name}`, coords);
-
-        state.map.flyTo({
-            center: coords,
-            zoom: 15.5,
-            pitch: 45,
-            bearing: 0,
-            essential: true,
-            duration: 3000
-        });
-
-        // Add a tactical "Target" marker at the searched POI
-        new mapboxgl.Marker({ color: '#dc3545' }) 
-            .setLngLat(coords)
-            .setPopup(new mapboxgl.Popup({ offset: 25, closeButton: true })
-                .setHTML(`
-                    <div class="poi-briefing">
-                        <div class="poi-header">
-                            <h3>📍 MISSION SITE</h3>
-                        </div>
-                        <div class="poi-body">
-                            <strong style="display:block; margin-bottom:10px; color:#333;">${name}</strong>
-                            
-                            <button class="modal-button" 
-                                    style="width:100%; margin-bottom:8px; padding:10px; background:#f0f0f0; border:1px solid #ccc; border-radius:6px; cursor:pointer;"
-                                    onclick="window.showMeetupsList('${escapedName}')">
-                                🔍 VIEW MEETUPS
-                            </button>
-
-                            <button class="modal-button primary" 
-                                    style="width:100%; padding:10px; background:#4A7C59; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;"
-                                    onclick="window.openMeetupForm('${escapedName}', ${coords[1]}, ${coords[0]})">
-                                📅 SCHEDULE MEETUP
-                            </button>
-                        </div>
-                    </div>
-                `))
-            .addTo(state.map);
-    });
-    
-    // 4. Update geocoder proximity as user pans the map
-    state.map.on('moveend', () => {
-        const newCenter = state.map.getCenter();
-        geocoder.setProximity({
-            longitude: newCenter.lng,
-            latitude: newCenter.lat
-        });
-    });
-
-    // Mobile UX fix for search input
     const searchInput = document.querySelector('#geocoder-container .mapboxgl-ctrl-geocoder--input');
+
+    // This code makes the input readonly initially, then removes that attribute
+    // as soon as the user focuses on it (by clicking or tabbing).
     if (searchInput) {
         searchInput.setAttribute('readonly', 'readonly');
         searchInput.onfocus = () => {
@@ -105,21 +41,22 @@ export function initializeMap() {
     state.map.on('load', () => {
         initializeMapLayers();
         setupPoiClickListeners(); // From community.js
-        setupSectorVisuals();
     });
 
     state.map.on('zoom', toggleMarkerVisibility);
 }
 
 /**
- * Sets up the initial GeoJSON sources and layers for routes and live tracking.
+ * Sets up the initial GeoJSON sources and layers for routes and pins.
  */
+// In js/modules/map.js
+
 function initializeMapLayers() {
+  // --- User-Specific Layers ---
+
+  // User's route line
   if (!state.map.getSource('user-route')) {
-    state.map.addSource('user-route', { 
-        type: 'geojson', 
-        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } 
-    });
+    state.map.addSource('user-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
   }
   if (!state.map.getLayer('user-route')) {
     state.map.addLayer({
@@ -131,45 +68,30 @@ function initializeMapLayers() {
     });
   }
 
-  // Live Location Pulsing Dot
+  // User's current location dot
   if (!state.map.getSource('user-location-point')) {
-    state.map.addSource('user-location-point', { 
-        type: 'geojson', 
-        data: { type: 'Feature', geometry: { type: 'Point', coordinates: [] } } 
-    });
+    state.map.addSource('user-location-point', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', 'coordinates': [] } } });
   }
   if (!state.map.getLayer('user-location-pulse')) {
-    state.map.addLayer({ 
-        id: 'user-location-pulse', 
-        type: 'circle', 
-        source: 'user-location-point', 
-        paint: { 'circle-radius': 15, 'circle-color': '#4A7C59', 'circle-opacity': 0.2 } 
-    });
+    state.map.addLayer({ id: 'user-location-pulse', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 15, 'circle-color': '#4A7C59', 'circle-opacity': 0.2 } });
   }
   if (!state.map.getLayer('user-location-dot')) {
-    state.map.addLayer({ 
-        id: 'user-location-dot', 
-        type: 'circle', 
-        source: 'user-location-point', 
-        paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 2, 'circle-stroke-color': '#4A7C59' } 
-    });
+    state.map.addLayer({ id: 'user-location-dot', type: 'circle', source: 'user-location-point', paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 2, 'circle-stroke-color': '#4A7C59' } });
   }
 }
 
 /**
- * Cycles to the next map style while preserving all data layers.
+ * Cycles to the next map style and re-initializes layers and data.
  */
 export function changeMapStyle() {
     state.currentStyleIndex = (state.currentStyleIndex + 1) % mapStyles.length;
     state.map.setStyle(mapStyles[state.currentStyleIndex].url);
     
     state.map.once('style.load', () => {
+        // --- 1. Restore the standard stuff ---
         initializeMapLayers();
-        
-        // Re-add HTML Markers
         state.userMarkers.forEach(marker => marker.addTo(state.map));
         state.communityMarkers.forEach(marker => marker.addTo(state.map));
-        
         toggleMarkerVisibility();
         
         if (state.isCommunityViewOn) {
@@ -177,24 +99,28 @@ export function changeMapStyle() {
         }
         updateUserPinsSource();
 
-        setupSectorVisuals(); 
-        updateSwarmPulse();   
+        // --- 2. RESTORE THE SECTORS (The Fix) ---
+        setupSectorVisuals(); // Re-creates the polygon geometry
+        updateSwarmPulse();   // Re-applies the 'glow' opacities
         
-        // Re-apply Sector Visibility if it was active
+        // --- 3. RESPECT THE TOGGLE STATE ---
+        // Check if the button is currently 'active' (meaning sectors should be visible)
         const sectorBtn = document.getElementById('toggleSectorsBtn');
         const isSectorsActive = sectorBtn && sectorBtn.classList.contains('active');
         
         if (isSectorsActive) {
             ['RP-01', 'RP-02', 'RP-03', 'RP-04', 'RP-05'].forEach(id => {
-                if (state.map.getLayer(`layer-${id}`)) state.map.setLayoutProperty(`layer-${id}`, 'visibility', 'visible');
-                if (state.map.getLayer(`label-${id}`)) state.map.setLayoutProperty(`label-${id}`, 'visibility', 'visible');
+                const fillLayer = `layer-${id}`;
+                const labelLayer = `label-${id}`;
+                if (state.map.getLayer(fillLayer)) state.map.setLayoutProperty(fillLayer, 'visibility', 'visible');
+                if (state.map.getLayer(labelLayer)) state.map.setLayoutProperty(labelLayer, 'visibility', 'visible');
             });
         }
     });
 }
 
 /**
- * Hides pins when zoomed out to prevent map clutter.
+ * Shows or hides photo markers based on the map's zoom level.
  */
 function toggleMarkerVisibility() {
     const display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
@@ -203,13 +129,18 @@ function toggleMarkerVisibility() {
 }
 
 /**
- * Creates a photo pin marker and injects it into the map.
+ * Creates a photo marker with a popup and adds it to the map.
+ * @param {object} pinInfo - The data for the pin.
+ * @param {string} type - 'user' or 'community'.
+ * @param {object} routeInfo - Additional data for community pins.
+ * @returns {mapboxgl.Marker} The created marker instance.
  */
 export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
     const el = document.createElement('div');
     el.className = 'photo-marker';
-    // Use thumbnail if available, fallback to full image
+    //el.style.backgroundImage = `url(${pinInfo.imageURL || pinInfo.image})`;
     el.style.backgroundImage = `url(${pinInfo.thumbnailURL || pinInfo.imageURL || pinInfo.image})`;
+    //el.style.display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
 
     const popup = createPinPopup(pinInfo, type, routeInfo);
     const marker = new mapboxgl.Marker(el).setLngLat(pinInfo.coords).setPopup(popup).addTo(state.map);
@@ -217,73 +148,78 @@ export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
     if (type === 'user') {
         state.userMarkers.push(marker);
     } else {
-        el.style.borderColor = '#28a745'; // Community pins get a distinct border
+        el.style.borderColor = '#28a745'; // Community marker color
         state.communityMarkers.push(marker);
     }
     return marker;
 }
 
 /**
- * Generates the specific Popup HTML and Form Logic for a pin.
+ * Creates a Mapbox popup with appropriate controls for a given pin.
  */
 function createPinPopup(pinInfo, type, routeInfo = {}) {
     let popupHTML;
 
+    // --- HTML for User's Own Pin (Editable) ---
     if (type === 'user') {
         const mainCategories = Object.keys(pinCategories);
         let mainOptionsHTML = mainCategories.map(cat =>
             `<option value="${cat}" ${pinInfo.category === cat ? 'selected' : ''}>${cat}</option>`
         ).join('');
 
+        // Determine initial sub-categories based on saved data or default
         const currentCategory = pinInfo.category && pinCategories[pinInfo.category] ? pinInfo.category : 'Other';
         let subOptionsHTML = pinCategories[currentCategory].map(subCat =>
             `<option value="${subCat}" ${pinInfo.subCategory === subCat ? 'selected' : ''}>${subCat}</option>`
         ).join('');
 
         popupHTML = `
-            <div class="pin-edit-container" style="min-width: 200px;">
-                <img src="${pinInfo.imageURL || pinInfo.image}" alt="Item" style="width:100%; border-radius: 6px; margin-bottom: 10px;"/>
+            <div>
+                <img src="${pinInfo.imageURL || pinInfo.image}" alt="User photo" style="width:100%; height:auto; border-radius: 4px;"/>
                 <div class="pin-popup-form">
-                    <input type="text" id="title-${pinInfo.id}" value="${pinInfo.title || ''}" placeholder="Identify this item..." style="font-weight:bold;">
-                    
-                    <label>Category</label>
+                    <input type="text" id="title-${pinInfo.id}" value="${pinInfo.title || ''}" placeholder="Enter a title">
+
+                    <label for="category-${pinInfo.id}">Category:</label>
                     <select id="category-${pinInfo.id}">${mainOptionsHTML}</select>
-                    
-                    <label>Sub-Category</label>
+
+                    <label for="subCategory-${pinInfo.id}">Sub-Category:</label>
                     <select id="subCategory-${pinInfo.id}">${subOptionsHTML}</select>
-                    
-                    <label>Brand (Optional)</label>
-                    <input type="text" id="brand-${pinInfo.id}" value="${pinInfo.brand || ''}" placeholder="e.g. Coca-Cola">
-                    
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button id="update-${pinInfo.id}" class="modal-button btn-primary" style="margin:0; flex:1;">SAVE</button>
-                        <button id="delete-${pinInfo.id}" class="modal-button btn-danger" style="margin:0; flex:1;">PURGE</button>
+
+                    <label for="brand-${pinInfo.id}">Brand (Optional):</label>
+                    <input type="text" id="brand-${pinInfo.id}" value="${pinInfo.brand || ''}" placeholder="e.g., Coca-Cola">
+
+                    <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
+                        <button id="update-${pinInfo.id}" class="modal-button btn-primary">Update</button>
+                        <button id="delete-${pinInfo.id}" class="modal-button btn-danger">Delete</button>
                     </div>
                 </div>
             </div>`;
+
+    // --- HTML for Community Pin (Read-only) ---
     } else {
-        // Community Pin View
         popupHTML = `
-            <div class="community-pin-brief">
-                <img src="${pinInfo.thumbnailURL || pinInfo.imageURL}" alt="${pinInfo.title}" style="width:100%; border-radius: 6px;"/>
-                <p style="margin: 8px 0 2px;"><strong>${pinInfo.title || 'Untitled Item'}</strong></p>
-                <p style="margin: 0; font-size: 0.85em; color: #666;">
-                    ${pinInfo.category || 'General'} ${pinInfo.subCategory ? `(${pinInfo.subCategory})` : ''}
+            <div>
+                <img src="${pinInfo.thumbnailURL || pinInfo.imageURL}" alt="${pinInfo.title}" style="width:100%; border-radius: 4px;"/>
+                <p style="margin: 5px 0 0;"><strong>${pinInfo.title || 'Untitled Pin'}</strong></p>
+                <p style="margin: 5px 0 0; font-style: italic; color: #555;">
+                    Category: ${pinInfo.category || 'N/A'} ${pinInfo.subCategory ? `(${pinInfo.subCategory})` : ''}
                 </p>
-                <div style="margin-top:10px; border-top:1px solid #eee; padding-top:8px;">
-                    <small>Detected by: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'Trooper'}</a></small>
-                </div>
+                ${pinInfo.brand ? `<p style="margin: 5px 0 0; font-style: italic; color: #555;">Brand: ${pinInfo.brand}</p>` : ''}
+                <small>By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
             </div>
         `;
     }
 
+    // --- Create Popup and Add Event Listeners ---
     const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(popupHTML);
 
     popup.on('open', () => {
+        // --- Logic for User's Own Pin ---
         if (type === 'user') {
             const categorySelect = document.getElementById(`category-${pinInfo.id}`);
             const subCategorySelect = document.getElementById(`subCategory-${pinInfo.id}`);
 
+            // Update sub-category dropdown when main category changes
             categorySelect?.addEventListener('change', (e) => {
                 const selectedCategory = e.target.value;
                 const subCategories = pinCategories[selectedCategory] || [];
@@ -292,6 +228,7 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                 ).join('');
             });
 
+            // "Update" button listener
             document.getElementById(`update-${pinInfo.id}`)?.addEventListener('click', () => {
                 const pin = state.photoPins.find(p => p.id === pinInfo.id);
                 if (pin) {
@@ -301,27 +238,38 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                     pin.brand = document.getElementById(`brand-${pinInfo.id}`).value;
                 }
                 popup.remove();
-                console.log("Pin Metadata Updated Locally.");
+                alert("Pin updated! Remember to save your session.");
             });
 
+            // "Delete" button listener
             document.getElementById(`delete-${pinInfo.id}`)?.addEventListener('click', () => {
-                if (confirm("Confirm: Delete this pin from your current mission?")) {
+                if (confirm("Are you sure?")) {
+                    // Filter out the deleted pin from the state
                     state.photoPins = state.photoPins.filter(p => p.id !== pinInfo.id);
+                    // Find and remove the corresponding marker from the map and state
                     const markerToRemove = state.userMarkers.find(m => {
                         const lngLat = m.getLngLat();
-                        return lngLat.lng === pinInfo.coords[0] && lngLat.lat === pinInfo.coords[1];
+                        const markerCoords = [lngLat.lng, lngLat.lat];
+                        const pinCoords = Array.isArray(pinInfo.coords) ? pinInfo.coords : [pinInfo.coords.lng, pinInfo.coords.lat];
+                        return markerCoords[0] === pinCoords[0] && markerCoords[1] === pinCoords[1];
                     });
                     if (markerToRemove) {
                         markerToRemove.remove();
                         state.userMarkers = state.userMarkers.filter(m => m !== markerToRemove);
                     }
-                    updateUserPinsSource();
+                    // Update the underlying map source if it exists
+                    if (typeof updateUserPinsSource === 'function') { updateUserPinsSource(); }
                     popup.remove();
                 }
             });
+
+            // Blur the first input to prevent auto keyboard on mobile
+            document.getElementById(`title-${pinInfo.id}`)?.blur();
+
+        // --- Logic for Community Pin ---
         } else {
-            // Profile Link Bridge
-            popup.getElement().querySelector('.profile-link')?.addEventListener('click', (e) => {
+            // Add click listener for the profile link
+            popup.getElement().querySelector(`.profile-link[data-userid="${routeInfo.userId}"]`)?.addEventListener('click', (e) => {
                 e.preventDefault();
                 showPublicProfile(routeInfo.userId);
             });
@@ -331,7 +279,7 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
 }
 
 /**
- * Updates the Mapbox GeoJSON source for current pins.
+ * Updates the 'user-pins-source' GeoJSON with the current pins.
  */
 export function updateUserPinsSource() {
     const features = state.photoPins.map(pin => ({
@@ -345,11 +293,11 @@ export function updateUserPinsSource() {
 }
 
 /**
- * Smoothly fits the map view to the user's current tracked route.
+ * Fits the map view to the bounds of the current route and pins.
  */
 export function centerOnRoute() {
     if (state.routeCoordinates.length < 1 && state.photoPins.length < 1) {
-        alert("Sector Data Empty: No route coordinates or pins detected yet.");
+        alert("No route is currently loaded to center on.");
         return;
     }
     const bounds = new mapboxgl.LngLatBounds();
@@ -362,9 +310,41 @@ export function centerOnRoute() {
     });
 }
 
-/**
- * Draws the tactical sector overlays onto the map.
- */
+export function addSectorLayers() {
+    Object.entries(RP_SECTORS).forEach(([id, bounds]) => {
+        const sourceId = `source-${id}`;
+        
+        state.map.addSource(sourceId, {
+            'type': 'geojson',
+            'data': {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Polygon',
+                    'coordinates': [[
+                        [bounds.minLon, bounds.minLat],
+                        [bounds.maxLon, bounds.minLat],
+                        [bounds.maxLon, bounds.maxLat],
+                        [bounds.minLon, bounds.maxLat],
+                        [bounds.minLon, bounds.minLat]
+                    ]]
+                }
+            }
+        });
+
+        state.map.addLayer({
+            'id': `layer-${id}`,
+            'type': 'fill',
+            'source': sourceId,
+            'layout': { 'visibility': 'none' }, // Start hidden
+            'paint': {
+                'fill-color': id === 'RP-01' ? '#ff0000' : id === 'RP-02' ? '#00ff00' : '#0000ff', // Different colors per sector
+                'fill-opacity': 0.1,
+                'fill-outline-color': '#000'
+            }
+        });
+    });
+}
+
 export function setupSectorVisuals() {
     if (!state.map) return;
 
@@ -373,9 +353,12 @@ export function setupSectorVisuals() {
         const layerId = `layer-${id}`;
 
         let polygonCoords;
+
         if (sector.isPolygon) {
+            // Use the custom diagonal path defined in config.js
             polygonCoords = [sector.path];
         } else {
+            // Build the standard rectangular box path
             polygonCoords = [[
                 [sector.minLon, sector.minLat],
                 [sector.maxLon, sector.minLat],
@@ -385,46 +368,46 @@ export function setupSectorVisuals() {
             ]];
         }
 
-        if (!state.map.getSource(sourceId)) {
-            state.map.addSource(sourceId, {
-                'type': 'geojson',
-                'data': {
-                    'type': 'Feature',
-                    'geometry': { 'type': 'Polygon', 'coordinates': polygonCoords }
+        // 1. Add the Source (the geometry data)
+        state.map.addSource(sourceId, {
+            'type': 'geojson',
+            'data': {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Polygon',
+                    'coordinates': polygonCoords
                 }
-            });
-        }
+            }
+        });
 
-        // Fill Layer (The "Glow")
-        if (!state.map.getLayer(layerId)) {
-            state.map.addLayer({
-                'id': layerId,
-                'type': 'fill',
-                'source': sourceId,
-                'layout': { 'visibility': 'none' },
-                'paint': {
-                    'fill-color': sector.color,
-                    'fill-opacity': 0.15,
-                    'fill-outline-color': sector.color
-                }
-            });
+        // 2. Add the Fill Layer (the colored shape)
+        state.map.addLayer({
+            'id': layerId,
+            'type': 'fill',
+            'source': sourceId,
+            'layout': { 'visibility': 'none' }, // Toggleable via UI
+            'paint': {
+                'fill-color': sector.color,
+                'fill-opacity': 0.15,
+                'fill-outline-color': sector.color
+            }
+        });
 
-            // Label Layer (The Sector ID)
-            state.map.addLayer({
-                'id': `label-${id}`,
-                'type': 'symbol',
-                'source': sourceId,
-                'layout': {
-                    'text-field': id,
-                    'text-size': 14,
-                    'visibility': 'none'
-                },
-                'paint': {
-                    'text-color': sector.color,
-                    'text-halo-color': '#ffffff',
-                    'text-halo-width': 2
-                }
-            });
-        }
+        // 3. Add a Label Layer (optional: shows the sector name)
+        state.map.addLayer({
+            'id': `label-${id}`,
+            'type': 'symbol',
+            'source': sourceId,
+            'layout': {
+                'text-field': id, // Displays "RP-01", "RP-05", etc.
+                'text-size': 14,
+                'visibility': 'none'
+            },
+            'paint': {
+                'text-color': sector.color,
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 2
+            }
+        });
     });
 }
