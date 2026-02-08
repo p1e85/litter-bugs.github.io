@@ -580,3 +580,49 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
     border-bottom-color: #4A7C59;
 }
+
+/* Ensure the Mapbox popup content has zero padding so the header fills the space */
+.mapboxgl-popup-content {
+    padding: 0 !important;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #333;
+}
+
+.poi-header {
+    background: #4A7C59;
+    color: white;
+    padding: 12px;
+    text-align: center;
+    border-bottom: 2px solid rgba(0,0,0,0.1);
+}
+
+.poi-header h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+.poi-body {
+    padding: 15px;
+}
+
+/* Style for the active missions section */
+.poi-active-missions {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #ccc;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.mission-item-mini {
+    background: #f8f9fa;
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    font-size: 0.8rem;
+    border-left: 3px solid #4A7C59;
+}
