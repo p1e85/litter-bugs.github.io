@@ -1,6 +1,6 @@
 
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc } from './firebase.js'; 
-import { state, allTitles } from './config.js';
+import { state, allTitles, allBadges } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute, setupSectorVisuals } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
@@ -1101,30 +1101,38 @@ export async function showPublicProfile(userId) {
         }
 
         // 4. Badges (THE FIX: Read from data.badges)
-        if (badgesEl) {
-            const userBadges = data.badges || {}; // Read the field directly
+if (badgesEl) {
+            const userBadges = data.badges || {}; 
             const badgeKeys = Object.keys(userBadges);
 
             if (badgeKeys.length === 0) {
                 badgesEl.innerHTML = '<p style="color:#888; width:100%; text-align:center;">No badges yet.</p>';
             } else {
                 let badgesHTML = '';
-                // Import allBadges logic if needed, or rely on stored data
-                // For now, we render what is stored:
+                
                 badgeKeys.forEach(key => {
-                    const badgeData = userBadges[key];
-                    // Handle both simple "true" values or detailed objects
-                    const icon = badgeData.icon || '🏆';
-                    const title = badgeData.name || key; // Fallback to ID if no name
+                    // 1. Try to find the official badge config
+                    const config = allBadges[key]; 
                     
+                    // 2. Fallback to user data or defaults if not found in config
+                    const icon = config ? config.icon : (userBadges[key].icon || '🏆');
+                    const name = config ? config.name : (userBadges[key].name || key);
+                    
+                    // 3. Optional: Check for count
+                    const count = userBadges[key].count || 1;
+                    const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-top:2px;">x${count}</span>` : '';
+
                     badgesHTML += `
-                        <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:80px; text-align:center; display:flex; flex-direction:column; align-items:center;">
-                            <div style="font-size:2em;">${icon}</div>
-                            <div style="font-size:0.7em; font-weight:bold; margin-top:5px; word-wrap: break-word;">${title}</div>
+                        <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:90px; text-align:center; display:flex; flex-direction:column; align-items:center; margin:5px;">
+                            <div style="font-size:2.5em; line-height:1;">${icon}</div>
+                            <div style="font-size:0.75em; font-weight:bold; margin-top:5px; line-height:1.2;">${name}</div>
+                            ${countBadge}
                         </div>
                     `;
                 });
-                badgesEl.innerHTML = badgesHTML;
+                
+                // Wrap in a flex container for nice alignment
+                badgesEl.innerHTML = `<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;">${badgesHTML}</div>`;
             }
         }
 
