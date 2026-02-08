@@ -1040,10 +1040,19 @@ async function loadPastChallenges(filterType) {
     }
 }
 
-// --- PUBLIC PROFILE FUNCTION ---
+// --- PUBLIC PROFILE FUNCTION (Debug & Smart Lookup Version) ---
 export async function showPublicProfile(userId) {
     const modal = document.getElementById('publicProfileModal');
     if (modal) modal.style.display = 'flex';
+
+    // 1. Verify Imports
+    if (!allBadges) {
+        console.error("CRITICAL ERROR: 'allBadges' is undefined. Please check that 'config.js' exports 'allBadges'.");
+        if (document.getElementById('profileAchievements')) {
+            document.getElementById('profileAchievements').innerHTML = '<p style="color:red">Config Error: Badges not loaded.</p>';
+        }
+        return;
+    }
 
     const nameEl = document.getElementById('profileUsername');
     const locEl = document.getElementById('profileLocation');
@@ -1067,12 +1076,12 @@ export async function showPublicProfile(userId) {
 
         const data = docSnap.data();
 
-        // 1. Basic Info
+        // 2. Basic Info
         if (nameEl) nameEl.textContent = data.username || "Anonymous Trooper";
         if (locEl) locEl.textContent = data.location || "Unknown Location";
         if (bioEl) bioEl.textContent = data.bio || "No bio provided.";
 
-        // 2. Stats
+        // 3. Stats
         if (statsEl) {
             statsEl.innerHTML = `
                 <div class="stat-card">
@@ -1090,7 +1099,7 @@ export async function showPublicProfile(userId) {
             `;
         }
 
-        // 3. Support Button
+        // 4. Support Button
         if (supportBtn) {
             supportBtn.style.display = data.buyMeACoffeeLink ? "block" : "none";
             if (data.buyMeACoffeeLink) {
@@ -1100,10 +1109,12 @@ export async function showPublicProfile(userId) {
             }
         }
 
-        // 4. Badges (THE FIX: Read from data.badges)
-if (badgesEl) {
+        // 5. Badges (Smart Lookup Fix)
+        if (badgesEl) {
             const userBadges = data.badges || {}; 
             const badgeKeys = Object.keys(userBadges);
+            
+            console.log("User's Badges (Keys):", badgeKeys); // Debug Log
 
             if (badgeKeys.length === 0) {
                 badgesEl.innerHTML = '<p style="color:#888; width:100%; text-align:center;">No badges yet.</p>';
@@ -1111,14 +1122,26 @@ if (badgesEl) {
                 let badgesHTML = '';
                 
                 badgeKeys.forEach(key => {
-                    // 1. Try to find the official badge config
-                    const config = allBadges[key]; 
+                    // Debug: Check what we are looking for
+                    // console.log(`Looking up badge key: "${key}"`);
+
+                    // A. Direct Lookup
+                    let config = allBadges[key]; 
                     
-                    // 2. Fallback to user data or defaults if not found in config
+                    // B. Smart Fallback: If direct lookup fails, try to find by Name
+                    if (!config) {
+                        // console.warn(`Direct lookup failed for "${key}". Trying to find by name...`);
+                        const allKeys = Object.keys(allBadges);
+                        const match = allKeys.find(k => allBadges[k].name === key || allBadges[k].title === key);
+                        if (match) config = allBadges[match];
+                    }
+                    
+                    // C. Determine Icon & Name
+                    // If we found config, use it. If not, try to read from user data. If all else fails, show Trophy.
                     const icon = config ? config.icon : (userBadges[key].icon || '🏆');
                     const name = config ? config.name : (userBadges[key].name || key);
                     
-                    // 3. Optional: Check for count
+                    // Count Logic
                     const count = userBadges[key].count || 1;
                     const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-top:2px;">x${count}</span>` : '';
 
@@ -1131,7 +1154,6 @@ if (badgesEl) {
                     `;
                 });
                 
-                // Wrap in a flex container for nice alignment
                 badgesEl.innerHTML = `<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;">${badgesHTML}</div>`;
             }
         }
