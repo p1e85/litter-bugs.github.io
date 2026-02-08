@@ -1043,68 +1043,100 @@ async function loadPastChallenges(filterType) {
 // --- PUBLIC PROFILE FUNCTION ---
 export async function showPublicProfile(userId) {
     const modal = document.getElementById('publicProfileModal');
-    const content = document.getElementById('publicProfileContent');
-    content.innerHTML = '<p>Loading profile...</p>';
-    modal.style.display = 'flex';
+    
+    // 1. Show modal immediately so user sees something happening
+    if (modal) modal.style.display = 'flex';
+
+    // 2. Select the specific elements from your HTML
+    const nameEl = document.getElementById('profileUsername');
+    const locEl = document.getElementById('profileLocation');
+    const bioEl = document.getElementById('profileBio');
+    const statsEl = document.getElementById('profileStats');
+    const badgesEl = document.getElementById('profileAchievements');
+    const supportBtn = document.getElementById('profileSupportBtn');
+
+    // Clear previous data while loading
+    if (nameEl) nameEl.textContent = "Loading...";
+    if (locEl) locEl.textContent = "";
+    if (bioEl) bioEl.textContent = "";
+    if (statsEl) statsEl.innerHTML = "";
+    if (badgesEl) badgesEl.innerHTML = "";
 
     try {
-        // 1. Get Profile Data
+        // 3. Fetch Profile Data
         const docSnap = await getDoc(doc(db, "publicProfiles", userId));
+        
         if (!docSnap.exists()) {
-            content.innerHTML = '<p>User profile not found.</p>';
+            if (nameEl) nameEl.textContent = "User not found";
             return;
         }
+
         const data = docSnap.data();
 
-        // --- NEW TITLE LOOKUP LOGIC ---
-        // Converts the saved key (og_9) into the display name (The Original Nine)
-        const titleDisplay = (data.selectedTitle && allTitles[data.selectedTitle]) 
-            ? `<p style="margin:-5px 0 10px; font-weight:bold; color:#4A7C59; font-size:0.9em;">${allTitles[data.selectedTitle].name}</p>` 
-            : '';
+        // 4. Populate Basic Info
+        if (nameEl) nameEl.textContent = data.username || "Anonymous Trooper";
+        if (locEl) locEl.textContent = data.location || "Unknown Location";
+        if (bioEl) bioEl.textContent = data.bio || "No bio provided.";
 
-        // 2. Get Badges
-        const badgesSnap = await getDocs(query(collection(db, "publicProfiles", userId, "badges"), orderBy("date", "desc")));
-        let badgesHTML = '';
-        if (badgesSnap.empty) {
-            badgesHTML = '<p style="color:#888;">No badges yet.</p>';
-        } else {
-            badgesSnap.forEach(b => {
-                const badge = b.data();
-                const count = badge.count || 1;
-                const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-left:4px;">x${count}</span>` : '';
-                
-                badgesHTML += `
-                    <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:80px; text-align:center;">
-                        <div style="font-size:2em;">${badge.icon || '🏆'}</div>
-                        <div style="font-size:0.8em; font-weight:bold; margin-top:5px;">${badge.title}</div>
-                        ${countBadge}
-                        <div style="font-size:0.7em; color:${badge.color || '#666'};">${badge.tier || 'Stone'}</div>
-                    </div>
-                `;
-            });
+        // 5. Populate Stats
+        if (statsEl) {
+            statsEl.innerHTML = `
+                <div class="stat-card">
+                    <span class="stat-value">${data.totalPins || 0}</span>
+                    <span class="stat-label">Items</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${(data.totalDistance || 0).toFixed(1)}</span>
+                    <span class="stat-label">Miles</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${data.totalRoutes || 0}</span>
+                    <span class="stat-label">Routes</span>
+                </div>
+            `;
         }
 
-        // 3. Render
-        content.innerHTML = `
-            <div style="text-align:center;">
-                <img src="${data.photoURL || 'https://via.placeholder.com/100'}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #4A7C59;">
-                <h2 style="margin:10px 0;">${data.username}</h2>
-                
-                ${titleDisplay}
-                
-                <p style="color:#666;">${data.bio || 'No bio yet.'}</p>
-                <div style="margin:15px 0; font-size:0.9em; background:#e8f5e9; padding:10px; border-radius:8px; display:inline-block;">
-                    <strong>${data.totalDistance ? data.totalDistance.toFixed(1) : 0}</strong> miles cleaned
-                </div>
-            </div>
-            <h3 style="border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">Badges</h3>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
-                ${badgesHTML}
-            </div>
-        `;
+        // 6. Handle "Support" Button
+        if (supportBtn) {
+            if (data.buyMeACoffeeLink) {
+                supportBtn.style.display = "block";
+                // Remove old listeners by cloning
+                const newBtn = supportBtn.cloneNode(true);
+                supportBtn.parentNode.replaceChild(newBtn, supportBtn);
+                newBtn.addEventListener('click', () => window.open(data.buyMeACoffeeLink, '_blank'));
+            } else {
+                supportBtn.style.display = "none";
+            }
+        }
+
+        // 7. Fetch and Populate Badges
+        const badgesSnap = await getDocs(query(collection(db, "publicProfiles", userId, "badges"), orderBy("date", "desc")));
+        
+        if (badgesEl) {
+            if (badgesSnap.empty) {
+                badgesEl.innerHTML = '<p style="color:#888; width:100%; text-align:center;">No badges yet.</p>';
+            } else {
+                let badgesHTML = '';
+                badgesSnap.forEach(b => {
+                    const badge = b.data();
+                    const count = badge.count || 1;
+                    const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-left:4px;">x${count}</span>` : '';
+                    
+                    badgesHTML += `
+                        <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:80px; text-align:center; display:flex; flex-direction:column; align-items:center;">
+                            <div style="font-size:2em;">${badge.icon || '🏆'}</div>
+                            <div style="font-size:0.8em; font-weight:bold; margin-top:5px;">${badge.title}</div>
+                            ${countBadge}
+                        </div>
+                    `;
+                });
+                badgesEl.innerHTML = badgesHTML;
+            }
+        }
+
     } catch (err) {
         console.error("Error loading profile:", err);
-        content.innerHTML = '<p>Error loading profile.</p>';
+        if (nameEl) nameEl.textContent = "Error loading profile";
     }
 }
 
