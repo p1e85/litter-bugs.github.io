@@ -56,22 +56,26 @@ export function initializeMap() {
             .setLngLat(coords)
             .setPopup(new mapboxgl.Popup({ offset: 25, closeButton: true })
                 .setHTML(`
-                    <div class="poi-briefing">
-                        <div class="poi-header">
-                            <h3>📍 Mission Site</h3>
-                        </div>
-                        <div class="poi-body">
-                            <strong style="display:block; margin-bottom:5px; color:#333;">${name}</strong>
-                            <p>Status: Ready for Recon<br>City: Chicago</p>
-                            
-                            <button class="modal-button primary" 
-                                    style="width:100%; padding:10px; font-weight:bold; background:#4A7C59; border:none; color:white; border-radius:6px; cursor:pointer;"
-                                    onclick="window.openMeetupForm('${name.replace(/'/g, "\\'")}', ${coords[1]}, ${coords[0]})">
-                                📅 SCHEDULE MEETUP
-                            </button>
-                        </div>
-                    </div>
-                `))
+    <div class="poi-briefing">
+        <div class="poi-header">
+            <h3>📍 MISSION SITE</h3>
+        </div>
+        <div class="poi-body">
+            <strong style="display:block; font-size:1.1rem; color:#222;">${name}</strong>
+            <p style="font-size:0.8rem; color:#666; margin:4px 0 12px;">Chicago Deployment Zone</p>
+            
+            <div id="poi-missions-list" class="poi-active-missions">
+                <p style="font-size:0.75rem; color:#999; font-style:italic;">Scanning archives for active meetups...</p>
+            </div>
+
+            <button class="modal-button primary" 
+                    style="width:100%; margin-top:12px; padding:10px; font-weight:bold; background:#4A7C59; border:none; color:white; border-radius:6px; cursor:pointer;"
+                    onclick="window.openMeetupForm('${name.replace(/'/g, "\\'")}', ${coords[1]}, ${coords[0]})">
+                📅 SCHEDULE MEETUP
+            </button>
+        </div>
+    </div>
+`)
             .addTo(state.map);
     });
     
