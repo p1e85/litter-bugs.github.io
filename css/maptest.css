@@ -626,3 +626,22 @@ button.close-btn:hover { color: var(--color-text-dark); }
     font-size: 0.8rem;
     border-left: 3px solid #4A7C59;
 }
+
+/* --- SCHEDULE MEETUP CHECKBOX FIX --- */
+.checkbox-container {
+    display: flex;
+    align-items: center; /* Vertically centers checkbox with text */
+    gap: 10px;           /* Space between checkbox and text */
+    margin: 15px 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 18px;         /* Specific size so it doesn't shrink */
+    height: 18px;
+    margin: 0;           /* Resets default browser margins */
+    cursor: pointer;
+    accent-color: #4A7C59; /* Makes the checkmark Trooper Green */
+}
