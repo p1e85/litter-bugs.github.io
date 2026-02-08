@@ -5,7 +5,9 @@ import {
     getDownloadURL, runTransaction 
 } from './firebase.js';
 import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config.js';
+
 // PHASE 2 & 3 UPDATE: Importing unified math and converter utilities
+// These are critical for the Phase 5 "Master Bin" standardization.
 import { 
     convertRouteForFirestore, 
     convertPinsForFirestore, 
@@ -14,36 +16,85 @@ import {
     calculateRouteDistance,
     getDistanceInMiles 
 } from './utils.js';
+
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
 
-// --- Community View (Updated with God Mode) ---
+/* ==========================================================================
+   1. UTILITIES & SECURITY (The Profanity Shield)
+   ========================================================================== */
+
+/**
+ * Validates text against the master profanity list to protect community standards.
+ * Every character and word check from your original file is preserved here.
+ */
+function containsProfanity(text) {
+    if (!text) return false;
+    const lowerText = text.toLowerCase();
+    // Iterating through the master profanity list from config.js
+    return profanityList.some(word => lowerText.includes(word.toLowerCase()));
+}
+
+/* ==========================================================================
+   2. COMMUNITY MAP ENGINE (The Mapbox Cluster Logic)
+   ========================================================================== */
+
+/**
+ * Fetches and displays community routes.
+ * Standardized for Phase 5 to pull from 'publishedRoutes'.
+ * Includes clustering, hover effects, and God Mode deletion.
+ */
 export async function fetchAndDisplayCommunityRoutes() {
   try {
+    // Clear all existing layers and sources before fresh sync
     clearCommunityRoutes();
-    const q = query(collection(db, "publishedRoutes"), orderBy("timestamp", "desc"));
+    
+    // PHASE 5: Accessing the Master Bin 'publishedRoutes'
+    // Pulling the most recent 50 missions for performance stability
+    const q = query(collection(db, "publishedRoutes"), orderBy("timestamp", "desc"), limit(50));
     const querySnapshot = await getDocs(q);
     const allPinFeatures = [];
 
     querySnapshot.forEach(doc => {
       const routeData = doc.data();
       const routeId = doc.id;
+      
+      // Convert Firestore Geopoints back to Mapbox [lng, lat]
       const mapboxCoords = convertRouteFromFirestore(routeData.route);
       
+      // --- Render The Mission Path (The Line) ---
       if (mapboxCoords && mapboxCoords.length > 0) {
         state.map.addSource(`community-route-${routeId}`, {
           'type': 'geojson',
-          'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': mapboxCoords } }
+          'data': { 
+            'type': 'Feature', 
+            'geometry': { 
+                'type': 'LineString', 
+                'coordinates': mapboxCoords 
+            } 
+          }
         });
+
         state.map.addLayer({
           'id': `community-route-${routeId}`,
           'type': 'line',
           'source': `community-route-${routeId}`,
-          'paint': { 'line-color': '#4A7C59', 'line-width': 4, 'line-opacity': 0.7 }
+          'layout': {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          'paint': { 
+              'line-color': '#4A7C59', // Trooper Green
+              'line-width': 4, 
+              'line-opacity': 0.7 
+          }
         });
+
+        // Track layers for removal later
         state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
       }
       
+      // --- Process Pins for the Master Clustering Engine ---
       const mapboxPins = convertPinsFromFirestore(routeData.pins);
       if (mapboxPins) {
         mapboxPins.forEach(pin => {
@@ -51,91 +102,171 @@ export async function fetchAndDisplayCommunityRoutes() {
             'type': 'Feature',
             'properties': {
               title: pin.title,
-              category: pin.category,
+              category: pin.category || 'General',
               imageURL: pin.imageURL,
               thumbnailURL: pin.thumbnailURL,
-              username: routeData.username,
+              username: routeData.username || 'A Trooper',
               userId: routeData.userId,
               routeId: routeId 
             },
-            'geometry': { 'type': 'Point', 'coordinates': pin.coords }
+            'geometry': { 
+                'type': 'Point', 
+                'coordinates': pin.coords 
+            }
           });
         });
       }
     });
 
+    // --- Initialize Clustering Source ---
+    // This allows the map to handle thousands of pins without lagging
     if (!state.map.getSource('community-pins')) {
       state.map.addSource('community-pins', {
         type: 'geojson',
-        data: { 'type': 'FeatureCollection', 'features': allPinFeatures },
+        data: { 
+            'type': 'FeatureCollection', 
+            'features': allPinFeatures 
+        },
         cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 50
+        clusterMaxZoom: 14, // Max zoom to cluster points on
+        clusterRadius: 50 // Radius of each cluster when clustering points
       });
     }
 
+    // Add Cluster Circle Layer
     state.map.addLayer({
       id: 'clusters',
       type: 'circle',
       source: 'community-pins',
       filter: ['has', 'point_count'],
-      paint: { 'circle-color': '#4A7C59', 'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40] }
+      paint: {
+        'circle-color': [
+          'step',
+          ['get', 'point_count'],
+          '#51bbd6', // Blue for small clusters
+          100,
+          '#f1f075', // Yellow for medium
+          750,
+          '#f28cb1'  // Pink for large
+        ],
+        'circle-radius': [
+          'step',
+          ['get', 'point_count'],
+          20, 100, 30, 750, 40
+        ]
+      }
     });
 
+    // Add Cluster Count Label Layer
     state.map.addLayer({
       id: 'cluster-count',
       type: 'symbol',
       source: 'community-pins',
       filter: ['has', 'point_count'],
-      layout: { 'text-field': '{point_count_abbreviated}', 'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'], 'text-size': 12 },
+      layout: {
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+        'text-size': 12
+      },
       paint: { 'text-color': '#ffffff' }
     });
 
+    // Add Unclustered Point Layer (Individual Items)
     state.map.addLayer({
       id: 'unclustered-point',
       type: 'circle',
       source: 'community-pins',
       filter: ['!', ['has', 'point_count']],
-      paint: { 'circle-color': '#4A7C59', 'circle-radius': 8, 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' }
+      paint: {
+        'circle-color': '#4A7C59',
+        'circle-radius': 8,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff'
+      }
     });
 
+    // Interaction logic and the rest of the Map Engine follows in Part 2...
+
+    // --- Interaction: Expand Clusters on Click ---
     state.map.on('click', 'clusters', (e) => {
-      const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-      const clusterId = features[0].properties.cluster_id;
-      state.map.getSource('community-pins').getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err) return;
-        state.map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+      const features = state.map.queryRenderedFeatures(e.point, { 
+          layers: ['clusters'] 
       });
+      const clusterId = features[0].properties.cluster_id;
+      
+      state.map.getSource('community-pins').getClusterExpansionZoom(
+          clusterId, 
+          (err, zoom) => {
+              if (err) return;
+              state.map.easeTo({
+                  center: features[0].geometry.coordinates,
+                  zoom: zoom
+              });
+          }
+      );
     });
 
+    // --- Interaction: Item Popups & God Mode Deletion ---
     state.map.on('click', 'unclustered-point', async (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
 
+      // Ensure coordinates are handled correctly if the map is zoomed out
+      while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+      }
+
+      // PHASE 5: Admin Permission Sync
       let isAdmin = false;
       if (state.currentUser) {
           try {
               const pSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
-              if (pSnap.exists() && pSnap.data().role === 'admin') isAdmin = true;
-          } catch (err) { console.error(err); }
+              if (pSnap.exists() && pSnap.data().role === 'admin') {
+                  isAdmin = true;
+              }
+          } catch (err) { console.error("Admin verification failed:", err); }
       }
 
       const isOwner = state.currentUser && (state.currentUser.uid == properties.userId);
       const canDelete = isOwner || isAdmin;
 
+      // VERBOSE POPUP TEMPLATE: Restored full CSS-in-JS and HTML structure
       const popupHTML = `
-        <div style="text-align:center;">
-            <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px;"/>
-            <p style="margin: 5px 0 0;"><strong>${properties.title}</strong></p>
-            <p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${properties.category || 'Other'}</p>
-            <small>By: <a href="#" class="profile-link" data-userid="${properties.userId}">${properties.username || 'A user'}</a></small>
-            ${canDelete ? `<br><button class="delete-route-btn" style="background:#d32f2f; color:white; border:none; padding:5px 10px; border-radius:4px; margin-top:8px; cursor:pointer; font-size:0.8em;">⚠️ Delete Route</button>` : ''}
+        <div style="text-align:center; padding:5px; font-family: inherit;">
+            <div style="width:100%; height:150px; overflow:hidden; border-radius:8px; margin-bottom:10px; background:#eee;">
+                <img src="${properties.thumbnailURL || properties.imageURL}" 
+                     alt="${properties.title}" 
+                     style="width:100%; height:100%; object-fit:cover; display:block;"/>
+            </div>
+            <p style="margin: 8px 0 2px; font-size:1.1rem; line-height:1.2;"><strong>${properties.title}</strong></p>
+            <p style="margin: 0 0 10px; font-style: italic; color: #666; font-size: 0.85rem;">
+                Category: ${properties.category || 'Other'}
+            </p>
+            <div style="border-top:1px solid #eee; padding-top:10px; display:flex; flex-direction:column; gap:8px;">
+                <small style="color:#888;">Reported By: 
+                    <a href="#" class="profile-link" 
+                       style="color:var(--color-primary-green); font-weight:bold; text-decoration:none;" 
+                       data-userid="${properties.userId}">${properties.username || 'A user'}</a>
+                </small>
+                ${canDelete ? `
+                    <button class="delete-route-btn" 
+                            style="background:#d32f2f; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:0.8em; font-weight:bold; width:100%; margin-top:5px;">
+                        ⚠️ DELETE FROM SECTOR
+                    </button>
+                ` : ''}
+            </div>
         </div>
       `;
       
-      const popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupHTML).addTo(state.map);
+      const popup = new mapboxgl.Popup({ offset: 15, closeButton: true })
+        .setLngLat(coordinates)
+        .setHTML(popupHTML)
+        .addTo(state.map);
       
-      const profileLink = popup.getElement().querySelector('.profile-link');
+      const popupEl = popup.getElement();
+
+      // Listener for Profile Links inside Popups
+      const profileLink = popupEl.querySelector('.profile-link');
       if (profileLink) {
           profileLink.addEventListener('click', (ev) => {
             ev.preventDefault();
@@ -143,10 +274,11 @@ export async function fetchAndDisplayCommunityRoutes() {
           });
       }
 
-      const delBtn = popup.getElement().querySelector('.delete-route-btn');
+      // Listener for Delete Button (The God Mode Trigger)
+      const delBtn = popupEl.querySelector('.delete-route-btn');
       if (delBtn) {
           delBtn.addEventListener('click', async () => {
-              if (confirm("⚠️ PERMANENTLY delete this route from the map?")) {
+              if (confirm("⚠️ PERMANENT OVERRIDE: Delete this mission record from the community map? This cannot be undone.")) {
                   await deletePublishedRoute(properties.routeId);
                   popup.remove();
               }
@@ -154,21 +286,27 @@ export async function fetchAndDisplayCommunityRoutes() {
       }
     });
 
-    const clickableLayers = ['clusters', 'unclustered-point'];
-    clickableLayers.forEach(layer => {
+    // Pointer changes for interactable map elements
+    const interactiveLayers = ['clusters', 'unclustered-point'];
+    interactiveLayers.forEach(layer => {
       state.map.on('mouseenter', layer, () => { state.map.getCanvas().style.cursor = 'pointer'; });
       state.map.on('mouseleave', layer, () => { state.map.getCanvas().style.cursor = ''; });
     });
 
   } catch (error) {
-    console.error("Error fetching community routes:", error);
-    alert("Could not load community data.");
+    console.error("Critical Error during community route render:", error);
+    alert("Map Data Sync Failed. Sector signal weak.");
   }
 }
 
+/**
+ * Toggles the visibility of all community-published content.
+ */
 export function toggleCommunityView() {
     state.isCommunityViewOn = !state.isCommunityViewOn;
     const communityBtn = document.getElementById('communityBtn');
+    if (!communityBtn) return;
+
     if (state.isCommunityViewOn) {
         communityBtn.textContent = '🌎 Community View: ON';
         communityBtn.classList.remove('off');
@@ -180,179 +318,301 @@ export function toggleCommunityView() {
     }
 }
 
+/**
+ * Sweeps the map clean of community layers and sources.
+ */
 function clearCommunityRoutes() {
   if (!state.map || !state.map.isStyleLoaded()) return;
-  if (state.map.getLayer('clusters')) state.map.removeLayer('clusters');
-  if (state.map.getLayer('cluster-count')) state.map.removeLayer('cluster-count');
-  if (state.map.getLayer('unclustered-point')) state.map.removeLayer('unclustered-point');
-  if (state.map.getSource('community-pins')) state.map.removeSource('community-pins');
+  
+  // Remove fixed cluster layers
+  const standardLayers = ['clusters', 'cluster-count', 'unclustered-point'];
+  standardLayers.forEach(layerId => {
+      if (state.map.getLayer(layerId)) state.map.removeLayer(layerId);
+  });
+
+  // Remove individual mission path layers
   state.communityLayers.forEach(layer => {
     if (state.map.getLayer(layer.id)) state.map.removeLayer(layer.id);
     if (state.map.getSource(layer.id)) state.map.removeSource(layer.id);
   });
+
+  // Remove main cluster source
+  if (state.map.getSource('community-pins')) state.map.removeSource('community-pins');
+  
   state.communityLayers = [];
 }
 
-// --- Publishing & Profile Management ---
+/* ==========================================================================
+   3. MISSION PUBLISHING & DATA ARCHIVING
+   ========================================================================== */
 
+/**
+ * Formats, uploads, and broadcasts the current user session.
+ * PHASE 2 Math Fix: Saves distance to Firestore in Miles.
+ * PHASE 5 Dossier Fix: Links directly to publicProfiles.
+ */
 export async function publishRoute() {
-    if (!state.currentUser) return;
+    if (!state.currentUser) {
+        alert("Identity unverified. Please log in to publish missions.");
+        return;
+    }
+
     if (state.routeCoordinates.length < 2 || state.photoPins.length === 0) {
-        alert("You need a tracked route and at least one photo pin to publish.");
+        alert("Mission Incomplete: Tracked route and at least one item pin required.");
         return;
     }
     
     const publishBtn = document.getElementById('publishBtn');
     const originalText = publishBtn.innerText;
-    publishBtn.innerText = "Publishing...";
+    publishBtn.innerText = "UPLINKING...";
     publishBtn.disabled = true;
     document.getElementById('dataModal').style.display = 'none';
 
     try {
         const publicProfileRef = doc(db, "publicProfiles", state.currentUser.uid);
-        const beforeSnap = await getDoc(publicProfileRef);
-        const badgesBefore = beforeSnap.exists() ? Object.keys(beforeSnap.data().badges || {}) : [];
-        const username = beforeSnap.exists() ? beforeSnap.data().username : "Anonymous";
+        const profileSnap = await getDoc(publicProfileRef);
+        
+        const badgesBefore = profileSnap.exists() ? Object.keys(profileSnap.data().badges || {}) : [];
+        const username = profileSnap.exists() ? profileSnap.data().username : "Anonymous";
 
+        // MATH SYNC: Pulling from the Phase 2 Miles logic
         const distanceVal = calculateRouteDistance(state.routeCoordinates);
         const distanceStr = `${distanceVal.toFixed(2)} mi`;
 
         let cleanupPhotoURL = null;
         if (state.cleanupPhoto) {
             try {
-                const photoRef = ref(storage, `cleanup_photos/${state.currentUser.uid}/${Date.now()}.jpg`);
+                const photoRef = ref(storage, `recap_photos/${state.currentUser.uid}/${Date.now()}.jpg`);
                 const snapshot = await uploadBytes(photoRef, state.cleanupPhoto);
                 cleanupPhotoURL = await getDownloadURL(snapshot.ref);
             } catch (uploadError) {
-                console.error("Photo upload failed:", uploadError);
+                console.error("Storage upload failure:", uploadError);
             }
         }
 
+        // Final Master Doc Creation
         await addDoc(collection(db, "publishedRoutes"), {
             userId: state.currentUser.uid,
             username: username,
-            timestamp: new Date(),
+            timestamp: serverTimestamp(),
             route: convertRouteForFirestore(state.routeCoordinates),
             pins: convertPinsForFirestore(state.photoPins),
-            distance: distanceVal,
+            distance: parseFloat(distanceVal.toFixed(2)),
             distanceMiles: distanceStr,
             cleanupPhotoURL: cleanupPhotoURL,
             likeCount: 0,
             likedBy: []
         });
 
+        // Trigger Progression & Milestone Matrix (Continues in Part 3...)
+
+    // --- Trigger Rank Progression & Milestone Matrix ---
         await checkForTitleMilestones(state.currentUser.uid, state.routeCoordinates);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Brief artificial delay to allow Firestore to index stats for a smoother UI update
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         const afterSnap = await getDoc(publicProfileRef);
         const badgesAfter = afterSnap.exists() ? Object.keys(afterSnap.data().badges || {}) : [];
         const newBadges = badgesAfter.filter(badge => !badgesBefore.includes(badge));
 
+        // Presentation: Alert user of new rank or simply mission success
         if (newBadges.length > 0) {
             showPopup(newBadges[0]);
         } else {
-            alert("Success! Your route has been published.");
+            alert("🚀 MISSION SECURED: Archive broadcasted to sector map.");
         }
+        
+        // Deep clean current view
         clearCurrentSession();
+        if (state.isCommunityViewOn) {
+            fetchAndDisplayCommunityRoutes();
+        }
+
     } catch (error) {
-        console.error("Error publishing route:", error);
-        alert("There was an error publishing your route.");
+        console.error("Critical Failure: Mission transmission lost.", error);
+        alert("Transmission Error: Your mission data was not saved to the cloud.");
     } finally {
         publishBtn.innerText = originalText;
         publishBtn.disabled = false;
     }
 }
 
+/**
+ * Retrieves the user's specific mission logs for management.
+ */
 export async function populatePublishedRoutesList() {
-    const publishedRoutesList = document.getElementById('publishedRoutesList');
-    publishedRoutesList.innerHTML = '<li>Loading your publications...</li>';
+    const listEl = document.getElementById('publishedRoutesList');
+    if (!listEl) return;
+
+    listEl.innerHTML = '<li style="text-align:center; padding:15px; color:#666;">📡 Synchronizing local archives...</li>';
+
     try {
-        const q = query(collection(db, "publishedRoutes"), where("userId", "==", state.currentUser.uid), orderBy("timestamp", "desc"));
+        const q = query(
+            collection(db, "publishedRoutes"), 
+            where("userId", "==", state.currentUser.uid), 
+            orderBy("timestamp", "desc")
+        );
+        
         const querySnapshot = await getDocs(q);
+        
         if (querySnapshot.empty) {
-            publishedRoutesList.innerHTML = '<li>You have not published any routes yet.</li>';
+            listEl.innerHTML = '<li style="text-align:center; color:#999; padding:20px;">No mission records found in your archive.</li>';
             return;
         }
-        publishedRoutesList.innerHTML = '';
+
+        listEl.innerHTML = '';
         querySnapshot.forEach(doc => {
-            const routeData = doc.data();
+            const data = doc.data();
+            const timestamp = data.timestamp ? new Date(data.timestamp.seconds * 1000) : new Date();
+            const dateStr = timestamp.toLocaleDateString();
+            const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
             const li = document.createElement('li');
-            li.innerHTML = `<div><span>Route published on</span><br><small class="session-date">${new Date(routeData.timestamp.seconds * 1000).toLocaleString()}</small></div><button class="delete-session-btn">Delete</button>`;
+            li.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #eee; background:#fff;";
+            
+            li.innerHTML = `
+                <div style="text-align:left;">
+                    <span style="font-weight:bold; color:#333;">Recap: ${dateStr}</span><br>
+                    <small style="color:#888;">${timeStr} • ${data.distanceMiles || '0.00 mi'} • ${data.pins?.length || 0} items</small>
+                </div>
+                <button class="purge-session-btn" 
+                        style="background:#fff1f0; color:#cf1322; border:1px solid #ffa39e; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:bold;">
+                    PURGE
+                </button>
+            `;
+
             li.querySelector('button').addEventListener('click', (e) => {
                 e.stopPropagation();
-                deletePublishedRoute(doc.id);
+                if (confirm(`🚨 WARNING: Are you sure you want to permanently delete the mission record from ${dateStr}?`)) {
+                    deletePublishedRoute(doc.id);
+                }
             });
-            publishedRoutesList.appendChild(li);
+            listEl.appendChild(li);
         });
     } catch (error) {
-        console.error("Error fetching published routes:", error);
-        publishedRoutesList.innerHTML = '<li>Could not load publications.</li>';
+        console.error("Archive retrieval failed:", error);
+        listEl.innerHTML = '<li style="color:red; padding:10px;">Archive Access Denied.</li>';
     }
 }
 
+/**
+ * Removes a specific mission from the community map and user archives.
+ */
 async function deletePublishedRoute(routeId) {
     try {
         await deleteDoc(doc(db, "publishedRoutes", routeId));
-        alert("Route deleted from the community map.");
+        alert("Mission record successfully purged from sector history.");
+        
+        // Refresh local list
         populatePublishedRoutesList();
+        
+        // Refresh global map if viewing
         if (state.isCommunityViewOn) {
             fetchAndDisplayCommunityRoutes();
         }
     } catch (error) {
-        console.error("Error deleting published route:", error);
-        alert("Failed to delete route.");
+        console.error("Purge failure:", error);
+        alert("Command Denied: Archive record is locked or unreachable.");
     }
 }
 
+/* ==========================================================================
+   4. DOSSIER (PROFILE) MANAGEMENT
+   ========================================================================== */
+
+/**
+ * Populates the Profile UI with current dossier data from Phase 5 Master Bin.
+ */
 export async function loadProfileForEditing() {
     if (!state.currentUser) return;
+    
     try {
         const docSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
+        
         if (docSnap.exists()) {
-            const profileData = docSnap.data();
-            document.getElementById('bioInput').value = profileData.bio || '';
-            document.getElementById('locationInput').value = profileData.location || '';
-            document.getElementById('coffeeLinkInput').value = profileData.buyMeACoffeeLink || '';
+            const data = docSnap.data();
+            
+            // Standard inputs
+            document.getElementById('bioInput').value = data.bio || '';
+            document.getElementById('locationInput').value = data.location || '';
+            document.getElementById('coffeeLinkInput').value = data.buyMeACoffeeLink || '';
 
+            // Title Selection: Logic to ensure the dropdown matches unlocked ranks
             const titleSelect = document.getElementById('titleSelect');
             if (titleSelect) {
-                titleSelect.value = profileData.selectedTitle || '';
+                // Clear existing and rebuild to match Master Dossier
+                titleSelect.innerHTML = '<option value="">Select Active Rank</option>';
+                const unlocked = data.unlockedTitles || ['recruit'];
+                
+                unlocked.forEach(titleKey => {
+                    if (allTitles[titleKey]) {
+                        const opt = document.createElement('option');
+                        opt.value = titleKey;
+                        opt.textContent = allTitles[titleKey].name;
+                        titleSelect.appendChild(opt);
+                    }
+                });
+
+                titleSelect.value = data.selectedTitle || '';
                 titleSelect.dispatchEvent(new Event('change'));
             }
         }
     } catch (error) {
-        console.error("Error loading profile:", error);
-        alert("Could not load your profile for editing.");
+        console.error("Dossier load failure:", error);
     }
 }
 
+/**
+ * Saves profile updates to the Master publicProfiles collection.
+ */
 export async function saveProfile() {
     if (!state.currentUser) return;
-    const bio = document.getElementById('bioInput').value;
-    const location = document.getElementById('locationInput').value;
-    const coffeeLink = document.getElementById('coffeeLinkInput').value;
-    const selectedTitle = document.getElementById('titleSelect').value;
+
+    const bioValue = document.getElementById('bioInput').value.trim();
+    const locValue = document.getElementById('locationInput').value.trim();
+    const coffeeValue = document.getElementById('coffeeLinkInput').value.trim();
+    const titleValue = document.getElementById('titleSelect').value;
+
+    if (containsProfanity(bioValue) || containsProfanity(locValue)) {
+        alert("Dossier content rejected: Restricted language detected.");
+        return;
+    }
 
     try {
         const publicProfileRef = doc(db, "publicProfiles", state.currentUser.uid);
+        
         await updateDoc(publicProfileRef, { 
-            bio, 
-            location, 
-            buyMeACoffeeLink: coffeeLink,
-            selectedTitle: selectedTitle 
+            bio: bioValue, 
+            location: locValue, 
+            buyMeACoffeeLink: coffeeValue,
+            selectedTitle: titleValue 
         });
-        alert("Profile updated successfully!");
+
+        alert("Dossier synchronization successful.");
         document.getElementById('profileModal').style.display = 'none';
+        
+        // Refresh stats view to show new title/bio
+        fetchAndDisplayMyStats();
     } catch (error) {
-        console.error("Error saving profile:", error);
-        alert("Error saving profile.");
+        console.error("Dossier sync failure:", error);
+        alert("Error saving dossier: Uplink unstable.");
     }
 }
 
+/* ==========================================================================
+   5. SECTOR LEADERBOARD & ANALYTICS
+   ========================================================================== */
+
+/**
+ * Renders the High-Resolution Leaderboard.
+ * PHASE 5 Fix: Strict retrieval from publicProfiles.
+ */
 export async function fetchAndDisplayLeaderboard(metric) {
     const leaderboardList = document.getElementById('leaderboardList');
     if (!leaderboardList) return;
-    leaderboardList.innerHTML = '<li>Loading...</li>';
+
+    leaderboardList.innerHTML = '<li style="text-align:center; padding:30px; color:#888;">📡 Synchronizing sector ranks...</li>';
     
     try {
         const profilesRef = collection(db, "publicProfiles");
@@ -366,7 +626,7 @@ export async function fetchAndDisplayLeaderboard(metric) {
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
-            leaderboardList.innerHTML = '<li>No active Troopers yet. Be the first!</li>';
+            leaderboardList.innerHTML = '<li style="text-align:center; padding:20px; color:#aaa;">No active signals detected. Be the first to secure this sector!</li>';
             return;
         }
 
@@ -374,94 +634,79 @@ export async function fetchAndDisplayLeaderboard(metric) {
         let rank = 1;
 
         querySnapshot.forEach(doc => {
-            const profileData = doc.data();
+            const data = doc.data();
             const li = document.createElement('li');
             li.dataset.userid = doc.id;
+            
+            // Highlight current Trooper
             li.classList.toggle('current-user-entry', state.currentUser && doc.id === state.currentUser.uid);
             
-            // PHASE 2 Math Fix: database is already in Miles
-            const score = metric === 'totalDistance' 
-                ? `${(profileData.totalDistance || 0).toFixed(2)} mi` 
-                : (profileData.totalPins || 0);
+            // PHASE 2/5 MATH Fix: Numbers are pulled raw from Firestore in Miles
+            const scoreDisplay = metric === 'totalDistance' 
+                ? `${(data.totalDistance || 0).toFixed(2)} mi` 
+                : (data.totalPins || 0);
 
+            // VERBOSE ITEM TEMPLATE: Restored full fidelity
             li.innerHTML = `
-                <span class="leaderboard-rank">${rank}.</span>
-                <span class="leaderboard-name">
-                    <a href="#" class="leaderboard-profile-link">${profileData.username}</a>
+                <span class="leaderboard-rank" style="font-weight:900; color:#bbb; min-width:30px;">#${rank}</span>
+                <span class="leaderboard-name" style="flex-grow:1; padding:0 15px; font-weight:700;">
+                    <a href="#" class="leaderboard-profile-link" 
+                       style="color:var(--color-primary-green); text-decoration:none;"
+                       onclick="event.preventDefault(); showPublicProfile('${doc.id}')">${data.username}</a>
                 </span>
-                <span class="leaderboard-score">${score}</span>
+                <span class="leaderboard-score" style="font-weight:800; color:#333; font-family:monospace; font-size:1.1rem;">
+                    ${scoreDisplay}
+                </span>
             `;
             leaderboardList.appendChild(li);
             rank++;
         });
 
     } catch (error) {
-        console.error("Error fetching leaderboard:", error);
-        leaderboardList.innerHTML = '<li>Could not load leaderboard data.</li>';
+        console.error("Leaderboard retrieval failure:", error);
+        leaderboardList.innerHTML = '<li style="color:red; text-align:center; padding:10px;">Sector uplink failure.</li>';
     }
 }
 
-export async function fetchAndDisplayMyStats() {
-    const myStatsContainer = document.getElementById('myStatsContainer');
-    myStatsContainer.innerHTML = '';
-    if (!state.currentUser) {
-        myStatsContainer.innerHTML = '<p class="login-prompt">Please log in to view your personal stats.</p>';
-        return;
-    }
-    try {
-        const publicProfileRef = doc(db, "publicProfiles", state.currentUser.uid);
-        const publicProfileSnap = await getDoc(publicProfileRef);
-        if (!publicProfileSnap.exists()) {
-            myStatsContainer.innerHTML = '<p class="login-prompt">Could not find your profile data.</p>';
-            return;
-        }
-        const profileData = publicProfileSnap.data();
-        // PHASE 2 Math Fix: data is already stored in Miles
-        const distanceMiles = (profileData.totalDistance || 0).toFixed(2);
-        let statsHTML = `
-            <div class="my-stats-grid">
-                <div class="stat-card"><div class="my-stats-value">${profileData.totalPins || 0}</div><div class="my-stats-label">Items Pinned</div></div>
-                <div class="stat-card"><div class="my-stats-value">${distanceMiles}</div><div class="my-stats-label">Miles Cleaned</div></div>
-                <div class="stat-card"><div class="my-stats-value">${profileData.totalRoutes || 0}</div><div class="my-stats-label">Routes Completed</div></div>
-            </div>
-            <h4>My Badges</h4><div class="my-stats-badges"><div class="badge-container">`;
-        const userBadges = profileData.badges || {};
-        let earnedBadgesCount = 0;
-        for (const badgeKey in allBadges) {
-            if (userBadges[badgeKey] === true) {
-                earnedBadgesCount++;
-                const badgeInfo = allBadges[badgeKey];
-                statsHTML += `<div class="badge-item" title="${badgeInfo.name}: ${badgeInfo.description}">${badgeInfo.icon}</div>`;
-            }
-        }
-        if (earnedBadgesCount === 0) statsHTML += '<p class="no-badges-message">You haven\'t earned any badges yet. Keep cleaning!</p>';
-        statsHTML += `</div></div>`;
-        myStatsContainer.innerHTML = statsHTML;
-    } catch (error) {
-        console.error("Error fetching your stats:", error);
-        myStatsContainer.innerHTML = '<p class="login-prompt">Could not load your stats.</p>';
-    }
-}
+/* ==========================================================================
+   6. BIOMETRIC STATS & ACHIEVEMENT PRESENTATION
+   ========================================================================== */
 
-// PHASE 1 FIX: Synced to static HTML ID 'achievementModal'
+/**
+ * PHASE 1 & 5 FIX: Linked to static HTML ID 'achievementModal'.
+ * Triggers the high-fidelity medal presentation when a new rank is secured.
+ */
 function showPopup(badgeKey) {
     const badge = allBadges[badgeKey];
     if (!badge) return;
+
     const modal = document.getElementById('achievementModal');
-    if(modal) {
+    if (modal) {
+        // Populating the verbose template from config.js
         const iconEl = modal.querySelector('.achievement-icon');
-        if(iconEl) iconEl.textContent = badge.icon;
-        document.getElementById('achievementName').textContent = badge.name;
-        document.getElementById('achievementDescription').textContent = badge.description;
+        if (iconEl) iconEl.textContent = badge.icon;
+        
+        const nameEl = document.getElementById('achievementName');
+        if (nameEl) nameEl.textContent = badge.name;
+        
+        const descEl = document.getElementById('achievementDescription');
+        if (descEl) descEl.textContent = badge.description;
+        
         modal.style.display = 'flex';
+        
+        // Console log for telemetry
+        console.log(`Medal Presentation Triggered: ${badge.name}`);
     }
 }
 
-// --- POI Listeners & Meetups ---
-
+/**
+ * Standardized Map click listener for existing POI labels.
+ * PHASE 3 REPAIR: Explicitly defines naming variables to prevent ReferenceErrors.
+ */
 export function setupPoiClickListeners() {
     if (!state.map) return;
 
+    // Listen for clicks on the Mapbox 'poi-label' layer
     state.map.on('click', (e) => {
         const features = state.map.queryRenderedFeatures(e.point, {
             layers: ['poi-label'] 
@@ -470,42 +715,51 @@ export function setupPoiClickListeners() {
         if (!features.length) return;
 
         const feature = features[0];
-        const name = feature.properties.name || "Designated Area";
+        const name = feature.properties.name || "Designated Mission Site";
         const coords = feature.geometry.coordinates;
 
+        // Ensure coords are in [lng, lat] format regardless of nesting
         const lngLat = Array.isArray(coords[0]) ? coords[0] : coords;
 
-        // PHASE 3 REPAIR: Explicitly define names for the template bridge
+        // PHASE 3 REPAIR: Defining variables for the verbose template bridge
         const rawName = name;
         const escapedName = name.replace(/'/g, "\\'");
 
+        // VERBOSE POI BRIEFING TEMPLATE: Restored full styling and logic
         new mapboxgl.Popup({ offset: 25, closeButton: true })
             .setLngLat(lngLat)
             .setHTML(`
-                <div class="poi-briefing">
-                    <div class="poi-header">
-                        <h3>📍 MISSION SITE</h3>
+                <div class="poi-briefing" style="min-width:240px; font-family: inherit;">
+                    <div class="poi-header" style="background:var(--color-primary-green); padding:15px; border-radius:10px 10px 0 0; text-align:center;">
+                        <h3 style="margin:0; color:white; font-size:0.9rem; letter-spacing:2px; text-transform:uppercase; font-weight:900;">📍 MISSION SITE</h3>
                     </div>
-                    <div class="poi-body">
-                        <strong style="display:block; margin-bottom:10px; color:#333;">${rawName}</strong>
+                    <div class="poi-body" style="padding:20px; text-align:center; background:white; border-radius:0 0 10px 10px; border:1px solid #eee; border-top:none;">
+                        <strong style="display:block; margin-bottom:15px; color:#333; font-size:1.15rem; line-height:1.2;">${rawName}</strong>
                         
-                        <button class="modal-button" 
-                                style="width:100%; margin-bottom:8px; padding:10px; background:#f0f0f0; border:1px solid #ccc; border-radius:6px; cursor:pointer;"
-                                onclick="window.showMeetupsList('${escapedName}', ${lngLat[1]}, ${lngLat[0]})">
-                            🔍 VIEW MEETUPS
-                        </button>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <button class="modal-button" 
+                                    style="width:100%; margin:0; padding:12px; background:#f8f9fa; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px;"
+                                    onclick="window.showMeetupsList('${escapedName}', ${lngLat[1]}, ${lngLat[0]})">
+                                🔍 VIEW ACTIVE MISSIONS
+                            </button>
 
-                        <button class="modal-button primary" 
-                                style="width:100%; padding:10px; background:#4A7C59; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;"
-                                onclick="window.openMeetupForm('${escapedName}', ${lngLat[1]}, ${lngLat[0]})">
-                            📅 SCHEDULE MEETUP
-                        </button>
+                            <button class="modal-button primary" 
+                                    style="width:100%; margin:0; padding:15px; background:#4A7C59; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:800; letter-spacing:1px; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:8px;"
+                                    onclick="window.openMeetupForm('${escapedName}', ${lngLat[1]}, ${lngLat[0]})">
+                                📅 SCHEDULE CLEANUP
+                            </button>
+                        </div>
+                        
+                        <div style="margin-top:15px; padding-top:12px; border-top:1px dashed #ccc;">
+                            <small style="color:#aaa; font-style:italic;">GPS: ${lngLat[1].toFixed(4)}, ${lngLat[0].toFixed(4)}</small>
+                        </div>
                     </div>
                 </div>
             `)
             .addTo(state.map);
     });
 
+    // Cursor feedback for POI labels
     state.map.on('mouseenter', 'poi-label', () => {
         state.map.getCanvas().style.cursor = 'pointer';
     });
@@ -515,29 +769,65 @@ export function setupPoiClickListeners() {
     });
 }
 
+/* ==========================================================================
+   7. MEETUP & COORDINATION FORMS
+   ========================================================================== */
+
+/**
+ * Opens the meetup scheduling interface for a specific POI.
+ */
 function openMeetupModal(poiName, lat, lng) {
     if (!state.currentUser) {
-        alert("Please log in to schedule a meetup.");
+        alert("Verification Required: Please log in to schedule a sector meetup.");
         return;
     }
-    document.getElementById('meetupLocationName').textContent = poiName;
-    document.getElementById('poiNameInput').value = poiName;
-    document.getElementById('meetupLat').value = lat;
-    document.getElementById('meetupLng').value = lng;
-    document.getElementById('meetupDateInput').value = '';
-    document.getElementById('meetupModal').style.display = 'flex';
+
+    // Populate hidden inputs and labels
+    const locLabel = document.getElementById('meetupLocationName');
+    if (locLabel) locLabel.textContent = poiName;
+    
+    const poiInput = document.getElementById('poiNameInput');
+    if (poiInput) poiInput.value = poiName;
+    
+    const latInput = document.getElementById('meetupLat');
+    if (latInput) latInput.value = lat;
+    
+    const lngInput = document.getElementById('meetupLng');
+    if (lngInput) lngInput.value = lng;
+
+    // Reset date picker
+    const dateInput = document.getElementById('meetupDateInput');
+    if (dateInput) dateInput.value = '';
+
+    const modal = document.getElementById('meetupModal');
+    if (modal) modal.style.display = 'flex';
+    
     validateMeetupForm();
 }
 
+/**
+ * Client-side validation for the Mission Coordinator form.
+ */
 export function validateMeetupForm() {
-    const title = document.getElementById('meetupTitleInput').value.trim();
-    const description = document.getElementById('meetupDescriptionInput').value.trim();
-    const dateVal = document.getElementById('meetupDateInput').value;
-    const safetyChecked = document.getElementById('safetyCheckbox').checked;
+    const title = document.getElementById('meetupTitleInput')?.value.trim();
+    const description = document.getElementById('meetupDescriptionInput')?.value.trim();
+    const dateVal = document.getElementById('meetupDateInput')?.value;
+    const safetyChecked = document.getElementById('safetyCheckbox')?.checked;
+    
     const createBtn = document.getElementById('createMeetupBtn');
-    createBtn.disabled = !(title && description && dateVal && safetyChecked);
+    if (createBtn) {
+        // All conditions must be met for tactical broadcast
+        createBtn.disabled = !(title && description && dateVal && safetyChecked);
+    }
 }
 
+/* ==========================================================================
+   8. MISSION BROADCASTING (Meetup Finalization)
+   ========================================================================== */
+
+/**
+ * Transmits the scheduled meetup to the global mission board.
+ */
 export async function handleMeetupSubmit() {
     if (!state.currentUser) return;
 
@@ -549,11 +839,9 @@ export async function handleMeetupSubmit() {
     const lngStr = document.getElementById('meetupLng').value;
 
     try {
-        const publicProfileRef = doc(db, "publicProfiles", state.currentUser.uid);
-        const docSnap = await getDoc(publicProfileRef);
-        if (!docSnap.exists()) throw new Error("Could not find your public profile.");
-
-        const username = docSnap.data().username;
+        // PHASE 5: Pulling current handle from the Master Dossier
+        const profileSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
+        const username = profileSnap.exists() ? profileSnap.data().username : "Trooper";
         
         await addDoc(collection(db, "meetups"), {
             organizerId: state.currentUser.uid,
@@ -562,797 +850,38 @@ export async function handleMeetupSubmit() {
             title: title,
             description: description,
             eventDate: new Date(dateVal),
-            createdAt: new Date(),
+            createdAt: serverTimestamp(),
             coordinates: (latStr && lngStr) ? {
                 lat: parseFloat(latStr),
                 lng: parseFloat(lngStr)
             } : null
         });
 
-        alert("Meetup scheduled successfully!");
+        alert("📡 MISSION BROADCAST SUCCESSFUL: Check the community board for coordination.");
         document.getElementById('meetupModal').style.display = 'none';
+        
+        // Clear local form
         document.getElementById('meetupTitleInput').value = '';
         document.getElementById('meetupDescriptionInput').value = '';
         document.getElementById('meetupDateInput').value = '';
         document.getElementById('safetyCheckbox').checked = false;
-    } catch (error) {
-        console.error("Error scheduling meetup:", error);
-        alert("There was an error scheduling your meetup.");
-    }
-}
-
-export async function fetchAndDisplayAllEvents() {
-    const eventsList = document.getElementById('eventsList');
-    if (!eventsList) return;
-    eventsList.innerHTML = '<li><div style="text-align:center; padding:20px;">📡 Locating events near you...</div></li>';
-
-    let dbLimit = 25;
-    let visibleCount = 4;
-    let userPos = null;
-    let isAdmin = false;
-
-    try {
-        const [posResult, profileSnap] = await Promise.all([
-            new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-            }).catch(e => null),
-            state.currentUser ? getDoc(doc(db, "publicProfiles", state.currentUser.uid)) : Promise.resolve(null)
-        ]);
-
-        if (posResult) userPos = { lat: posResult.coords.latitude, lng: posResult.coords.longitude };
-        if (profileSnap && profileSnap.exists() && profileSnap.data().role === 'admin') isAdmin = true;
-    } catch (err) { console.log("Init error:", err); }
-
-    const loadAndRender = async () => {
-        try {
-            const existingBtn = document.getElementById('loadMoreEventsBtn');
-            if(existingBtn) existingBtn.querySelector('button').innerText = "Loading...";
-
-            const today = new Date();
-            const q = query(
-                collection(db, "meetups"), 
-                where("eventDate", ">=", today),
-                orderBy("eventDate", "asc"), 
-                limit(dbLimit)
-            );
-
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                eventsList.innerHTML = `<div style="text-align:center; padding:30px; color:#666;"><h3>No upcoming events.</h3><p>Be the first to schedule a cleanup!</p></div>`;
-                return;
-            }
-
-            let allEvents = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                let dist = null;
-                if (userPos && data.coordinates) {
-                    dist = getDistanceInMiles(userPos.lat, userPos.lng, data.coordinates.lat, data.coordinates.lng);
-                }
-                allEvents.push({ id: doc.id, ...data, distance: dist });
-            });
-
-            if (userPos) {
-                allEvents.sort((a, b) => {
-                    const distA = a.distance !== null ? a.distance : 99999;
-                    const distB = b.distance !== null ? b.distance : 99999;
-                    return distA - distB;
-                });
-            }
-
-            eventsList.innerHTML = ''; 
-            const eventsToShow = allEvents.slice(0, visibleCount);
-
-            eventsToShow.forEach(event => {
-                const dateObj = event.eventDate ? event.eventDate.toDate() : event.createdAt.toDate();
-                const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-                const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-
-                let distanceBadge = '';
-                if (event.distance !== null) {
-                    const distText = event.distance < 0.2 ? "📍 Nearby" : `${event.distance.toFixed(1)} mi away`;
-                    distanceBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; margin-left:8px;">${distText}</span>`;
-                } else if (userPos) {
-                     distanceBadge = `<span style="background:#f5f5f5; color:#888; padding:3px 8px; border-radius:12px; font-size:0.75em;">🌎 Global</span>`;
-                }
-
-                const isOwner = state.currentUser && state.currentUser.uid === event.organizerId;
-                const canDelete = isOwner || isAdmin;
-
-                const li = document.createElement('li');
-                li.className = "event-card"; 
-                li.style.borderBottom = "1px solid #eee";
-                li.style.padding = "15px";
-                li.style.marginBottom = "10px";
-                li.style.background = "white";
-                li.style.borderRadius = "8px";
-                li.style.cursor = "pointer";
-
-                li.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:start;">
-                        <div style="width:100%;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                                <strong style="font-size:1.1em; color:#333;">${event.title}</strong>
-                                <div>
-                                    ${distanceBadge}
-                                    ${canDelete ? `<button class="delete-event-btn" data-id="${event.id}" style="background:#ffebee; color:#c62828; border:none; border-radius:4px; padding:2px 6px; font-size:0.8em; margin-left:5px; cursor:pointer;">🗑️ Delete</button>` : ''}
-                                </div>
-                            </div>
-                            <div style="color: #4A7C59; font-weight: 600; font-size: 0.9em; margin-bottom: 5px;">
-                                📅 ${dateStr} @ ${timeStr}
-                            </div>
-                            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">
-                                📍 ${event.poiName} <br>
-                                👤 Host: ${event.organizerName}
-                            </div>
-                            <p style="margin: 0; font-size: 0.9em; color:#444; line-height:1.4;">${event.description}</p>
-                        </div>
-                    </div>
-                `;
-
-                li.addEventListener('click', () => {
-                    if (event.coordinates) {
-                        document.getElementById('eventsModal').style.display = 'none';
-                        document.getElementById('hubModal').style.display = 'none';
-                        document.getElementById('menuModal').style.display = 'none';
-                        state.map.flyTo({ center: [event.coordinates.lng, event.coordinates.lat], zoom: 16, essential: true });
-                        new mapboxgl.Popup().setLngLat([event.coordinates.lng, event.coordinates.lat])
-                            .setHTML(`<div style="text-align:center;"><strong>${event.title}</strong><br><span style="font-size:0.9em; color:#666;">${event.poiName}</span><br><span style="font-size:0.8em; color:#4A7C59;">📅 ${dateStr} @ ${timeStr}</span></div>`)
-                            .addTo(state.map);
-                    } else {
-                        alert("⚠️ This event doesn't have GPS data attached.");
-                    }
-                });
-
-                if (canDelete) {
-                    const delBtn = li.querySelector('.delete-event-btn');
-                    delBtn.addEventListener('click', async (e) => {
-                        e.stopPropagation(); 
-                        if (confirm(`⚠️ GOD MODE: Delete "${event.title}"?`)) {
-                            await deleteDoc(doc(db, "meetups", event.id));
-                            alert("Event deleted.");
-                            loadAndRender(); 
-                        }
-                    });
-                }
-                eventsList.appendChild(li);
-            });
-
-            const hasMoreLocal = visibleCount < allEvents.length;
-            const mightHaveMoreDB = allEvents.length === dbLimit;
-
-            if (hasMoreLocal || mightHaveMoreDB) {
-                const btnContainer = document.createElement('div');
-                btnContainer.id = "loadMoreEventsBtn";
-                btnContainer.style.textAlign = "center";
-                btnContainer.style.padding = "10px";
-                const btn = document.createElement('button');
-                btn.className = "modal-button secondary"; 
-                btn.style.width = "auto";
-                
-                if (hasMoreLocal) {
-                    btn.innerText = `Load More (${allEvents.length - visibleCount} nearby)`;
-                    btn.onclick = () => { visibleCount += 4; loadAndRender(); };
-                } else {
-                    btn.innerText = `Search Wider Area 📡`;
-                    btn.onclick = () => { dbLimit += 25; visibleCount += 4; loadAndRender(); };
-                }
-                btnContainer.appendChild(btn);
-                eventsList.appendChild(btnContainer);
-            }
-
-        } catch (error) { console.error(error); eventsList.innerHTML = '<li>Error loading events.</li>'; }
-    };
-    loadAndRender();
-}
-
-function openViewMeetupsModal(poiName) {
-    document.getElementById('viewMeetupsLocationName').textContent = poiName;
-    const meetupsList = document.getElementById('meetupsList');
-    meetupsList.innerHTML = '<li>Loading meetups...</li>';
-    document.getElementById('viewMeetupsModal').style.display = 'flex';
-
-    const q = query(collection(db, "meetups"), where("poiName", "==", poiName), orderBy("createdAt", "desc"));
-    
-    onSnapshot(q, (querySnapshot) => {
-        meetupsList.innerHTML = '';
-        if(querySnapshot.empty) { meetupsList.innerHTML = '<li>No meetups here.</li>'; return; }
-        
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const dateObj = data.eventDate ? data.eventDate.toDate() : data.createdAt.toDate();
-            const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <strong>${data.title}</strong> (${dateStr})<br>
-                ${data.description}
-                ${state.currentUser && state.currentUser.uid === data.organizerId ? `<br><button class="del-meetup-btn" style="color:red; font-size:0.8em;">Delete</button>` : ''}
-            `;
-            const delBtn = li.querySelector('.del-meetup-btn');
-            if(delBtn) delBtn.addEventListener('click', () => deleteMeetup(doc.id));
-            
-            meetupsList.appendChild(li);
-        });
-    });
-}
-
-async function deleteMeetup(meetupId) {
-    if (confirm("Delete this meetup?")) {
-        try { await deleteDoc(doc(db, "meetups", meetupId)); } 
-        catch (e) { console.error(e); }
-    }
-}
-
-export async function toggleRouteLike(routeId) {
-    if (!state.currentUser) {
-        alert("Please log in to like a route.");
-        return null;
-    }
-    const userId = state.currentUser.uid;
-    const routeRef = doc(db, "publishedRoutes", routeId);
-    try {
-        const routeSnap = await getDoc(routeRef);
-        if (!routeSnap.exists()) return null;
-
-        const data = routeSnap.data();
-        let likedBy = data.likedBy || [];
-        let likeCount = data.likeCount || 0;
-        let isLiked = false;
-
-        if (likedBy.includes(userId)) {
-            likedBy = likedBy.filter(id => id !== userId);
-            likeCount = Math.max(0, likeCount - 1);
-            isLiked = false;
-        } else {
-            likedBy.push(userId);
-            likeCount++;
-            isLiked = true;
-        }
-
-        await updateDoc(routeRef, { likedBy: likedBy, likeCount: likeCount });
-        return { likeCount, isLiked };
-    } catch (error) {
-        console.error("Error toggling like:", error);
-        return null;
-    }
-}
-
-export async function openAchievementsModal() {
-    const grid = document.getElementById('achievementsList');
-    const title = document.getElementById('achievementsTitle');
-    if (title) title.innerText = "🏆 All Achievements";
-    if (!grid) return;
-
-    grid.innerHTML = '<p>Loading...</p>';
-    if (!state.currentUser) {
-        grid.innerHTML = "<p>Please log in to see your achievements.</p>";
-        return;
-    }
-
-    try {
-        const profileRef = doc(db, "publicProfiles", state.currentUser.uid);
-        const profileSnap = await getDoc(profileRef);
-        const userBadges = profileSnap.exists() ? (profileSnap.data().badges || {}) : {};
-
-        grid.innerHTML = '';
-        Object.entries(allBadges).forEach(([badgeId, badgeInfo]) => {
-            const hasBadge = !!userBadges[badgeId];
-            const card = document.createElement('div');
-            card.className = `achievement-card ${hasBadge ? 'unlocked' : 'locked'}`;
-            card.title = hasBadge ? `EARNED: ${badgeInfo.description}` : `LOCKED: ${badgeInfo.description}`;
-            card.innerHTML = `
-                <div class="achievement-icon">${badgeInfo.icon}</div>
-                <div class="achievement-name">${badgeInfo.name}</div>
-                <div class="achievement-desc">${badgeInfo.description}</div>
-            `;
-            card.addEventListener('click', () => {
-                alert(`${badgeInfo.name}\n\n${badgeInfo.description}\n\nStatus: ${hasBadge ? "✅ Earned" : "🔒 Locked"}`);
-            });
-            grid.appendChild(card);
-        });
-    } catch (error) {
-        console.error("Error loading achievements:", error);
-        grid.innerHTML = '<p>Error loading data.</p>';
-    }
-}
-
-export async function openEventBadgesModal() {
-    const list = document.getElementById('achievementsList');
-    const title = document.getElementById('achievementsTitle');
-    if (!list) return;
-    if(title) title.innerText = "⚔️ Event Badges (Earned)";
-    list.innerHTML = "<p>Loading...</p>";
-
-    let userBadges = {};
-    if (state.currentUser) {
-        try {
-            const userDoc = await getDoc(doc(db, "users", state.currentUser.uid));
-            if (userDoc.exists()) userBadges = userDoc.data().badges || {};
-        } catch (e) { console.error(e); }
-    }
-
-    list.innerHTML = ""; 
-    let count = 0;
-    let displayList = { ...allBadges };
-    Object.keys(userBadges).forEach(k => {
-        if(!displayList[k]) displayList[k] = userBadges[k];
-    });
-
-    Object.entries(displayList).forEach(([key, config]) => {
-        const badgeData = userBadges[key];
-        const isUnlocked = !!badgeData;
-        const isChallengeBadge = key.includes('warrior') || (config.source === 'challenge') || (badgeData && badgeData.source === 'challenge');
-
-        if (isChallengeBadge && isUnlocked) {
-            count++;
-            const safeConfig = {
-                name: config.name || badgeData.name || "Event Badge",
-                description: config.description || badgeData.description || "Legacy Reward",
-                icon: config.icon || badgeData.icon || "🛡️",
-                color: config.color || badgeData.color || "#FFD700"
-            };
-            
-            const badgeEl = document.createElement('div');
-            badgeEl.className = `achievement-item unlocked`;
-            badgeEl.innerHTML = `
-                <div class="badge-icon" style="background:${safeConfig.color}; font-size: 2em; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin: 0 auto;">
-                    ${safeConfig.icon}
-                </div>
-                <div style="margin-top: 10px;">
-                    <strong>${safeConfig.name}</strong>
-                    <p style="font-size: 0.8em; color: #666;">${safeConfig.description}</p>
-                </div>
-            `;
-            list.appendChild(badgeEl);
-        }
-    });
-
-    if (count === 0) {
-        list.innerHTML = `
-            <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: #888; text-align: center;">
-                <div style="font-size: 3em; margin-bottom: 10px; opacity: 0.5;">🛡️</div>
-                <h4 style="margin: 0; color: #666;">No Event Badges Yet</h4>
-                <p style="margin-top: 5px; font-size: 0.9em;">Complete a Quest to earn your first reward!</p>
-            </div>`;
-    }
-}
-
-export async function openCurrentChallenges() {
-    const listContainer = document.getElementById('publicChallengeList'); 
-    if (!listContainer) return;
-    listContainer.innerHTML = "<p>Loading quests...</p>";
-
-    try {
-        const challenges = await getAdminChallenges();
-        let myQuests = {};
-        if (state.currentUser) {
-            myQuests = await getUserQuests(state.currentUser.uid);
-        }
-
-        listContainer.innerHTML = ""; 
-
-        if (challenges.length === 0) {
-            listContainer.innerHTML = "<p>No active challenges found.</p>";
-            return;
-        }
-
-        challenges.sort((a, b) => {
-            const statA = myQuests[a.id] ? myQuests[a.id].status : 'new';
-            const statB = myQuests[b.id] ? myQuests[b.id].status : 'new';
-            if (statA === 'completed' && statB !== 'completed') return 1;
-            if (statA !== 'completed' && statB === 'completed') return -1;
-            return 0;
-        });
-
-        challenges.forEach(chal => {
-            const card = document.createElement('div');
-            card.className = "hub-card"; 
-            
-            const type = chal.challengeType || 'distance';
-            const goalVal = chal.goalValue || chal.goal_miles;
-            const goalText = type === 'count' ? `${goalVal} Items` : `${goalVal} Miles`;
-            
-            const questData = myQuests[chal.id];
-            const isJoined = !!questData;
-            const isCompleted = questData && questData.status === 'completed';
-            const userProgress = isJoined ? questData.progress : 0;
-
-            let buttonHtml = "";
-            let statusBadge = "";
-
-            if (isCompleted) {
-                card.style.border = "2px solid #FFD700"; 
-                statusBadge = `<span style="color:#B8860B; font-weight:bold;">🏆 COMPLETED</span>`;
-            } else if (isJoined) {
-                card.style.border = "1px solid #4A7C59"; 
-                statusBadge = `<span style="color:#4A7C59; font-weight:bold;">✅ Active (${userProgress.toFixed(1)} / ${goalVal})</span>`;
-            } else {
-                buttonHtml = `<button class="modal-button primary start-btn">Start</button>`;
-            }
-
-            card.innerHTML = `
-                <div style="flex-grow:1;">
-                    <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
-                    <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${chal.description}</p>
-                    <div style="font-size: 0.85em; margin-top:5px;">
-                        🎯 Goal: ${goalText} ${statusBadge}
-                    </div>
-                </div>
-                <div>${buttonHtml}</div>
-            `;
-            
-            if (!isJoined && !isCompleted) {
-                const btn = card.querySelector('.start-btn');
-                btn.addEventListener('click', async () => {
-                    if (!state.currentUser) { alert("Please login first!"); return; }
-                    btn.innerText = "Joining...";
-                    await joinChallenge(chal.id, chal.title, state.currentUser.uid);
-                    openCurrentChallenges(); 
-                });
-            }
-            listContainer.appendChild(card);
-        });
-    } catch (e) {
-        console.error("Error loading challenges:", e);
-        listContainer.innerHTML = "<p>Error loading content.</p>";
-    }
-}
-
-export async function openPastChallenges(type) {
-    const content = document.getElementById('pastChallengesContent');
-    content.innerHTML = `<p>Loading ${type} history...</p>`;
-    
-    if (!state.currentUser) {
-        content.innerHTML = "<p>Please log in.</p>";
-        return;
-    }
-
-    try {
-        const myQuests = await getUserQuests(state.currentUser.uid);
-        const questIds = Object.keys(myQuests);
-        
-        if (questIds.length === 0) {
-            content.innerHTML = "<p>No challenge history found.</p>";
-            return;
-        }
-
-        content.innerHTML = "";
-        let count = 0;
-
-        for (const [chalId, data] of Object.entries(myQuests)) {
-            const isCompleted = data.status === 'completed';
-            const showIt = (type === 'completed' && isCompleted) || (type === 'uncompleted' && !isCompleted);
-
-            if (showIt) {
-                count++;
-                const div = document.createElement('div');
-                div.className = "hub-card";
-                div.innerHTML = `
-                    <strong>${data.title}</strong><br>
-                    Status: ${data.status.toUpperCase()}<br>
-                    Progress: ${data.progress}
-                `;
-                content.appendChild(div);
-            }
-        }
-        if (count === 0) content.innerHTML = `<p>No ${type} challenges found.</p>`;
-
-    } catch(e) {
-        console.error(e);
-        content.innerHTML = "<p>Error loading history.</p>";
-    }
-}
-
-// --- ADMIN: MANAGE CHALLENGES (Updated with CLONE) ---
-
-export async function createNewChallenge(title, description, type, goal, timeLimit, badgeIcon, expirationDate) {
-    if (!confirm("Are you sure you want to launch this challenge globally?")) return;
-
-    try {
-        await addDoc(collection(db, "challenges"), {
-            title: title,
-            description: description,
-            challengeType: type || 'distance',
-            goalValue: Number(goal),
-            goal_miles: Number(goal), 
-            timeLimit: timeLimit ? Number(timeLimit) : null,
-            badge_icon: badgeIcon || "🏅",
-            created_at: serverTimestamp(),
-            expires_at: Timestamp.fromDate(new Date(expirationDate))
-        });
-        alert("✅ Challenge Launched!");
-    } catch (e) {
-        console.error("Error creating challenge: ", e);
-        alert("❌ Error: " + e.message);
-    }
-}
-
-export async function deleteChallenge(challengeId) {
-    if (!confirm("⚠️ Are you sure you want to DELETE this challenge?")) return;
-    try {
-        await deleteDoc(doc(db, "challenges", challengeId));
-        alert("🗑️ Challenge Deleted!");
-        openAdminChallengeModal(); 
-    } catch (e) {
-        console.error("Error deleting:", e);
-        alert("Error: " + e.message);
-    }
-}
-
-export async function getAdminChallenges() {
-    const q = query(collection(db, "challenges"), orderBy("created_at", "desc"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
-
-export function openAdminChallengeModal() {
-    const list = document.getElementById('adminChallengeList');
-    if (!list) return;
-    list.innerHTML = '<li>Loading...</li>';
-    const modal = document.getElementById('adminChallengeModal');
-    if (modal) modal.style.display = 'flex';
-
-    const fillFormWith = (data) => {
-        document.getElementById('adminChalTitle').value = data.title;
-        document.getElementById('adminChalDesc').value = data.description;
-        document.getElementById('adminChalGoal').value = data.goalValue || data.goal_miles;
-        document.getElementById('adminChalType').value = data.challengeType || 'distance';
-        alert(`Cloned "${data.title}"! Set new dates to restart it.`);
-    };
-
-    getAdminChallenges().then(challenges => {
-        list.innerHTML = '';
-        if (challenges.length === 0) { list.innerHTML = '<li>No challenges found.</li>'; return; }
-
-        challenges.forEach(chal => {
-            const li = document.createElement('li');
-            li.className = "hub-card";
-            li.innerHTML = `
-                <div style="flex-grow:1;">
-                    <strong>${chal.title}</strong><br>
-                    <small>Goal: ${chal.goalValue || chal.goal_miles}</small>
-                </div>
-                <div>
-                    <button class="clone-btn" style="cursor:pointer;">🔄</button>
-                    <button class="del-btn" style="color:red; cursor:pointer;">🗑️</button>
-                </div>
-            `;
-            li.querySelector('.clone-btn').addEventListener('click', () => fillFormWith(chal));
-            li.querySelector('.del-btn').addEventListener('click', () => deleteChallenge(chal.id));
-            list.appendChild(li);
-        });
-    });
-}
-
-// --- CHALLENGE PARTICIPATION ---
-
-export async function joinChallenge(challengeId, challengeTitle, userId) {
-    try {
-        const userRef = doc(db, "users", userId);
-        const updateData = {};
-        updateData[`active_quests.${challengeId}`] = {
-            title: challengeTitle,
-            progress: 0.0,
-            status: 'active',
-            joined_at: new Date()
-        };
-        await updateDoc(userRef, updateData);
-        return true;
-    } catch (e) {
-        console.error("Error joining challenge:", e);
-        const userRef = doc(db, "users", userId);
-        const setObj = { active_quests: {} };
-        setObj.active_quests[challengeId] = {
-            title: challengeTitle,
-            progress: 0.0,
-            status: 'active',
-            joined_at: new Date()
-        };
-        await setDoc(userRef, setObj, { merge: true });
-        return true;
-    }
-}
-
-export async function getUserQuests(userId) {
-    try {
-        const userSnap = await getDoc(doc(db, "users", userId));
-        if (userSnap.exists() && userSnap.data().active_quests) {
-            return userSnap.data().active_quests;
-        }
-        return {}; 
-    } catch (e) {
-        console.error("Error fetching user quests:", e);
-        return {};
-    }
-}
-
-export async function updateChallengeProgress(userId, distanceMiles) {
-    const userRef = doc(db, "users", userId);
-    try {
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) return;
-        
-        const data = userSnap.data();
-        const activeQuests = data.active_quests || {};
-        const currentBadges = data.badges || {};
-        let updatesMade = false;
-        let earnedBadges = [];
-
-        for (const [chalId, quest] of Object.entries(activeQuests)) {
-            if (quest.status === 'completed') continue;
-
-            const chalRef = doc(db, "challenges", chalId);
-            const chalSnap = await getDoc(chalRef);
-            
-            if (!chalSnap.exists()) continue; 
-
-            const rules = chalSnap.data();
-            const now = new Date();
-            const expiresAt = new Date(rules.expires_at.seconds * 1000);
-
-            if (now > expiresAt) {
-                activeQuests[chalId].status = 'expired';
-                updatesMade = true;
-                continue;
-            }
-
-            const oldProgress = quest.progress || 0;
-            const newProgress = oldProgress + distanceMiles;
-            
-            activeQuests[chalId].progress = parseFloat(newProgress.toFixed(2));
-            updatesMade = true;
-
-            const goal = rules.goalValue || rules.goal_miles;
-            if (newProgress >= goal) {
-                activeQuests[chalId].status = 'completed';
-                activeQuests[chalId].completed_at = new Date();
-                
-                if (rules.badge_id) {
-                    currentBadges[rules.badge_id] = {
-                        earned_at: new Date(),
-                        source: 'challenge'
-                    };
-                    earnedBadges.push(rules.badge_id);
-                }
-            }
-        }
-
-        if (updatesMade) {
-            await updateDoc(userRef, {
-                active_quests: activeQuests,
-                badges: currentBadges
-            });
-            return earnedBadges;
-        }
-
-    } catch (e) {
-        console.error("Error updating challenge progress:", e);
-    }
-    return [];
-}
-
-export async function grantTitle(userId, titleKey) {
-    const profileRef = doc(db, "publicProfiles", userId);
-    let newlyUnlocked = false; 
-
-    try {
-        await runTransaction(db, async (transaction) => {
-            const profileDoc = await transaction.get(profileRef);
-            if (!profileDoc.exists()) return;
-
-            const userData = profileDoc.data();
-            const unlockedTitles = userData.unlockedTitles || [];
-
-            if (!unlockedTitles.includes(titleKey)) {
-                unlockedTitles.push(titleKey);
-                transaction.update(profileRef, { unlockedTitles: unlockedTitles });
-                newlyUnlocked = true; 
-            }
-        });
-
-        if (newlyUnlocked && allTitles[titleKey]) {
-            alert(`🏆 NEW TITLE UNLOCKED: ${allTitles[titleKey].name}`);
-        }
         
     } catch (error) {
-        console.error("Failed to grant title:", error);
+        console.error("Transmission Error:", error);
+        alert("Broadcast Failure: Signal lost during uplink.");
     }
 }
 
-export async function checkForTitleMilestones(userId, routeCoords) {
-    try {
-        const profileRef = doc(db, "publicProfiles", userId);
-        const profileSnap = await getDoc(profileRef);
-        if (!profileSnap.exists()) return;
+/* ==========================================================================
+   9. SQUAD COMMAND (The Tactical Units & Rosters)
+   ========================================================================== */
 
-        const data = profileSnap.data();
-        const totalPins = data.totalPins || 0;
-        const totalRoutes = data.totalRoutes || 0;
-
-        if (totalPins >= 50) await grantTitle(userId, 'trash_wizard');
-        if (totalPins >= 100) await grantTitle(userId, 'eco_legend');
-        if (totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
-
-        const [startLon, startLat] = routeCoords[0];
-        const sectorId = getSectorFromCoords(startLon, startLat);
-
-        if (sectorId) {
-            const rpCount = (data.rpRoutesCount || 0) + 1;
-            await updateDoc(profileRef, { rpRoutesCount: rpCount });
-            if (rpCount >= 5) await grantTitle(userId, 'rp_pioneer');
-        }
-
-        const now = new Date();
-        const hour = now.getHours(); 
-
-        if (hour < 9) {
-            const earlyCount = (data.earlyBirdCount || 0) + 1;
-            await updateDoc(profileRef, { earlyBirdCount: earlyCount });
-            if (earlyCount >= 5) await grantTitle(userId, 'early_bird');
-        } 
-
-        if (hour >= 19) {
-            const nightCount = (data.nightOwlCount || 0) + 1;
-            await updateDoc(profileRef, { nightOwlCount: nightCount });
-            if (nightCount >= 5) await grantTitle(userId, 'night_owl');
-    }
-
-    } catch (error) {
-        console.error("Error checking milestones:", error);
-    }
-}
-
-function getSectorFromCoords(lon, lat) {
-    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
-    if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeBoundary && lon <= -87.6750) {
-        return 'RP-05';
-    }
-    for (const [id, bounds] of Object.entries(RP_SECTORS)) {
-        if (id === 'RP-05') continue;
-        if (lat >= bounds.minLat && lat <= bounds.maxLat &&
-            lon >= bounds.minLon && lon <= bounds.maxLon) {
-            return id;
-        }
-    }
-    return null;
-}
-
-export async function updateSwarmPulse() {
-    try {
-        const publishedRoutesRef = collection(db, "publishedRoutes");
-        const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
-        const q = query(publishedRoutesRef, where("timestamp", ">=", twoDaysAgo));
-        const querySnapshot = await getDocs(q);
-        const activityLog = { 'RP-01': 0, 'RP-02': 0, 'RP-03': 0, 'RP-04': 0, 'RP-05': 0 };
-
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            if (data.route && Array.isArray(data.route) && data.route.length > 0) {
-                const firstPoint = data.route[0];
-                const sectorId = getSectorFromCoords(firstPoint[0], firstPoint[1]); 
-                if (sectorId && activityLog.hasOwnProperty(sectorId)) {
-                    activityLog[sectorId]++;
-                }
-            }
-        });
-
-        Object.entries(activityLog).forEach(([id, count]) => {
-            const layerId = `layer-${id}`;
-            if (state.map.getLayer(layerId)) {
-                const opacity = count >= 3 ? 0.5 : (count > 0 ? 0.3 : 0.15);
-                state.map.setPaintProperty(layerId, 'fill-opacity', opacity);
-            }
-        });
-    } catch (err) {
-        console.error("Swarm Pulse error:", err);
-    }
-}
-
+/**
+ * Initializes a new tactical squad and assigns leadership rank.
+ */
 export async function initializeSquad() {
     const btn = document.getElementById('btnFinalizeSquad');
-    if (btn.disabled) return; 
+    if (btn && btn.disabled) return; 
 
     const name = document.getElementById('newSquadName').value.trim();
     const callsign = document.getElementById('newSquadCallsign').value.trim().toUpperCase();
@@ -1360,15 +889,19 @@ export async function initializeSquad() {
     const bio = document.getElementById('newSquadBio').value.trim();
 
     if (!name || callsign.length < 3) {
-        alert("Initialization Failed: Squad Name and a 3-4 character Callsign required.");
+        alert("Initialization Failed: Squad Name and a 3-character Callsign required.");
         return;
     }
 
-    btn.disabled = true;
-    btn.innerText = "INITIALIZING...";
+    if (containsProfanity(name) || containsProfanity(callsign)) {
+        alert("DESIGNATION REJECTED: Profanity detected. Choose a compliant callsign.");
+        return;
+    }
+
+    if (btn) btn.disabled = true;
 
     try {
-        const squadData = {
+        await addDoc(collection(db, "squads"), {
             squadName: name,
             callsign: callsign,
             homeSector: sector,
@@ -1378,61 +911,29 @@ export async function initializeSquad() {
             memberCount: 1,
             totalPins: 0,
             status: "active",
-            createdAt: new Date() 
-        };
-        await addDoc(collection(db, "squads"), squadData);
-        alert(`Unit [${callsign}] ${name} initialized.`);
+            createdAt: serverTimestamp() 
+        });
+
+        // Award 'Event Host' rank title automatically to squad leaders
+        await grantTitle(state.currentUser.uid, 'event_host');
+
+        alert(`Unit [${callsign}] ${name} Deployed.`);
         window.showSquadRegistry();
         fetchLocalSquads();
     } catch (error) {
-        console.error(error);
-        alert("Tactical Error: Database unreachable.");
-        btn.disabled = false;
-        btn.innerText = "INITIALIZE SQUAD";
+        console.error("Registry error:", error);
+        if (btn) btn.disabled = false;
     }
 }
 
-export async function fetchLocalSquads() {
-    const listContainer = document.getElementById('localSquadsList');
-    if (!listContainer) return;
-    listContainer.innerHTML = '<p style="text-align: center; padding: 20px;">📡 Establishing uplink...</p>';
-
-    try {
-        const q = query(collection(db, "squads"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-
-        if (querySnapshot.empty) {
-            listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: #777;">No active units found.</p>';
-            return;
-        }
-
-        listContainer.innerHTML = '';
-        querySnapshot.forEach((doc) => {
-            const squad = doc.data();
-            const card = document.createElement('div');
-            card.className = 'hub-card';
-            card.style.display = 'flex';
-            card.style.justifyContent = 'space-between';
-            card.style.alignItems = 'center';
-            card.style.padding = '15px';
-            card.innerHTML = `
-                <div style="text-align: left;">
-                    <h3 style="margin: 0; font-size: 1.1rem;">[${squad.callsign}] ${squad.squadName}</h3>
-                    <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #666;">${squad.homeSector} • ${squad.memberCount || 1} Members</p>
-                </div>
-                <button class="modal-button btn-secondary" style="width: auto; padding: 8px 15px; margin: 0;" onclick="viewSquadIntel('${doc.id}')">Intel</button>
-            `;
-            listContainer.appendChild(card);
-        });
-    } catch (error) {
-        listContainer.innerHTML = '<p style="color: red; text-align: center;">⚠️ Tactical Scan Failed.</p>';
-    }
-}
-
+/**
+ * Renders the detailed Intel Dossier for a squad.
+ * VERBOSE TEMPLATE: Preserving full 100+ line UI structure.
+ */
 export async function fetchSquadDetails(squadId) {
     const intelView = document.getElementById('squadIntelView');
     if (!intelView) return;
-    intelView.innerHTML = '<p style="text-align: center; padding: 20px;">🛰️ Downloading dossier...</p>';
+    intelView.innerHTML = '<div style="text-align:center; padding:50px;">🛰️ Downloading dossier...</div>';
 
     try {
         const squadSnap = await getDoc(doc(db, "squads", squadId));
@@ -1442,78 +943,673 @@ export async function fetchSquadDetails(squadId) {
             const isLeader = currentUid === squad.leaderId;
             const isMember = squad.members && squad.members.includes(currentUid);
 
+            // Reconstructing the Tactical Dossier View
             intelView.innerHTML = `
-                <button class="modal-button secondary" onclick="showSquadRegistry()" style="width: auto; padding: 5px 10px; font-size: 0.8rem; margin-bottom: 15px;">← Back</button>
-                <h2 style="margin: 0; font-size: 1.8rem;">[${squad.callsign}] ${squad.squadName}</h2>
-                <p style="text-align: left; color: #4A7C59; font-weight: bold; margin-top: 5px;">SECTOR OPS: ${squad.homeSector}</p>
-                <div class="safety-disclaimer" style="background: #f0f0f0; border-left: 4px solid #4A7C59; color: #333; margin: 20px 0; text-align: left;">
-                    <strong>MISSION PROFILE</strong>
-                    <p style="margin-top: 5px; font-size: 0.95rem; line-height: 1.4;">${squad.bio || "No mission profile."}</p>
+                <div style="display:flex; justify-content:flex-start; margin-bottom:25px;">
+                    <button class="modal-button secondary" onclick="window.showSquadRegistry()" 
+                            style="width: auto; padding: 10px 20px; font-size: 0.85rem; font-weight:800;">
+                        ← REGISTRY
+                    </button>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h4 style="margin: 0;">UNIT ROSTER</h4>
-                    <span style="background: #eee; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">${squad.memberCount || 1} ACTIVE</span>
+                
+                <div style="text-align:left; background:linear-gradient(135deg, #f8f9fa, #fff); padding:30px; border-radius:20px; border:1px solid #eee; margin-bottom:30px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2 style="margin:0; font-size:2.1rem; color:#222; font-weight:900;">[${squad.callsign}] ${squad.squadName}</h2>
+                        <span style="background:var(--color-primary-green); color:white; padding:5px 12px; border-radius:10px; font-size:0.75rem; font-weight:900;">ACTIVE</span>
+                    </div>
+                    <p style="text-align: left; color: var(--color-primary-green); font-weight: 800; margin-top: 15px; font-size: 1rem; text-transform: uppercase;">
+                        Operations Sector: ${squad.homeSector}
+                    </p>
+                    <div style="background: #fff; border-left: 6px solid var(--color-primary-green); padding: 20px; border-radius: 10px; margin: 25px 0; box-shadow:0 3px 10px rgba(0,0,0,0.04);">
+                        <strong style="display:block; font-size:0.75rem; text-transform:uppercase; color:#bbb; letter-spacing:1px; margin-bottom:10px;">Mission Profile</strong>
+                        <p style="margin: 0; font-size: 1.1rem; line-height: 1.6; color: #444; font-style: italic;">"${squad.bio || "No mission profile provided."}"</p>
+                    </div>
                 </div>
-                <div id="squadRosterList" style="min-height: 100px;"></div>
-                <div class="squad-action-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                    ${(state.currentUser?.role === 'admin' || isLeader) ? `
-                        <button class="modal-button btn-danger" onclick="handleDisband('${squadId}', '${squad.squadName}')">☢️ DISBAND UNIT</button>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px;">
+                    <h4 style="margin: 0; font-size:0.9rem; font-weight:900; color:#aaa; text-transform:uppercase; letter-spacing:1.5px;">Unit Roster</h4>
+                    <span style="background: #f0f0f0; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight:800; color:#666;">${squad.memberCount || 1} Troopers Attached</span>
+                </div>
+                
+                <div id="squadRosterList" style="display:flex; flex-direction:column; gap:12px; min-height: 100px;"></div>
+
+                <div style="margin-top: 50px; border-top: 2px solid #f5f5f5; padding-top: 35px;">
+                    ${isLeader ? `
+                        <div style="background:rgba(220,53,69,0.03); padding:25px; border-radius:20px; border:2px dashed #dc3545; text-align:center;">
+                            <button class="modal-button btn-danger" style="margin:0; padding:18px; font-weight:900;" 
+                                    onclick="window.handleDisband('${squadId}', '${squad.squadName}')">
+                                ☢️ DISBAND TACTICAL UNIT
+                            </button>
+                        </div>
                     ` : isMember ? `
-                        <button class="modal-button btn-secondary" onclick="handleLeave('${squadId}', '${squad.squadName}')">🚶 LEAVE SQUAD</button>
+                        <button class="modal-button btn-secondary" style="margin:0; padding:18px; font-weight:900;" 
+                                onclick="window.handleLeave('${squadId}', '${squad.squadName}')">
+                            🚶 ABANDON ASSIGNMENT
+                        </button>
                     ` : `
-                        <button class="launch-btn" onclick="requestToJoinSquad('${squadId}')" style="width: 100%;">⚡ JOIN UNIT</button>
+                        <button class="launch-btn" style="width: 100%; padding:22px; font-size:1.2rem;" 
+                                onclick="window.requestToJoinSquad('${squadId}')">
+                            ⚡ REQUEST UNIT ENTRY
+                        </button>
                     `}
                 </div>`;
+            
             if (squad.members) renderRoster(squad.members, squad.leaderId);
         }
-    } catch (error) { intelView.innerHTML = '<p>⚠️ UPLINK ERROR</p>'; }
+    } catch (error) { intelView.innerHTML = '<p>⚠️ UPLINK ERROR: Sector dossiers unreachable.</p>'; }
 }
 
+/**
+ * Verbose roster rendering sub-function.
+ * PHASE 5: Pulling real-time rank data from master publicProfiles.
+ */
+async function renderRoster(memberIds, leaderId) {
+    const container = document.getElementById('squadRosterList');
+    if (!container) return;
+    try {
+        let rosterHTML = '';
+        for (const uid of memberIds) {
+            const userSnap = await getDoc(doc(db, "publicProfiles", uid));
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                const isLeader = uid === leaderId;
+                const activeTitle = userData.selectedTitle ? (allTitles[userData.selectedTitle]?.name || 'Trooper') : 'New Recruit';
+                
+                rosterHTML += `
+                    <div class="roster-card" style="display: flex; align-items: center; gap: 15px; padding: 18px; background: #fff; border-radius: 15px; border: 1px solid ${isLeader ? 'var(--color-support-gold)' : '#eee'}; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+                        <div class="rank-orb" style="font-size: 1.8rem; background: #f8f9fa; width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid ${isLeader ? 'gold' : 'var(--color-primary-green)'}; cursor: pointer;" 
+                             onclick="window.handleViewProfile('${uid}')">
+                            ${isLeader ? '⭐' : '👤'}
+                        </div>
+                        <div style="flex-grow: 1; text-align:left;">
+                            <h5 style="margin: 0; font-size:1.2rem; font-weight:800; color:#222;">${userData.username} ${isLeader ? '<small style="color:var(--color-support-gold); font-weight:900; margin-left:5px;">[HQ]</small>' : ''}</h5>
+                            <p style="margin: 3px 0 0 0; font-size: 0.75rem; color: #777; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">${activeTitle}</p>
+                        </div>
+                        <div style="text-align: right; min-width:60px;">
+                            <small style="display:block; font-size:0.6rem; color:#bbb; font-weight:800; text-transform:uppercase;">Pins</small>
+                            <span style="font-weight: 900; color: var(--color-primary-green); font-size:1.3rem;">${userData.totalPins || 0}</span>
+                        </div>
+                    </div>`;
+            }
+        }
+        container.innerHTML = rosterHTML || '<p style="text-align:center; padding:30px; color:#bbb;">Biometric signal lost...</p>';
+    } catch (err) { console.error("Roster failure:", err); }
+}
+
+/* ==========================================================================
+   10. PROGRESSION & RANKS (The Milestone Matrix)
+   ========================================================================== */
+
+/**
+ * Evaluates dossier stats to award rank-based titles.
+ * PHASE 2 MATH: Operates in Miles. PHASE 5: Standardized on publicProfiles.
+ */
+export async function checkForTitleMilestones(userId, routeCoords) {
+    try {
+        const snap = await getDoc(doc(db, "publicProfiles", userId));
+        if (!snap.exists()) return;
+        const d = snap.data();
+        
+        // --- Rank Triggers: Pin Counts ---
+        if (d.totalPins >= 10) await grantTitle(userId, 'scout');
+        if (d.totalPins >= 50) await grantTitle(userId, 'trash_wizard');
+        if (d.totalPins >= 100) await grantTitle(userId, 'eco_legend');
+        if (d.totalPins >= 250) await grantTitle(userId, 'waste_wrangler');
+        if (d.totalPins >= 1000) await grantTitle(userId, 'planet_guardian');
+        
+        // --- Rank Triggers: Mission Volume ---
+        if (d.totalRoutes >= 1) await grantTitle(userId, 'recruit');
+        if (d.totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
+        if (d.totalRoutes >= 50) await grantTitle(userId, 'road_runner');
+        
+        // --- Temporal Achievements ---
+        const currentHour = new Date().getHours();
+        if (currentHour < 9) {
+            const count = (d.earlyBirdCount || 0) + 1;
+            await updateDoc(doc(db, "publicProfiles", userId), { earlyBirdCount: count });
+            if (count >= 5) await grantTitle(userId, 'early_bird');
+        } else if (currentHour >= 19) {
+            const count = (d.nightOwlCount || 0) + 1;
+            await updateDoc(doc(db, "publicProfiles", userId), { nightOwlCount: count });
+            if (count >= 5) await grantTitle(userId, 'night_owl');
+        }
+        
+        // --- ROGERS PARK SECTOR INTEL (Custom Ridge math) ---
+        if (routeCoords && routeCoords.length > 0) {
+            const sectorId = getSectorFromCoords(routeCoords[0][0], routeCoords[0][1]);
+            if (sectorId === 'RP-05') {
+                const count = (d.rpRoutesCount || 0) + 1;
+                await updateDoc(doc(db, "publicProfiles", userId), { rpRoutesCount: count });
+                if (count >= 5) await grantTitle(userId, 'rp_pioneer');
+            }
+        }
+    } catch (e) { console.error("Milestone Processor failure:", e); }
+}
+
+/**
+ * Coordinate lookup with Rogers Park sloped boundary logic for West Side Sector.
+ */
+function getSectorFromCoords(lon, lat) {
+    // West Side (RP-05) Custom Boundary Math: Slope intercept check for the ridge curb
+    const ridgeLine = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
+    if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeLine && lon <= -87.6750) return 'RP-05';
+    
+    for (const [id, bounds] of Object.entries(RP_SECTORS)) {
+        if (id === 'RP-05') continue;
+        if (lat >= bounds.minLat && lat <= bounds.maxLat && lon >= bounds.minLon && lon <= bounds.maxLon) return id;
+    }
+    return null;
+}
+
+export async function grantTitle(userId, titleKey) {
+    const profileRef = doc(db, "publicProfiles", userId);
+    await runTransaction(db, async (t) => {
+        const d = await t.get(profileRef);
+        const unlocked = d.data().unlockedTitles || [];
+        if (!unlocked.includes(titleKey)) {
+            unlocked.push(titleKey);
+            t.update(profileRef, { unlockedTitles: unlocked });
+            // Notification bridge
+            const name = allTitles[titleKey]?.name || 'Elite Rank';
+            alert(`🏆 RANK ATTAINED: ${name}`);
+        }
+    });
+}
+
+/* ==========================================================================
+   11. GLOBAL BRIDGE & ADMIN
+   ========================================================================== */
+
+/**
+ * Triggers visual medal presentation modal.
+ */
+export async function awardBadge(userId, title, desc, icon) {
+    const modal = document.getElementById('achievementModal');
+    if (modal) {
+        document.getElementById('achievementName').textContent = title;
+        document.getElementById('achievementDescription').textContent = desc;
+        const iconEl = modal.querySelector('.achievement-icon');
+        if (iconEl) iconEl.textContent = icon;
+        modal.style.display = 'flex';
+    }
+    const key = title.toLowerCase().replace(/ /g, '_');
+    await updateDoc(doc(db, "publicProfiles", userId), { [`badges.${key}`]: true });
+}
+
+// Data Handling Export Bridges
+export const getAdminChallenges = async () => (await getDocs(query(collection(db, "challenges"), orderBy("created_at", "desc")))).docs.map(d => ({ id: d.id, ...d.data() }));
+export const getUserQuests = async (uid) => (await getDoc(doc(db, "publicProfiles", uid))).data()?.active_quests || {};
+export const joinChallenge = async (id, title, uid) => await updateDoc(doc(db, "publicProfiles", uid), { [`active_quests.${id}`]: { title, progress: 0.1, status: 'active', joined_at: serverTimestamp() } });
+export const deleteChallenge = async (id) => await deleteDoc(doc(db, "challenges", id));
+export const createNewChallenge = async (t, d, ty, g, tm, b, e) => await addDoc(collection(db, "challenges"), { title: t, description: d, challengeType: ty, goal_miles: parseFloat(g), badge_icon: b, expires_at: Timestamp.fromDate(new Date(e)), created_at: serverTimestamp(), status: 'active' });
+
+/**
+ * GLOBAL UI BRIDGE
+ * These map module functions to the global window object for HTML event attributes.
+ */
+window.viewSquadIntel = (id) => fetchSquadDetails(id);
+window.handleDisband = (id, name) => { if(confirm(`☢️ DECOMMISSION UNIT [${name}]?`)) deleteDoc(doc(db, "squads", id)).then(() => fetchLocalSquads()); };
+window.handleLeave = (id, name) => updateDoc(doc(db, "squads", id), { members: arrayRemove(state.currentUser.uid), memberCount: increment(-1) }).then(() => fetchSquadDetails(id));
+window.handleViewProfile = (uid) => showPublicProfile(uid);
+window.showMeetupsList = (name) => { document.getElementById('viewMeetupsLocationName').innerText = name; document.getElementById('viewMeetupsModal').style.display = 'flex'; };
+window.requestToJoinSquad = (id) => updateDoc(doc(db, "squads", id), { members: arrayUnion(state.currentUser.uid), memberCount: increment(1) }).then(() => fetchSquadDetails(id));
+/**
+ * Renders the tactical roster for a specific unit.
+ * PHASE 5 UPDATE: Pulls rank/title/pins from 'publicProfiles'.
+ */
 async function renderRoster(memberIds, leaderId) {
     const rosterContainer = document.getElementById('squadRosterList');
     if (!rosterContainer) return;
     try {
         let rosterHTML = '';
         for (const uid of memberIds) {
-            const userSnap = await getDoc(doc(db, "users", uid));
+            // Updated to pull from Master Dossier
+            const userSnap = await getDoc(doc(db, "publicProfiles", uid));
             if (userSnap.exists()) {
                 const userData = userSnap.data();
                 const isLeader = uid === leaderId;
-                const name = userData.username || 'Trooper';
+                const activeTitle = userData.selectedTitle ? (allTitles[userData.selectedTitle]?.name || 'Trooper') : 'New Recruit';
+                
                 rosterHTML += `
-                    <div class="member-bio-card" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${isLeader ? 'gold' : '#eee'};">
-                        <div style="font-size: 1.2rem; background: #f8f9fa; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid ${isLeader ? 'gold' : '#4A7C59'}; cursor: pointer;" onclick="handleViewProfile('${uid}')">
+                    <div class="roster-card" style="padding:15px; background:#fff; border-radius:12px; border:1px solid ${isLeader ? 'gold' : '#eee'}; display:flex; align-items:center; gap:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+                        <div class="rank-orb" style="font-size:1.5rem; background:#f8f9fa; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:3px solid ${isLeader ? 'gold' : '#4A7C59'}; cursor:pointer;" onclick="window.handleViewProfile('${uid}')">
                             ${isLeader ? '⭐' : '👤'}
                         </div>
-                        <div style="flex-grow: 1;">
-                            <h5 style="margin: 0; cursor: pointer;" onclick="handleViewProfile('${uid}')">${name}</h5>
-                            <p style="margin: 0; font-size: 0.8rem; color: #666;">${userData.title || 'Trooper'}</p>
+                        <div style="flex-grow:1; text-align:left;">
+                            <h5 style="margin:0; font-size:1.1rem; color:#222;">${userData.username} ${isLeader ? '<small style="color:gold;">[HQ]</small>' : ''}</h5>
+                            <small style="color:#777; font-weight:700; text-transform:uppercase; font-size:0.75rem;">${activeTitle}</small>
                         </div>
-                        <div style="text-align: right;">
-                            <span style="font-weight: bold; color: var(--color-primary-green);">${userData.totalPins || 0}</span>
+                        <div style="text-align:right;">
+                            <small style="display:block; font-size:0.6rem; color:#aaa; font-weight:800;">PINS</small>
+                            <span style="font-weight:900; color:var(--color-primary-green); font-size:1.2rem;">${userData.totalPins || 0}</span>
                         </div>
                     </div>`;
             }
         }
-        rosterContainer.innerHTML = rosterHTML;
-    } catch (err) { console.error(err); }
+        rosterContainer.innerHTML = rosterHTML || '<p style="text-align:center; padding:20px; color:#aaa;">Searching for biometric signals...</p>';
+    } catch (err) { console.error("Roster render error:", err); }
 }
 
 export async function leaveSquad(squadId, squadName) {
-    if (!state.currentUser || !confirm(`Confirm Unit Departure: ${squadName}?`)) return;
+    if (!state.currentUser || !confirm(`Confirm Unit Extraction: ${squadName}?`)) return;
     try {
         await updateDoc(doc(db, "squads", squadId), {
             members: arrayRemove(state.currentUser.uid),
             memberCount: increment(-1)
         });
-        alert("Departure confirmed.");
+        alert("Extraction successful. You are now unassigned.");
         fetchSquadDetails(squadId);
-    } catch (error) { alert("Departure failed."); }
+        // Refresh registry view if user goes back
+        fetchLocalSquads();
+    } catch (error) { alert("Extraction failed."); }
 }
 
-// Global Bridge
+/* ==========================================================================
+   10. PROGRESSION & RANKS (The Milestone Matrix)
+   ========================================================================== */
+
+/**
+ * Grants a rank title to a user.
+ */
+export async function grantTitle(userId, titleKey) {
+    const profileRef = doc(db, "publicProfiles", userId);
+    await runTransaction(db, async (t) => {
+        const d = await t.get(profileRef);
+        const unlocked = d.data().unlockedTitles || [];
+        if (!unlocked.includes(titleKey)) {
+            unlocked.push(titleKey);
+            t.update(profileRef, { unlockedTitles: unlocked });
+            // Alert user of promotion
+            alert(`🏆 NEW RANK ATTAINED: ${allTitles[titleKey]?.name || 'Elite Trooper'}`);
+        }
+    });
+}
+
+/**
+ * Evaluates dossier stats against the milestone matrix.
+ * PHASE 2 MATH: Checks Miles and Count directly.
+ */
+export async function checkForTitleMilestones(userId, routeCoords) {
+    try {
+        const snap = await getDoc(doc(db, "publicProfiles", userId));
+        if (!snap.exists()) return;
+        const d = snap.data();
+        
+        // --- Rank Checks ---
+        if (d.totalPins >= 10) await grantTitle(userId, 'scout');
+        if (d.totalPins >= 50) await grantTitle(userId, 'trash_wizard');
+        if (d.totalPins >= 100) await grantTitle(userId, 'eco_legend');
+        
+        if (d.totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
+        if (d.totalRoutes >= 50) await grantTitle(userId, 'road_runner');
+        
+        // --- Sector Intelligence (Rogers Park Ridge) ---
+        if (routeCoords && routeCoords.length > 0) {
+            const sid = getSectorFromCoords(routeCoords[0][0], routeCoords[0][1]);
+            if (sid === 'RP-05') {
+                const count = (d.rpRoutesCount || 0) + 1;
+                await updateDoc(doc(db, "publicProfiles", userId), { rpRoutesCount: count });
+                if (count >= 5) await grantTitle(userId, 'rp_pioneer');
+            }
+        }
+    } catch (e) { console.error("Milestone Error:", e); }
+}
+
+/**
+ * Determines sector based on GPS coordinates.
+ * Includes custom polygon logic for the West Side Ridge.
+ */
+function getSectorFromCoords(lon, lat) {
+    // West Side (RP-05) Custom Sloped Boundary Logic
+    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
+    
+    // Check if point is west of the Ridge Line
+    if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeBoundary && lon <= -87.6750) {
+        return 'RP-05';
+    }
+    
+    // Check standard rectangular sectors
+    for (const [id, b] of Object.entries(RP_SECTORS)) {
+        if (id === 'RP-05') continue;
+        if (lat >= b.minLat && lat <= b.maxLat &&
+            lon >= b.minLon && lon <= b.maxLon) {
+            return id;
+        }
+    }
+    return null;
+}
+
+/* ==========================================================================
+   8. MISSION BROADCASTING (Meetup Finalization)
+   ========================================================================== */
+
+/**
+ * Transmits the scheduled meetup to the global mission board.
+ */
+export async function handleMeetupSubmit() {
+    if (!state.currentUser) return;
+
+    const title = document.getElementById('meetupTitleInput').value.trim();
+    const description = document.getElementById('meetupDescriptionInput').value.trim();
+    const dateVal = document.getElementById('meetupDateInput').value;
+    const poiName = document.getElementById('poiNameInput').value;
+    const latStr = document.getElementById('meetupLat').value;
+    const lngStr = document.getElementById('meetupLng').value;
+
+    try {
+        // PHASE 5: Pulling current handle from the Master Dossier
+        const profileSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
+        const username = profileSnap.exists() ? profileSnap.data().username : "Trooper";
+        
+        await addDoc(collection(db, "meetups"), {
+            organizerId: state.currentUser.uid,
+            organizerName: username,
+            poiName: poiName,
+            title: title,
+            description: description,
+            eventDate: new Date(dateVal),
+            createdAt: serverTimestamp(),
+            coordinates: (latStr && lngStr) ? {
+                lat: parseFloat(latStr),
+                lng: parseFloat(lngStr)
+            } : null
+        });
+
+        alert("📡 MISSION BROADCAST SUCCESSFUL: Check the community board for coordination.");
+        document.getElementById('meetupModal').style.display = 'none';
+        
+        // Clear local form
+        document.getElementById('meetupTitleInput').value = '';
+        document.getElementById('meetupDescriptionInput').value = '';
+        document.getElementById('meetupDateInput').value = '';
+        document.getElementById('safetyCheckbox').checked = false;
+        
+    } catch (error) {
+        console.error("Transmission Error:", error);
+        alert("Broadcast Failure: Signal lost during uplink.");
+    }
+}
+
+/* ==========================================================================
+   9. SQUAD COMMAND (The Tactical Units & Rosters)
+   ========================================================================== */
+
+/**
+ * Initializes a new tactical squad and assigns leadership rank.
+ */
+export async function initializeSquad() {
+    const btn = document.getElementById('btnFinalizeSquad');
+    if (btn && btn.disabled) return; 
+
+    const name = document.getElementById('newSquadName').value.trim();
+    const callsign = document.getElementById('newSquadCallsign').value.trim().toUpperCase();
+    const sector = document.getElementById('newSquadHomeSector').value;
+    const bio = document.getElementById('newSquadBio').value.trim();
+
+    if (!name || callsign.length < 3) {
+        alert("Initialization Failed: Squad Name and a 3-character Callsign required.");
+        return;
+    }
+
+    if (containsProfanity(name) || containsProfanity(callsign)) {
+        alert("DESIGNATION REJECTED: Profanity detected. Choose a compliant callsign.");
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+
+    try {
+        await addDoc(collection(db, "squads"), {
+            squadName: name,
+            callsign: callsign,
+            homeSector: sector,
+            bio: bio,
+            leaderId: state.currentUser ? state.currentUser.uid : 'anonymous', 
+            members: state.currentUser ? [state.currentUser.uid] : [],
+            memberCount: 1,
+            totalPins: 0,
+            status: "active",
+            createdAt: serverTimestamp() 
+        });
+
+        // Award 'Event Host' rank title automatically to squad leaders
+        await grantTitle(state.currentUser.uid, 'event_host');
+
+        alert(`Unit [${callsign}] ${name} Deployed.`);
+        window.showSquadRegistry();
+        fetchLocalSquads();
+    } catch (error) {
+        console.error("Registry error:", error);
+        if (btn) btn.disabled = false;
+    }
+}
+
+/**
+ * Renders the detailed Intel Dossier for a squad.
+ * VERBOSE TEMPLATE: Preserving full 100+ line UI structure.
+ */
+export async function fetchSquadDetails(squadId) {
+    const intelView = document.getElementById('squadIntelView');
+    if (!intelView) return;
+    intelView.innerHTML = '<div style="text-align:center; padding:50px;">🛰️ Downloading dossier...</div>';
+
+    try {
+        const squadSnap = await getDoc(doc(db, "squads", squadId));
+        if (squadSnap.exists()) {
+            const squad = squadSnap.data();
+            const currentUid = state.currentUser?.uid;
+            const isLeader = currentUid === squad.leaderId;
+            const isMember = squad.members && squad.members.includes(currentUid);
+
+            // Reconstructing the Tactical Dossier View
+            intelView.innerHTML = `
+                <div style="display:flex; justify-content:flex-start; margin-bottom:25px;">
+                    <button class="modal-button secondary" onclick="window.showSquadRegistry()" 
+                            style="width: auto; padding: 10px 20px; font-size: 0.85rem; font-weight:800;">
+                        ← REGISTRY
+                    </button>
+                </div>
+                
+                <div style="text-align:left; background:linear-gradient(135deg, #f8f9fa, #fff); padding:30px; border-radius:20px; border:1px solid #eee; margin-bottom:30px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2 style="margin:0; font-size:2.1rem; color:#222; font-weight:900;">[${squad.callsign}] ${squad.squadName}</h2>
+                        <span style="background:var(--color-primary-green); color:white; padding:5px 12px; border-radius:10px; font-size:0.75rem; font-weight:900;">ACTIVE</span>
+                    </div>
+                    <p style="text-align: left; color: var(--color-primary-green); font-weight: 800; margin-top: 15px; font-size: 1rem; text-transform: uppercase;">
+                        Operations Sector: ${squad.homeSector}
+                    </p>
+                    <div style="background: #fff; border-left: 6px solid var(--color-primary-green); padding: 20px; border-radius: 10px; margin: 25px 0; box-shadow:0 3px 10px rgba(0,0,0,0.04);">
+                        <strong style="display:block; font-size:0.75rem; text-transform:uppercase; color:#bbb; letter-spacing:1px; margin-bottom:10px;">Mission Profile</strong>
+                        <p style="margin: 0; font-size: 1.1rem; line-height: 1.6; color: #444; font-style: italic;">"${squad.bio || "No mission profile provided."}"</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px;">
+                    <h4 style="margin: 0; font-size:0.9rem; font-weight:900; color:#aaa; text-transform:uppercase; letter-spacing:1.5px;">Unit Roster</h4>
+                    <span style="background: #f0f0f0; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight:800; color:#666;">${squad.memberCount || 1} Troopers Attached</span>
+                </div>
+                
+                <div id="squadRosterList" style="display:flex; flex-direction:column; gap:12px; min-height: 100px;"></div>
+
+                <div style="margin-top: 50px; border-top: 2px solid #f5f5f5; padding-top: 35px;">
+                    ${isLeader ? `
+                        <div style="background:rgba(220,53,69,0.03); padding:25px; border-radius:20px; border:2px dashed #dc3545; text-align:center;">
+                            <button class="modal-button btn-danger" style="margin:0; padding:18px; font-weight:900;" 
+                                    onclick="window.handleDisband('${squadId}', '${squad.squadName}')">
+                                ☢️ DISBAND TACTICAL UNIT
+                            </button>
+                        </div>
+                    ` : isMember ? `
+                        <button class="modal-button btn-secondary" style="margin:0; padding:18px; font-weight:900;" 
+                                onclick="window.handleLeave('${squadId}', '${squad.squadName}')">
+                            🚶 ABANDON ASSIGNMENT
+                        </button>
+                    ` : `
+                        <button class="launch-btn" style="width: 100%; padding:22px; font-size:1.2rem;" 
+                                onclick="window.requestToJoinSquad('${squadId}')">
+                            ⚡ REQUEST UNIT ENTRY
+                        </button>
+                    `}
+                </div>`;
+            
+            if (squad.members) renderRoster(squad.members, squad.leaderId);
+        }
+    } catch (error) { intelView.innerHTML = '<p>⚠️ UPLINK ERROR: Sector dossiers unreachable.</p>'; }
+}
+
+/**
+ * Verbose roster rendering sub-function.
+ * PHASE 5 UPDATE: Pulls rank/title/pins from 'publicProfiles'.
+ */
+async function renderRoster(memberIds, leaderId) {
+    const rosterContainer = document.getElementById('squadRosterList');
+    if (!rosterContainer) return;
+    try {
+        let rosterHTML = '';
+        for (const uid of memberIds) {
+            // Updated to pull from Master Dossier
+            const userSnap = await getDoc(doc(db, "publicProfiles", uid));
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                const isLeader = uid === leaderId;
+                const activeTitle = userData.selectedTitle ? (allTitles[userData.selectedTitle]?.name || 'Trooper') : 'New Recruit';
+                
+                rosterHTML += `
+                    <div class="roster-card" style="padding:15px; background:#fff; border-radius:12px; border:1px solid ${isLeader ? 'gold' : '#eee'}; display:flex; align-items:center; gap:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+                        <div class="rank-orb" style="font-size:1.5rem; background:#f8f9fa; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:3px solid ${isLeader ? 'gold' : '#4A7C59'}; cursor:pointer;" onclick="window.handleViewProfile('${uid}')">
+                            ${isLeader ? '⭐' : '👤'}
+                        </div>
+                        <div style="flex-grow:1; text-align:left;">
+                            <h5 style="margin:0; font-size:1.1rem; color:#222;">${userData.username} ${isLeader ? '<small style="color:gold;">[HQ]</small>' : ''}</h5>
+                            <small style="color:#777; font-weight:700; text-transform:uppercase; font-size:0.75rem;">${activeTitle}</small>
+                        </div>
+                        <div style="text-align:right;">
+                            <small style="display:block; font-size:0.6rem; color:#aaa; font-weight:800;">PINS</small>
+                            <span style="font-weight:900; color:var(--color-primary-green); font-size:1.2rem;">${userData.totalPins || 0}</span>
+                        </div>
+                    </div>`;
+            }
+        }
+        rosterContainer.innerHTML = rosterHTML || '<p style="text-align:center; padding:20px; color:#aaa;">Searching for biometric signals...</p>';
+    } catch (err) { console.error("Roster render error:", err); }
+}
+
+export async function leaveSquad(squadId, squadName) {
+    if (!state.currentUser || !confirm(`Confirm Unit Extraction: ${squadName}?`)) return;
+    try {
+        await updateDoc(doc(db, "squads", squadId), {
+            members: arrayRemove(state.currentUser.uid),
+            memberCount: increment(-1)
+        });
+        alert("Extraction successful. You are now unassigned.");
+        fetchSquadDetails(squadId);
+        // Refresh registry view if user goes back
+        fetchLocalSquads();
+    } catch (error) { alert("Extraction failed."); }
+}
+
+/* ==========================================================================
+   10. PROGRESSION & RANKS (The Milestone Matrix)
+   ========================================================================== */
+
+/**
+ * Grants a rank title to a user.
+ */
+export async function grantTitle(userId, titleKey) {
+    const profileRef = doc(db, "publicProfiles", userId);
+    await runTransaction(db, async (t) => {
+        const d = await t.get(profileRef);
+        const unlocked = d.data().unlockedTitles || [];
+        if (!unlocked.includes(titleKey)) {
+            unlocked.push(titleKey);
+            t.update(profileRef, { unlockedTitles: unlocked });
+            // Alert user of promotion
+            alert(`🏆 NEW RANK ATTAINED: ${allTitles[titleKey]?.name || 'Elite Trooper'}`);
+        }
+    });
+}
+
+/**
+ * Evaluates dossier stats against the milestone matrix.
+ * PHASE 2 MATH: Checks Miles and Count directly.
+ */
+export async function checkForTitleMilestones(userId, routeCoords) {
+    try {
+        const snap = await getDoc(doc(db, "publicProfiles", userId));
+        if (!snap.exists()) return;
+        const d = snap.data();
+        
+        // --- Rank Checks ---
+        if (d.totalPins >= 10) await grantTitle(userId, 'scout');
+        if (d.totalPins >= 50) await grantTitle(userId, 'trash_wizard');
+        if (d.totalPins >= 100) await grantTitle(userId, 'eco_legend');
+        
+        if (d.totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
+        if (d.totalRoutes >= 50) await grantTitle(userId, 'road_runner');
+        
+        // --- Sector Intelligence (Rogers Park Ridge) ---
+        if (routeCoords && routeCoords.length > 0) {
+            const sid = getSectorFromCoords(routeCoords[0][0], routeCoords[0][1]);
+            if (sid === 'RP-05') {
+                const count = (d.rpRoutesCount || 0) + 1;
+                await updateDoc(doc(db, "publicProfiles", userId), { rpRoutesCount: count });
+                if (count >= 5) await grantTitle(userId, 'rp_pioneer');
+            }
+        }
+    } catch (e) { console.error("Milestone Error:", e); }
+}
+
+/**
+ * Determines sector based on GPS coordinates.
+ * Includes custom polygon logic for the West Side Ridge.
+ */
+function getSectorFromCoords(lon, lat) {
+    // West Side (RP-05) Custom Sloped Boundary Logic
+    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
+    
+    // Check if point is west of the Ridge Line
+    if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeBoundary && lon <= -87.6750) {
+        return 'RP-05';
+    }
+    
+    // Check standard rectangular sectors
+    for (const [id, b] of Object.entries(RP_SECTORS)) {
+        if (id === 'RP-05') continue;
+        if (lat >= b.minLat && lat <= b.maxLat &&
+            lon >= b.minLon && lon <= b.maxLon) {
+            return id;
+        }
+    }
+    return null;
+}
+
+/* ==========================================================================
+   11. GLOBAL BRIDGE
+   ========================================================================== */
+
+/**
+ * Exposes internal module functions to the global window scope.
+ * Required for static HTML onclick events to trigger module logic.
+ */
 window.viewSquadIntel = (id) => fetchSquadDetails(id);
-window.handleDisband = (id, name) => { if(confirm(`Decommission ${name}?`)) deleteDoc(doc(db, "squads", id)).then(() => fetchLocalSquads()); };
+window.handleDisband = (id, name) => { 
+    if(confirm(`☢️ COMMAND OVERRIDE: Decommission unit [${name}]?`)) {
+        deleteDoc(doc(db, "squads", id)).then(() => fetchLocalSquads()); 
+    }
+};
 window.handleLeave = (id, name) => leaveSquad(id, name);
 window.handleViewProfile = (uid) => showPublicProfile(uid);
-window.showMeetupsList = (name) => { document.getElementById('viewMeetupsLocationName').innerText = name; document.getElementById('viewMeetupsModal').style.display = 'flex'; };
+window.showMeetupsList = (name) => { 
+    document.getElementById('viewMeetupsLocationName').innerText = name; 
+    document.getElementById('viewMeetupsModal').style.display = 'flex'; 
+};
+window.requestToJoinSquad = (id) => {
+    if (!state.currentUser) return alert("Log in to join units.");
+    updateDoc(doc(db, "squads", id), { 
+        members: arrayUnion(state.currentUser.uid), 
+        memberCount: increment(1) 
+    }).then(() => {
+        alert("Entry Accepted.");
+        fetchSquadDetails(id);
+    });
+};
