@@ -1457,43 +1457,6 @@ export async function fetchSquadDetails(squadId) {
     } catch (error) { intelView.innerHTML = '<p>⚠️ UPLINK ERROR: Sector dossiers unreachable.</p>'; }
 }
 
-/**
- * Verbose roster rendering sub-function.
- * PHASE 5 UPDATE: Pulls rank/title/pins from 'publicProfiles'.
- */
-async function renderRoster(memberIds, leaderId) {
-    const rosterContainer = document.getElementById('squadRosterList');
-    if (!rosterContainer) return;
-    try {
-        let rosterHTML = '';
-        for (const uid of memberIds) {
-            // Updated to pull from Master Dossier
-            const userSnap = await getDoc(doc(db, "publicProfiles", uid));
-            if (userSnap.exists()) {
-                const userData = userSnap.data();
-                const isLeader = uid === leaderId;
-                const activeTitle = userData.selectedTitle ? (allTitles[userData.selectedTitle]?.name || 'Trooper') : 'New Recruit';
-                
-                rosterHTML += `
-                    <div class="roster-card" style="padding:15px; background:#fff; border-radius:12px; border:1px solid ${isLeader ? 'gold' : '#eee'}; display:flex; align-items:center; gap:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                        <div class="rank-orb" style="font-size:1.5rem; background:#f8f9fa; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:3px solid ${isLeader ? 'gold' : '#4A7C59'}; cursor:pointer;" onclick="window.handleViewProfile('${uid}')">
-                            ${isLeader ? '⭐' : '👤'}
-                        </div>
-                        <div style="flex-grow:1; text-align:left;">
-                            <h5 style="margin:0; font-size:1.1rem; color:#222;">${userData.username} ${isLeader ? '<small style="color:gold;">[HQ]</small>' : ''}</h5>
-                            <small style="color:#777; font-weight:700; text-transform:uppercase; font-size:0.75rem;">${activeTitle}</small>
-                        </div>
-                        <div style="text-align:right;">
-                            <small style="display:block; font-size:0.6rem; color:#aaa; font-weight:800;">PINS</small>
-                            <span style="font-weight:900; color:var(--color-primary-green); font-size:1.2rem;">${userData.totalPins || 0}</span>
-                        </div>
-                    </div>`;
-            }
-        }
-        rosterContainer.innerHTML = rosterHTML || '<p style="text-align:center; padding:20px; color:#aaa;">Searching for biometric signals...</p>';
-    } catch (err) { console.error("Roster render error:", err); }
-}
-
 export async function leaveSquad(squadId, squadName) {
     if (!state.currentUser || !confirm(`Confirm Unit Extraction: ${squadName}?`)) return;
     try {
