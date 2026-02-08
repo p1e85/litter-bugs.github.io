@@ -1531,3 +1531,73 @@ export async function fetchLocalSquads() {
         listContainer.innerHTML = '<p style="color: var(--color-accent-danger);">⚠️ Tactical Scan Failed. Check console.</p>';
     }
 }
+
+// --- SQUAD INTEL (View Details) ---
+export async function fetchSquadDetails(squadId) {
+    // 1. Select DOM elements (Make sure your HTML IDs match these!)
+    const nameEl = document.getElementById('intelSquadName');
+    const callsignEl = document.getElementById('intelSquadCallsign');
+    const missionEl = document.getElementById('intelSquadMission');
+    const rosterEl = document.getElementById('intelSquadRoster');
+
+    // 2. Clear previous data / Show Loading
+    if (nameEl) nameEl.textContent = "Loading Intel...";
+    if (callsignEl) callsignEl.textContent = "[...]";
+    if (missionEl) missionEl.textContent = "Decryption in progress...";
+    if (rosterEl) rosterEl.innerHTML = '<li style="color:#888;">Scanning for lifeforms...</li>';
+
+    try {
+        // 3. Fetch the Squad Document
+        const squadRef = doc(db, "squads", squadId);
+        const squadSnap = await getDoc(squadRef);
+
+        if (!squadSnap.exists()) {
+            if (nameEl) nameEl.textContent = "Squad Not Found";
+            return;
+        }
+
+        const data = squadSnap.data();
+
+        // 4. Populate Basic Info
+        if (nameEl) nameEl.textContent = data.squadName || "Unknown Squad";
+        if (callsignEl) callsignEl.textContent = `[${data.callsign || '???'}]`;
+        if (missionEl) missionEl.textContent = data.missionStatement || "No mission established.";
+
+        // 5. Populate Active Roster
+        if (rosterEl) {
+            rosterEl.innerHTML = ""; // Clear loader
+            
+            // Check if members exist (Handle both Array and Object structures for safety)
+            let memberIDs = [];
+            if (Array.isArray(data.members)) {
+                memberIDs = data.members;
+            } else if (data.members && typeof data.members === 'object') {
+                memberIDs = Object.keys(data.members);
+            }
+
+            if (memberIDs.length === 0) {
+                rosterEl.innerHTML = "<li>No active members.</li>";
+            } else {
+                // Fetch details for each member
+                // Note: For a real app, you might want to store usernames in the squad doc to save reads.
+                // For now, we will fetch them to ensure they are up to date.
+                for (const memberId of memberIDs) {
+                    const memberDoc = await getDoc(doc(db, "publicProfiles", memberId));
+                    const memberData = memberDoc.exists() ? memberDoc.data() : { username: "Unknown Trooper" };
+                    
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span class="trooper-rank">🛡️</span> 
+                        ${memberData.username} 
+                        ${memberId === data.leaderId ? '<span style="color:gold; font-size:0.8em; margin-left:5px;">(Leader)</span>' : ''}
+                    `;
+                    rosterEl.appendChild(li);
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error("Error fetching squad intel:", error);
+        if (nameEl) nameEl.textContent = "Error loading data.";
+    }
+}
