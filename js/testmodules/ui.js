@@ -1043,11 +1043,8 @@ async function loadPastChallenges(filterType) {
 // --- PUBLIC PROFILE FUNCTION ---
 export async function showPublicProfile(userId) {
     const modal = document.getElementById('publicProfileModal');
-    
-    // 1. Show modal immediately so user sees something happening
     if (modal) modal.style.display = 'flex';
 
-    // 2. Select the specific elements from your HTML
     const nameEl = document.getElementById('profileUsername');
     const locEl = document.getElementById('profileLocation');
     const bioEl = document.getElementById('profileBio');
@@ -1055,15 +1052,12 @@ export async function showPublicProfile(userId) {
     const badgesEl = document.getElementById('profileAchievements');
     const supportBtn = document.getElementById('profileSupportBtn');
 
-    // Clear previous data while loading
+    // Loading State
     if (nameEl) nameEl.textContent = "Loading...";
-    if (locEl) locEl.textContent = "";
-    if (bioEl) bioEl.textContent = "";
     if (statsEl) statsEl.innerHTML = "";
     if (badgesEl) badgesEl.innerHTML = "";
 
     try {
-        // 3. Fetch Profile Data
         const docSnap = await getDoc(doc(db, "publicProfiles", userId));
         
         if (!docSnap.exists()) {
@@ -1073,12 +1067,12 @@ export async function showPublicProfile(userId) {
 
         const data = docSnap.data();
 
-        // 4. Populate Basic Info
+        // 1. Basic Info
         if (nameEl) nameEl.textContent = data.username || "Anonymous Trooper";
         if (locEl) locEl.textContent = data.location || "Unknown Location";
         if (bioEl) bioEl.textContent = data.bio || "No bio provided.";
 
-        // 5. Populate Stats
+        // 2. Stats
         if (statsEl) {
             statsEl.innerHTML = `
                 <div class="stat-card">
@@ -1096,37 +1090,37 @@ export async function showPublicProfile(userId) {
             `;
         }
 
-        // 6. Handle "Support" Button
+        // 3. Support Button
         if (supportBtn) {
+            supportBtn.style.display = data.buyMeACoffeeLink ? "block" : "none";
             if (data.buyMeACoffeeLink) {
-                supportBtn.style.display = "block";
-                // Remove old listeners by cloning
                 const newBtn = supportBtn.cloneNode(true);
                 supportBtn.parentNode.replaceChild(newBtn, supportBtn);
                 newBtn.addEventListener('click', () => window.open(data.buyMeACoffeeLink, '_blank'));
-            } else {
-                supportBtn.style.display = "none";
             }
         }
 
-        // 7. Fetch and Populate Badges
-        const badgesSnap = await getDocs(query(collection(db, "publicProfiles", userId, "badges"), orderBy("date", "desc")));
-        
+        // 4. Badges (THE FIX: Read from data.badges)
         if (badgesEl) {
-            if (badgesSnap.empty) {
+            const userBadges = data.badges || {}; // Read the field directly
+            const badgeKeys = Object.keys(userBadges);
+
+            if (badgeKeys.length === 0) {
                 badgesEl.innerHTML = '<p style="color:#888; width:100%; text-align:center;">No badges yet.</p>';
             } else {
                 let badgesHTML = '';
-                badgesSnap.forEach(b => {
-                    const badge = b.data();
-                    const count = badge.count || 1;
-                    const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-left:4px;">x${count}</span>` : '';
+                // Import allBadges logic if needed, or rely on stored data
+                // For now, we render what is stored:
+                badgeKeys.forEach(key => {
+                    const badgeData = userBadges[key];
+                    // Handle both simple "true" values or detailed objects
+                    const icon = badgeData.icon || '🏆';
+                    const title = badgeData.name || key; // Fallback to ID if no name
                     
                     badgesHTML += `
                         <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:80px; text-align:center; display:flex; flex-direction:column; align-items:center;">
-                            <div style="font-size:2em;">${badge.icon || '🏆'}</div>
-                            <div style="font-size:0.8em; font-weight:bold; margin-top:5px;">${badge.title}</div>
-                            ${countBadge}
+                            <div style="font-size:2em;">${icon}</div>
+                            <div style="font-size:0.7em; font-weight:bold; margin-top:5px; word-wrap: break-word;">${title}</div>
                         </div>
                     `;
                 });
