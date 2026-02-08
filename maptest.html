@@ -418,29 +418,23 @@
             </div>
         </div>
 
-        <div id="squadIntelView" style="display: none;">
-            <button class="modal-button secondary" onclick="showSquadRegistry()" style="padding: 5px; font-size: 0.8rem; width: auto; margin-bottom: 15px;">
-                ← Back to Registry
-            </button>
+<div id="squadIntelView" style="display: none;">
+    <h2 id="intelSquadName">Squad Name</h2>
+    <h3 id="intelSquadCallsign" style="color: #4A7C59;">[CALLSIGN]</h3>
+    
+    <div class="intel-section">
+        <h4>Mission Statement</h4>
+        <p id="intelSquadMission">Loading...</p>
+    </div>
 
-            <div id="squadIntelHeader" style="text-align: left;">
-                <h2 id="intelSquadName" style="margin: 0; text-align: left;">Squad Name</h2>
-                <span id="intelSquadCallsign" style="color: var(--color-primary-green); font-weight: bold; letter-spacing: 1px;">[CALLSIGN]</span>
-            </div>
-
-            <div class="safety-disclaimer" style="margin: 15px 0; background: #f0f4f1; border-color: var(--color-primary-green);">
-                <strong>Mission Statement</strong>
-                <p id="intelSquadBio" style="font-style: italic; margin: 5px 0 0 0;">"No bio provided."</p>
-            </div>
-
-            <h4 style="text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">Active Roster</h4>
-            <div id="squadRosterList" class="feed-container" style="max-height: 200px;">
-                </div>
-
-            <button id="btnRequestJoin" class="modal-button launch-btn" style="margin-top: 20px; width: 100%;">
-                REQUEST TO JOIN UNIT
-            </button>
-        </div>
+    <div class="intel-section">
+        <h4>Active Roster</h4>
+        <ul id="intelSquadRoster" class="roster-list">
+            </ul>
+    </div>
+    
+    <button class="modal-button btn-secondary" onclick="showSquadRegistry()">← Back to Registry</button>
+</div>
 
         <div id="squadCreateView" style="display: none;">
     <button class="modal-button secondary" onclick="showSquadRegistry()" style="padding: 5px; font-size: 0.8rem; width: auto; margin-bottom: 15px;">
