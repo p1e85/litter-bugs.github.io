@@ -1070,62 +1070,6 @@ export async function grantTitle(userId, titleKey) {
     });
 }
 
-/* ==========================================================================
-   11. GLOBAL BRIDGE & ADMIN
-   ========================================================================== */
-
-/**
- * Triggers visual medal presentation modal.
- */
-export async function awardBadge(userId, title, desc, icon) {
-    const modal = document.getElementById('achievementModal');
-    if (modal) {
-        document.getElementById('achievementName').textContent = title;
-        document.getElementById('achievementDescription').textContent = desc;
-        const iconEl = modal.querySelector('.achievement-icon');
-        if (iconEl) iconEl.textContent = icon;
-        modal.style.display = 'flex';
-    }
-    const key = title.toLowerCase().replace(/ /g, '_');
-    await updateDoc(doc(db, "publicProfiles", userId), { [`badges.${key}`]: true });
-}
-
-// Data Handling Export Bridges
-export const getAdminChallenges = async () => (await getDocs(query(collection(db, "challenges"), orderBy("created_at", "desc")))).docs.map(d => ({ id: d.id, ...d.data() }));
-export const getUserQuests = async (uid) => (await getDoc(doc(db, "publicProfiles", uid))).data()?.active_quests || {};
-export const joinChallenge = async (id, title, uid) => await updateDoc(doc(db, "publicProfiles", uid), { [`active_quests.${id}`]: { title, progress: 0.1, status: 'active', joined_at: serverTimestamp() } });
-export const deleteChallenge = async (id) => await deleteDoc(doc(db, "challenges", id));
-export const createNewChallenge = async (t, d, ty, g, tm, b, e) => await addDoc(collection(db, "challenges"), { title: t, description: d, challengeType: ty, goal_miles: parseFloat(g), badge_icon: b, expires_at: Timestamp.fromDate(new Date(e)), created_at: serverTimestamp(), status: 'active' });
-
-/**
- * GLOBAL UI BRIDGE
- * These map module functions to the global window object for HTML event attributes.
- */
-window.viewSquadIntel = (id) => fetchSquadDetails(id);
-window.handleDisband = (id, name) => { if(confirm(`☢️ DECOMMISSION UNIT [${name}]?`)) deleteDoc(doc(db, "squads", id)).then(() => fetchLocalSquads()); };
-window.handleLeave = (id, name) => updateDoc(doc(db, "squads", id), { members: arrayRemove(state.currentUser.uid), memberCount: increment(-1) }).then(() => fetchSquadDetails(id));
-window.handleViewProfile = (uid) => showPublicProfile(uid);
-window.showMeetupsList = (name) => { document.getElementById('viewMeetupsLocationName').innerText = name; document.getElementById('viewMeetupsModal').style.display = 'flex'; };
-window.requestToJoinSquad = (id) => updateDoc(doc(db, "squads", id), { members: arrayUnion(state.currentUser.uid), memberCount: increment(1) }).then(() => fetchSquadDetails(id));
-
-export async function leaveSquad(squadId, squadName) {
-    if (!state.currentUser || !confirm(`Confirm Unit Extraction: ${squadName}?`)) return;
-    try {
-        await updateDoc(doc(db, "squads", squadId), {
-            members: arrayRemove(state.currentUser.uid),
-            memberCount: increment(-1)
-        });
-        alert("Extraction successful. You are now unassigned.");
-        fetchSquadDetails(squadId);
-        // Refresh registry view if user goes back
-        fetchLocalSquads();
-    } catch (error) { alert("Extraction failed."); }
-}
-
-/* ==========================================================================
-   10. PROGRESSION & RANKS (The Milestone Matrix)
-   ========================================================================== */
-
 /**
  * Evaluates dossier stats against the milestone matrix.
  * PHASE 2 MATH: Checks Miles and Count directly.
@@ -1156,208 +1100,6 @@ export async function checkForTitleMilestones(userId, routeCoords) {
     } catch (e) { console.error("Milestone Error:", e); }
 }
 
-/**
- * Determines sector based on GPS coordinates.
- * Includes custom polygon logic for the West Side Ridge.
- */
-function getSectorFromCoords(lon, lat) {
-    // West Side (RP-05) Custom Sloped Boundary Logic
-    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
-    
-    // Check if point is west of the Ridge Line
-    if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeBoundary && lon <= -87.6750) {
-        return 'RP-05';
-    }
-    
-    // Check standard rectangular sectors
-    for (const [id, b] of Object.entries(RP_SECTORS)) {
-        if (id === 'RP-05') continue;
-        if (lat >= b.minLat && lat <= b.maxLat &&
-            lon >= b.minLon && lon <= b.maxLon) {
-            return id;
-        }
-    }
-    return null;
-}
-
-/* ==========================================================================
-   8. MISSION BROADCASTING (Meetup Finalization)
-   ========================================================================== */
-
-/**
- * Transmits the scheduled meetup to the global mission board.
- */
-export async function handleMeetupSubmit() {
-    if (!state.currentUser) return;
-
-    const title = document.getElementById('meetupTitleInput').value.trim();
-    const description = document.getElementById('meetupDescriptionInput').value.trim();
-    const dateVal = document.getElementById('meetupDateInput').value;
-    const poiName = document.getElementById('poiNameInput').value;
-    const latStr = document.getElementById('meetupLat').value;
-    const lngStr = document.getElementById('meetupLng').value;
-
-    try {
-        // PHASE 5: Pulling current handle from the Master Dossier
-        const profileSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
-        const username = profileSnap.exists() ? profileSnap.data().username : "Trooper";
-        
-        await addDoc(collection(db, "meetups"), {
-            organizerId: state.currentUser.uid,
-            organizerName: username,
-            poiName: poiName,
-            title: title,
-            description: description,
-            eventDate: new Date(dateVal),
-            createdAt: serverTimestamp(),
-            coordinates: (latStr && lngStr) ? {
-                lat: parseFloat(latStr),
-                lng: parseFloat(lngStr)
-            } : null
-        });
-
-        alert("📡 MISSION BROADCAST SUCCESSFUL: Check the community board for coordination.");
-        document.getElementById('meetupModal').style.display = 'none';
-        
-        // Clear local form
-        document.getElementById('meetupTitleInput').value = '';
-        document.getElementById('meetupDescriptionInput').value = '';
-        document.getElementById('meetupDateInput').value = '';
-        document.getElementById('safetyCheckbox').checked = false;
-        
-    } catch (error) {
-        console.error("Transmission Error:", error);
-        alert("Broadcast Failure: Signal lost during uplink.");
-    }
-}
-
-/* ==========================================================================
-   9. SQUAD COMMAND (The Tactical Units & Rosters)
-   ========================================================================== */
-
-/**
- * Initializes a new tactical squad and assigns leadership rank.
- */
-export async function initializeSquad() {
-    const btn = document.getElementById('btnFinalizeSquad');
-    if (btn && btn.disabled) return; 
-
-    const name = document.getElementById('newSquadName').value.trim();
-    const callsign = document.getElementById('newSquadCallsign').value.trim().toUpperCase();
-    const sector = document.getElementById('newSquadHomeSector').value;
-    const bio = document.getElementById('newSquadBio').value.trim();
-
-    if (!name || callsign.length < 3) {
-        alert("Initialization Failed: Squad Name and a 3-character Callsign required.");
-        return;
-    }
-
-    if (containsProfanity(name) || containsProfanity(callsign)) {
-        alert("DESIGNATION REJECTED: Profanity detected. Choose a compliant callsign.");
-        return;
-    }
-
-    if (btn) btn.disabled = true;
-
-    try {
-        await addDoc(collection(db, "squads"), {
-            squadName: name,
-            callsign: callsign,
-            homeSector: sector,
-            bio: bio,
-            leaderId: state.currentUser ? state.currentUser.uid : 'anonymous', 
-            members: state.currentUser ? [state.currentUser.uid] : [],
-            memberCount: 1,
-            totalPins: 0,
-            status: "active",
-            createdAt: serverTimestamp() 
-        });
-
-        // Award 'Event Host' rank title automatically to squad leaders
-        await grantTitle(state.currentUser.uid, 'event_host');
-
-        alert(`Unit [${callsign}] ${name} Deployed.`);
-        window.showSquadRegistry();
-        fetchLocalSquads();
-    } catch (error) {
-        console.error("Registry error:", error);
-        if (btn) btn.disabled = false;
-    }
-}
-
-/**
- * Renders the detailed Intel Dossier for a squad.
- * VERBOSE TEMPLATE: Preserving full 100+ line UI structure.
- */
-export async function fetchSquadDetails(squadId) {
-    const intelView = document.getElementById('squadIntelView');
-    if (!intelView) return;
-    intelView.innerHTML = '<div style="text-align:center; padding:50px;">🛰️ Downloading dossier...</div>';
-
-    try {
-        const squadSnap = await getDoc(doc(db, "squads", squadId));
-        if (squadSnap.exists()) {
-            const squad = squadSnap.data();
-            const currentUid = state.currentUser?.uid;
-            const isLeader = currentUid === squad.leaderId;
-            const isMember = squad.members && squad.members.includes(currentUid);
-
-            // Reconstructing the Tactical Dossier View
-            intelView.innerHTML = `
-                <div style="display:flex; justify-content:flex-start; margin-bottom:25px;">
-                    <button class="modal-button secondary" onclick="window.showSquadRegistry()" 
-                            style="width: auto; padding: 10px 20px; font-size: 0.85rem; font-weight:800;">
-                        ← REGISTRY
-                    </button>
-                </div>
-                
-                <div style="text-align:left; background:linear-gradient(135deg, #f8f9fa, #fff); padding:30px; border-radius:20px; border:1px solid #eee; margin-bottom:30px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h2 style="margin:0; font-size:2.1rem; color:#222; font-weight:900;">[${squad.callsign}] ${squad.squadName}</h2>
-                        <span style="background:var(--color-primary-green); color:white; padding:5px 12px; border-radius:10px; font-size:0.75rem; font-weight:900;">ACTIVE</span>
-                    </div>
-                    <p style="text-align: left; color: var(--color-primary-green); font-weight: 800; margin-top: 15px; font-size: 1rem; text-transform: uppercase;">
-                        Operations Sector: ${squad.homeSector}
-                    </p>
-                    <div style="background: #fff; border-left: 6px solid var(--color-primary-green); padding: 20px; border-radius: 10px; margin: 25px 0; box-shadow:0 3px 10px rgba(0,0,0,0.04);">
-                        <strong style="display:block; font-size:0.75rem; text-transform:uppercase; color:#bbb; letter-spacing:1px; margin-bottom:10px;">Mission Profile</strong>
-                        <p style="margin: 0; font-size: 1.1rem; line-height: 1.6; color: #444; font-style: italic;">"${squad.bio || "No mission profile provided."}"</p>
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px;">
-                    <h4 style="margin: 0; font-size:0.9rem; font-weight:900; color:#aaa; text-transform:uppercase; letter-spacing:1.5px;">Unit Roster</h4>
-                    <span style="background: #f0f0f0; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight:800; color:#666;">${squad.memberCount || 1} Troopers Attached</span>
-                </div>
-                
-                <div id="squadRosterList" style="display:flex; flex-direction:column; gap:12px; min-height: 100px;"></div>
-
-                <div style="margin-top: 50px; border-top: 2px solid #f5f5f5; padding-top: 35px;">
-                    ${isLeader ? `
-                        <div style="background:rgba(220,53,69,0.03); padding:25px; border-radius:20px; border:2px dashed #dc3545; text-align:center;">
-                            <button class="modal-button btn-danger" style="margin:0; padding:18px; font-weight:900;" 
-                                    onclick="window.handleDisband('${squadId}', '${squad.squadName}')">
-                                ☢️ DISBAND TACTICAL UNIT
-                            </button>
-                        </div>
-                    ` : isMember ? `
-                        <button class="modal-button btn-secondary" style="margin:0; padding:18px; font-weight:900;" 
-                                onclick="window.handleLeave('${squadId}', '${squad.squadName}')">
-                            🚶 ABANDON ASSIGNMENT
-                        </button>
-                    ` : `
-                        <button class="launch-btn" style="width: 100%; padding:22px; font-size:1.2rem;" 
-                                onclick="window.requestToJoinSquad('${squadId}')">
-                            ⚡ REQUEST UNIT ENTRY
-                        </button>
-                    `}
-                </div>`;
-            
-            if (squad.members) renderRoster(squad.members, squad.leaderId);
-        }
-    } catch (error) { intelView.innerHTML = '<p>⚠️ UPLINK ERROR: Sector dossiers unreachable.</p>'; }
-}
-
 export async function leaveSquad(squadId, squadName) {
     if (!state.currentUser || !confirm(`Confirm Unit Extraction: ${squadName}?`)) return;
     try {
@@ -1373,36 +1115,31 @@ export async function leaveSquad(squadId, squadName) {
 }
 
 /* ==========================================================================
-   10. PROGRESSION & RANKS (The Milestone Matrix)
+   11. GLOBAL BRIDGE & ADMIN
    ========================================================================== */
 
 /**
- * Determines sector based on GPS coordinates.
- * Includes custom polygon logic for the West Side Ridge.
+ * Triggers visual medal presentation modal.
  */
-function getSectorFromCoords(lon, lat) {
-    // West Side (RP-05) Custom Sloped Boundary Logic
-    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
-    
-    // Check if point is west of the Ridge Line
-    if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeBoundary && lon <= -87.6750) {
-        return 'RP-05';
+export async function awardBadge(userId, title, desc, icon) {
+    const modal = document.getElementById('achievementModal');
+    if (modal) {
+        document.getElementById('achievementName').textContent = title;
+        document.getElementById('achievementDescription').textContent = desc;
+        const iconEl = modal.querySelector('.achievement-icon');
+        if (iconEl) iconEl.textContent = icon;
+        modal.style.display = 'flex';
     }
-    
-    // Check standard rectangular sectors
-    for (const [id, b] of Object.entries(RP_SECTORS)) {
-        if (id === 'RP-05') continue;
-        if (lat >= b.minLat && lat <= b.maxLat &&
-            lon >= b.minLon && lon <= b.maxLon) {
-            return id;
-        }
-    }
-    return null;
+    const key = title.toLowerCase().replace(/ /g, '_');
+    await updateDoc(doc(db, "publicProfiles", userId), { [`badges.${key}`]: true });
 }
 
-/* ==========================================================================
-   11. GLOBAL BRIDGE
-   ========================================================================== */
+// Data Handling Export Bridges
+export const getAdminChallenges = async () => (await getDocs(query(collection(db, "challenges"), orderBy("created_at", "desc")))).docs.map(d => ({ id: d.id, ...d.data() }));
+export const getUserQuests = async (uid) => (await getDoc(doc(db, "publicProfiles", uid))).data()?.active_quests || {};
+export const joinChallenge = async (id, title, uid) => await updateDoc(doc(db, "publicProfiles", uid), { [`active_quests.${id}`]: { title, progress: 0.1, status: 'active', joined_at: serverTimestamp() } });
+export const deleteChallenge = async (id) => await deleteDoc(doc(db, "challenges", id));
+export const createNewChallenge = async (t, d, ty, g, tm, b, e) => await addDoc(collection(db, "challenges"), { title: t, description: d, challengeType: ty, goal_miles: parseFloat(g), badge_icon: b, expires_at: Timestamp.fromDate(new Date(e)), created_at: serverTimestamp(), status: 'active' });
 
 /**
  * Exposes internal module functions to the global window scope.
