@@ -1393,3 +1393,88 @@ export async function reattemptChallenge(challengeId, title) {
 
 // Bridge for HTML
 window.handleReattempt = (id, title) => reattemptChallenge(id, title);
+
+export async function showPublicProfile(userId) {
+    const modal = document.getElementById('publicProfileModal');
+    const content = document.getElementById('publicProfileContent');
+    const supportBtn = document.getElementById('profileSupportBtn');
+
+    if (!content) {
+        console.error("Target element 'publicProfileContent' not found in index.html");
+        return;
+    }
+
+    content.innerHTML = '<p style="text-align:center; padding:20px;">Establishing uplink...</p>';
+    modal.style.display = 'flex';
+
+    try {
+        // 1. Fetch Profile Data
+        const docSnap = await getDoc(doc(db, "publicProfiles", userId));
+        if (!docSnap.exists()) {
+            content.innerHTML = '<p style="text-align:center; padding:20px;">Trooper profile not found in archives.</p>';
+            return;
+        }
+        const data = docSnap.data();
+
+        // 2. Resolve Trooper Title
+        const titleDisplay = (data.selectedTitle && allTitles[data.selectedTitle]) 
+            ? `<p style="margin:-5px 0 10px; font-weight:bold; color:#4A7C59; font-size:0.9em; text-transform:uppercase;">${allTitles[data.selectedTitle].name}</p>` 
+            : '';
+
+        // 3. Fetch Badges Sub-collection
+        const badgesSnap = await getDocs(query(collection(db, "publicProfiles", userId, "badges"), orderBy("date", "desc")));
+        let badgesHTML = '';
+        if (badgesSnap.empty) {
+            badgesHTML = '<p style="color:#888; font-size:0.8rem;">No badges earned yet.</p>';
+        } else {
+            badgesSnap.forEach(b => {
+                const badge = b.data();
+                badgesHTML += `
+                    <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:75px; text-align:center; border:1px solid #eee;">
+                        <div style="font-size:1.8rem;">${badge.icon || '🏆'}</div>
+                        <div style="font-size:0.7rem; font-weight:bold; margin-top:5px; line-height:1;">${badge.title}</div>
+                    </div>`;
+            });
+        }
+
+        // 4. Handle Support Button visibility
+        if (supportBtn) {
+            if (data.coffeeLink) {
+                supportBtn.style.display = 'block';
+                supportBtn.onclick = () => window.open(data.coffeeLink, '_blank');
+            } else {
+                supportBtn.style.display = 'none';
+            }
+        }
+
+        // 5. Inject the full Dossier
+        content.innerHTML = `
+            <div style="text-align:center;">
+                <img src="${data.photoURL || 'https://via.placeholder.com/100'}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #4A7C59; margin-bottom:10px;">
+                <h2 style="margin:0;">${data.username}</h2>
+                ${titleDisplay}
+                <p style="color:#666; font-size:0.9rem; margin:10px 0;">${data.bio || 'This Trooper prefers to stay in the shadows (no bio).'}</p>
+                
+                <div style="margin:15px 0; display:flex; justify-content:center; gap:10px;">
+                    <div style="background:#e8f5e9; padding:8px 15px; border-radius:8px; border:1px solid #c8e6c9;">
+                        <strong style="display:block; font-size:1.1rem; color:#2e7d32;">${data.totalDistance ? data.totalDistance.toFixed(1) : 0}</strong>
+                        <span style="font-size:0.7rem; text-transform:uppercase; color:#666;">Miles</span>
+                    </div>
+                    <div style="background:#e3f2fd; padding:8px 15px; border-radius:8px; border:1px solid #bbdefb;">
+                        <strong style="display:block; font-size:1.1rem; color:#1565c0;">${data.totalPins || 0}</strong>
+                        <span style="font-size:0.7rem; text-transform:uppercase; color:#666;">Pins</span>
+                    </div>
+                </div>
+            </div>
+
+            <h4 style="border-bottom:1px solid #eee; padding-bottom:5px; margin:20px 0 10px; font-size:0.8rem; text-transform:uppercase; color:#888;">Mission Medals</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">
+                ${badgesHTML}
+            </div>
+        `;
+
+    } catch (err) {
+        console.error("Dossier Retrieval Failed:", err);
+        content.innerHTML = '<p style="text-align:center; padding:20px; color:#dc3545;">⚠️ Failed to retrieve Trooper data from HQ.</p>';
+    }
+}
