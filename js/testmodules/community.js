@@ -5,7 +5,7 @@ import {
     getDownloadURL, runTransaction 
 } from './firebase.js';
 import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config.js';
-// PHASE 2 UPDATE: Importing unified math from utils.js
+// PHASE 2 & 3 UPDATE: Importing unified math and converter utilities
 import { 
     convertRouteForFirestore, 
     convertPinsForFirestore, 
@@ -56,7 +56,7 @@ export async function fetchAndDisplayCommunityRoutes() {
               thumbnailURL: pin.thumbnailURL,
               username: routeData.username,
               userId: routeData.userId,
-              routeId: routeId // Saved for God Mode Deletion
+              routeId: routeId 
             },
             'geometry': { 'type': 'Point', 'coordinates': pin.coords }
           });
@@ -108,12 +108,10 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     });
 
-    // --- GOD MODE CLICK LISTENER ---
     state.map.on('click', 'unclustered-point', async (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
 
-      // Check Admin Status on Click
       let isAdmin = false;
       if (state.currentUser) {
           try {
@@ -137,7 +135,6 @@ export async function fetchAndDisplayCommunityRoutes() {
       
       const popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupHTML).addTo(state.map);
       
-      // Profile Link Listener
       const profileLink = popup.getElement().querySelector('.profile-link');
       if (profileLink) {
           profileLink.addEventListener('click', (ev) => {
@@ -146,7 +143,6 @@ export async function fetchAndDisplayCommunityRoutes() {
           });
       }
 
-      // Delete Button Listener
       const delBtn = popup.getElement().querySelector('.delete-route-btn');
       if (delBtn) {
           delBtn.addEventListener('click', async () => {
@@ -245,7 +241,6 @@ export async function publishRoute() {
             likedBy: []
         });
 
-        // Trigger the milestone check
         await checkForTitleMilestones(state.currentUser.uid, state.routeCoordinates);
         await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -256,7 +251,6 @@ export async function publishRoute() {
         if (newBadges.length > 0) {
             showPopup(newBadges[0]);
         } else {
-            await checkForTitleMilestones(state.currentUser.uid, state.routeCoordinates);
             alert("Success! Your route has been published.");
         }
         clearCurrentSession();
@@ -385,7 +379,7 @@ export async function fetchAndDisplayLeaderboard(metric) {
             li.dataset.userid = doc.id;
             li.classList.toggle('current-user-entry', state.currentUser && doc.id === state.currentUser.uid);
             
-            // Phase 2 Math: metric totals are in Miles, so just display.
+            // PHASE 2 Math Fix: database is already in Miles
             const score = metric === 'totalDistance' 
                 ? `${(profileData.totalDistance || 0).toFixed(2)} mi` 
                 : (profileData.totalPins || 0);
@@ -422,7 +416,7 @@ export async function fetchAndDisplayMyStats() {
             return;
         }
         const profileData = publicProfileSnap.data();
-        // Phase 2: data is already stored in Miles
+        // PHASE 2 Math Fix: data is already stored in Miles
         const distanceMiles = (profileData.totalDistance || 0).toFixed(2);
         let statsHTML = `
             <div class="my-stats-grid">
@@ -481,7 +475,8 @@ export function setupPoiClickListeners() {
 
         const lngLat = Array.isArray(coords[0]) ? coords[0] : coords;
 
-        // Corrected variable names to avoid "rawName is not defined" error
+        // PHASE 3 REPAIR: Explicitly define names for the template bridge
+        const rawName = name;
         const escapedName = name.replace(/'/g, "\\'");
 
         new mapboxgl.Popup({ offset: 25, closeButton: true })
@@ -492,7 +487,7 @@ export function setupPoiClickListeners() {
                         <h3>📍 MISSION SITE</h3>
                     </div>
                     <div class="poi-body">
-                        <strong style="display:block; margin-bottom:10px; color:#333;">${name}</strong>
+                        <strong style="display:block; margin-bottom:10px; color:#333;">${rawName}</strong>
                         
                         <button class="modal-button" 
                                 style="width:100%; margin-bottom:8px; padding:10px; background:#f0f0f0; border:1px solid #ccc; border-radius:6px; cursor:pointer;"
@@ -1486,7 +1481,7 @@ async function renderRoster(memberIds, leaderId) {
                 const isLeader = uid === leaderId;
                 const name = userData.username || 'Trooper';
                 rosterHTML += `
-                    <div class="member-bio-card" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${isL ? 'gold' : '#eee'};">
+                    <div class="member-bio-card" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${isLeader ? 'gold' : '#eee'};">
                         <div style="font-size: 1.2rem; background: #f8f9fa; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid ${isLeader ? 'gold' : '#4A7C59'}; cursor: pointer;" onclick="handleViewProfile('${uid}')">
                             ${isLeader ? '⭐' : '👤'}
                         </div>
@@ -1518,7 +1513,7 @@ export async function leaveSquad(squadId, squadName) {
 
 // Global Bridge
 window.viewSquadIntel = (id) => fetchSquadDetails(id);
-window.handleDisband = (id, name) => disbandSquad(id, name);
+window.handleDisband = (id, name) => { if(confirm(`Decommission ${name}?`)) deleteDoc(doc(db, "squads", id)).then(() => fetchLocalSquads()); };
 window.handleLeave = (id, name) => leaveSquad(id, name);
 window.handleViewProfile = (uid) => showPublicProfile(uid);
-window.showMeetupsList = (name) => openViewMeetupsModal(name);
+window.showMeetupsList = (name) => { document.getElementById('viewMeetupsLocationName').innerText = name; document.getElementById('viewMeetupsModal').style.display = 'flex'; };
