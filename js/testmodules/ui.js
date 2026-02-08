@@ -458,7 +458,8 @@ export function attachEventListeners() {
         elements.btnCurrentChallenges.addEventListener('click', () => {
             elements.challengeMenuModal.style.display = 'none';
             elements.activeChallengesModal.style.display = 'flex';
-            loadPublicChallenges();
+            // Use the function that matches your HTML ID (publicChallengeList)
+            loadPublicChallenges(); 
         });
     }
     
@@ -619,23 +620,32 @@ document.getElementById('toggleSectorsBtn').addEventListener('click', () => {
     btn.classList.toggle('active', sectorsVisible);
 });
 
-const hubSquadsBtn = document.getElementById('hubSquadsBtn');
+// --- SQUADS NAVIGATION ---
+    const hubSquadsBtn = document.getElementById('hubSquadsBtn');
+    if (hubSquadsBtn) {
+        hubSquadsBtn.addEventListener('click', () => {
+            openModal('squadsModal');
+            // Ensure it always opens to the list, not a half-filled form
+            if (typeof switchSquadView === 'function') {
+                switchSquadView('registry');
+            }
+            // Load the data
+            if (typeof fetchLocalSquads === 'function') {
+                fetchLocalSquads(); 
+            }
+        });
+    }
 
-if (hubSquadsBtn) {
-    hubSquadsBtn.onclick = () => { // Using .onclick ensures only ONE function ever runs
-        openModal('squadsModal');
-        
-        // Ensure it always opens to the list, not a half-filled form
-        if (typeof switchSquadView === 'function') {
-            switchSquadView('registry');
-        }
-        
-        // Load the data
-        if (typeof fetchLocalSquads === 'function') {
-            fetchLocalSquads(); 
-        }
-    };
-}
+    const btnFinalizeSquad = document.getElementById('btnFinalizeSquad');
+    if (btnFinalizeSquad) {
+        btnFinalizeSquad.addEventListener('click', () => {
+             if (typeof initializeSquad === 'function') {
+                initializeSquad();
+            } else {
+                console.error("initializeSquad function missing");
+            }
+        });
+    }
     
 //    document.getElementById('hubSquadsBtn').addEventListener('click', () => {
 //    openModal('squadsModal');
