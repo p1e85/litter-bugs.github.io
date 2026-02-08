@@ -340,30 +340,37 @@ export function updateLoggedInStatusUI(isLoggedIn, username = '') {
     const displayStyle = isLoggedIn ? 'flex' : 'none';
     const guestStyle = isLoggedIn ? 'none' : 'flex';
     const pubStyle = isLoggedIn ? 'block' : 'none';
-    document.getElementById('userEmail').textContent = isLoggedIn ? `Logged in as: ${username}` : '';
-    document.getElementById('loggedInContent').style.display = displayStyle;
-    document.getElementById('guestContent').style.display = guestStyle;
+    const emailEl = document.getElementById('userEmail');
+    if (emailEl) emailEl.textContent = isLoggedIn ? `Logged in as: ${username}` : '';
+    const loggedInEl = document.getElementById('loggedInContent');
+    if (loggedInEl) loggedInEl.style.display = displayStyle;
+    const guestEl = document.getElementById('guestContent');
+    if (guestEl) guestEl.style.display = guestStyle;
     if (elements.authModal) elements.authModal.style.display = 'none';
-    elements.publishBtn.style.display = pubStyle;
-    elements.managePublicationsBtn.style.display = pubStyle;
-    elements.editProfileBtn.style.display = pubStyle;
+    if (elements.publishBtn) elements.publishBtn.style.display = pubStyle;
+    if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = pubStyle;
+    if (elements.editProfileBtn) elements.editProfileBtn.style.display = pubStyle;
 }
 
 export function updateAuthModalUI() {
     const authForm = document.getElementById('authForm');
     const forgotLink = document.getElementById('forgotPasswordLink');
-    document.getElementById('authError').textContent = '';
+    const authTitle = document.getElementById('authTitle');
+    const authSub = document.getElementById('authSubtitle');
+    const authErr = document.getElementById('authError');
+    if (authErr) authErr.textContent = '';
+    
     if (state.isSignUpMode) {
-        document.getElementById('authTitle').textContent = 'Create a Litter Troopers Account';
-        document.getElementById('authSubtitle').innerHTML = 'Or <a href="#" id="switchAuthModeLink">log in.</a>';
-        elements.authActionBtn.textContent = 'Sign Up';
-        authForm.classList.replace('login-mode', 'signup-mode');
+        if (authTitle) authTitle.textContent = 'Create a Litter Troopers Account';
+        if (authSub) authSub.innerHTML = 'Or <a href="#" id="switchAuthModeLink">log in.</a>';
+        if (elements.authActionBtn) elements.authActionBtn.textContent = 'Sign Up';
+        authForm?.classList.replace('login-mode', 'signup-mode');
         if (forgotLink) forgotLink.style.display = 'none'; 
     } else {
-        document.getElementById('authTitle').textContent = 'Log In to Litter Troopers';
-        document.getElementById('authSubtitle').innerHTML = 'Or <a href="#" id="switchAuthModeLink">create an account.</a>';
-        elements.authActionBtn.textContent = 'Log In';
-        authForm.classList.replace('signup-mode', 'login-mode');
+        if (authTitle) authTitle.textContent = 'Log In to Litter Troopers';
+        if (authSub) authSub.innerHTML = 'Or <a href="#" id="switchAuthModeLink">create an account.</a>';
+        if (elements.authActionBtn) elements.authActionBtn.textContent = 'Log In';
+        authForm?.classList.replace('signup-mode', 'login-mode');
         if (forgotLink) forgotLink.style.display = 'inline-block'; 
     }
     validateSignUpForm();
@@ -374,12 +381,15 @@ function validateSignUpForm() {
     const isPasswordValid = elements.passwordInput.value.length >= 6;
     if (state.isSignUpMode) {
         const isUserValid = elements.usernameInput.value.trim().length >= 3;
-        elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid && isUserValid && elements.ageCheckbox.checked);
-    } else { elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid); }
+        if (elements.authActionBtn) elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid && isUserValid && elements.ageCheckbox.checked);
+    } else { 
+        if (elements.authActionBtn) elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid); 
+    }
 }
 
 async function loadActivityFeed() {
     const container = elements.feedContainer;
+    if (!container) return;
     container.innerHTML = '<div class="feed-loader">Scanning the globe...</div>';
     try {
         const q = query(collection(db, "publishedRoutes"), orderBy("timestamp", "desc"), limit(20));
@@ -494,7 +504,8 @@ export function populateTitleDropdown(unlockedTitles = []) {
         }
     });
     sel.onchange = (e) => {
-        document.getElementById('titleRequirement').textContent = e.target.value ? `Active: ${allTitles[e.target.value].name}` : "Select a title.";
+        const reqEl = document.getElementById('titleRequirement');
+        if (reqEl) reqEl.textContent = e.target.value ? `Active: ${allTitles[e.target.value].name}` : "Select a title.";
     };
 }
 
@@ -516,6 +527,49 @@ export async function cleanupExpiredChallenges() {
     } catch (e) { console.error("Cleanup Error:", e); }
 }
 
+// --- FIX: ADDED EXPORT FOR COMMUNITY.JS ---
+export async function showPublicProfile(userId) {
+    const modal = document.getElementById('publicProfileModal');
+    const content = document.getElementById('publicProfileContent');
+    const supportBtn = document.getElementById('profileSupportBtn');
+    
+    if (content) content.innerHTML = '<p style="text-align:center; padding:20px;">Establishing uplink...</p>';
+    if (supportBtn) supportBtn.style.display = 'none'; 
+    if (modal) modal.style.display = 'flex';
+
+    try {
+        const docSnap = await getDoc(doc(db, "publicProfiles", userId));
+        if (!docSnap.exists()) {
+            if (content) content.innerHTML = '<p>Trooper not found.</p>';
+            return;
+        }
+        const data = docSnap.data();
+        let jDate = "Legacy";
+        if (data.joinedAt) {
+            const d = data.joinedAt.toDate ? data.joinedAt.toDate() : new Date(data.joinedAt);
+            jDate = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+
+        if (content) {
+            content.innerHTML = `
+                <div style="text-align:center;">
+                    <img src="${data.photoURL || 'https://via.placeholder.com/100'}" style="width:100px; height:100px; border-radius:50%; border:3px solid #4A7C59;">
+                    <h2 style="margin:10px 0 0;">${data.username}</h2>
+                    <p style="color:#888; font-size:0.7rem;">Trooper Since ${jDate}</p>
+                    <p style="margin:15px 0;">${data.bio || 'Anonymous.'}</p>
+                    <div style="background:#e8f5e9; padding:10px; border-radius:8px;">
+                        <strong>${(data.totalDistance || 0).toFixed(1)}</strong> miles | <strong>${data.totalPins || 0}</strong> pins
+                    </div>
+                </div>
+            `;
+        }
+        if (supportBtn && data.buyMeACoffeeLink) {
+            supportBtn.style.display = 'block';
+            supportBtn.onclick = () => window.open(data.buyMeACoffeeLink, '_blank');
+        }
+    } catch (err) { if (content) content.innerHTML = '<p>Link failed.</p>'; }
+}
+
 // --- GLOBAL BRIDGE ---
 window.openModal = (id) => { if (elements[id]) elements[id].style.display = 'flex'; };
 window.closeModal = (id) => { if (elements[id]) elements[id].style.display = 'none'; };
@@ -527,9 +581,14 @@ window.handleDeleteMission = (id) => { if(confirm("Purge record?")) deleteDoc(do
 window.runGlobalCleanup = cleanupExpiredChallenges;
 window.openMeetupForm = (name, lat, lng) => {
     if (elements.meetupLocationName) elements.meetupLocationName.textContent = name;
-    document.getElementById('meetupLat').value = lat;
-    document.getElementById('meetupLng').value = lng;
-    document.getElementById('poiNameInput').value = name;
-    document.getElementById('meetupTitleInput').value = `Cleanup at ${name}`;
-    elements.meetupModal.style.display = 'flex';
+    const mLat = document.getElementById('meetupLat');
+    if (mLat) mLat.value = lat;
+    const mLng = document.getElementById('meetupLng');
+    if (mLng) mLng.value = lng;
+    const poi = document.getElementById('poiNameInput');
+    if (poi) poi.value = name;
+    const title = document.getElementById('meetupTitleInput');
+    if (title) title.value = `Cleanup at ${name}`;
+    if (elements.meetupModal) elements.meetupModal.style.display = 'flex';
 };
+window.handleViewProfile = (uid) => showPublicProfile(uid);
