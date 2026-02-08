@@ -1561,7 +1561,7 @@ export async function fetchSquadDetails(squadId) {
         // 4. Populate Basic Info
         if (nameEl) nameEl.textContent = data.squadName || "Unknown Squad";
         if (callsignEl) callsignEl.textContent = `[${data.callsign || '???'}]`;
-        if (missionEl) missionEl.textContent = data.missionStatement || "No mission established.";
+        if (missionEl) missionEl.textContent = data.bio || "No mission established.";
 
         // 5. Populate Active Roster
         if (rosterEl) {
