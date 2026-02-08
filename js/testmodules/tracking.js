@@ -1,6 +1,6 @@
 import { 
     db, storage, ref, uploadBytes, getDownloadURL, collection, 
-    query, where, getDocs, updateDoc, doc, getDoc 
+    query, where, getDocs, updateDoc, doc, getDoc, serverTimestamp, increment 
 } from './firebase.js';
 import { state } from './config.js';
 import { createAndAddMarker, updateUserPinsSource } from './map.js';
@@ -51,7 +51,7 @@ export function findMe() {
             if (locationWatcher) navigator.geolocation.clearWatch(locationWatcher);
             locationWatcher = navigator.geolocation.watchPosition(pos => {
                 const newCoords = [pos.coords.longitude, pos.coords.latitude];
-                state.findMeMarker.setLngLat(newCoords);
+                if (state.findMeMarker) state.findMeMarker.setLngLat(newCoords);
 
                 // If in State 2 (Compass Mode), rotate map with heading
                 if (state.findMeState === 2 && typeof pos.coords.heading === 'number' && pos.coords.heading !== null) {
@@ -316,7 +316,7 @@ function showCleanupSummary() {
     if (pinsEl) pinsEl.textContent = pinsCount;
     if (durEl) durEl.textContent = `${minutes}m ${seconds}s`;
 
-    // Trigger Challenge Logic if user is logged in
+    // PHASE 5.2 SYNC: Trigger Challenge Logic using the consolidated collection
     if (state.currentUser) {
         updateUserChallenges(state.currentUser.uid, distanceMiles, pinsCount);
     }
@@ -332,31 +332,24 @@ export async function shareCleanupResults() {
     const distance = document.getElementById('summaryDistance')?.textContent || "0.00 mi";
     const pins = document.getElementById('summaryPins')?.textContent || "0";
     
-    const shareText = `MISSION COMPLETE: I just cleaned up ${distance} and logged ${pins} items with Litter Troopers! Join the front lines at littertroopers.com #LitterTroopers #CleanThePlanet`;
+    const shareText = `MISSION COMPLETE: I just cleaned up ${distance} and logged ${pins} items with Litter Troopers! #LitterTroopers`;
 
     const shareData = {
         title: 'Litter Troopers Mission Recap',
         text: shareText,
-        url: 'https://www.littertroopers.com/' 
+        url: 'https://littertroopers.github.io/app/' 
     };
-
-    // If a cleanup photo was taken, try to include it in the share
-    if (state.cleanupPhoto instanceof File && navigator.canShare && navigator.canShare({ files: [state.cleanupPhoto] })) {
-        shareData.files = [state.cleanupPhoto];
-    }
 
     if (navigator.share) {
         try {
             await navigator.share(shareData);
-            console.log('Recap shared successfully.');
         } catch (err) {
             console.warn('Sharing cancelled:', err);
         }
     } else {
-        // Fallback: Copy to clipboard
         try {
             await navigator.clipboard.writeText(shareText);
-            alert("Recap text copied to clipboard! Share it with your unit.");
+            alert("Recap text copied to clipboard!");
         } catch (err) {
             alert("Sharing not supported on this device.");
         }
@@ -364,15 +357,16 @@ export async function shareCleanupResults() {
 }
 
 /* ==========================================================================
-   5. BACKEND UPDATES (Challenges & Progression)
+   5. BACKEND UPDATES (Phase 5: Consolidated Collections)
    ========================================================================== */
 
 /**
- * Updates active quests in the user's dossier.
+ * PHASE 5.2: Updates active quests in the MASTER dossier (publicProfiles).
  * Standardized to check distance (miles) or count (pins).
  */
 export async function updateUserChallenges(userId, sessionMiles, sessionPins) {
     try {
+        // Always point to publicProfiles for Phase 5 consistency
         const userRef = doc(db, "publicProfiles", userId);
         const userSnap = await getDoc(userRef);
         
@@ -382,19 +376,25 @@ export async function updateUserChallenges(userId, sessionMiles, sessionPins) {
         const activeQuests = data.active_quests || {};
         let updatesMade = false;
 
-        // Iterate through all quests currently active in the dossier
+        // Atomic update of global stats using 'increment'
+        await updateDoc(userRef, {
+            totalDistance: increment(parseFloat(sessionMiles.toFixed(2))),
+            totalPins: increment(sessionPins),
+            totalRoutes: increment(1)
+        });
+
+        // Update specific mission progress
         for (const [chalId, quest] of Object.entries(activeQuests)) {
             if (quest.status !== 'active') continue;
 
-            // Fetch current rules for this mission
-            const chalDoc = await getDoc(doc(db, "challenges", chalId));
-            if (!chalDoc.exists()) continue;
+            const chalRef = doc(db, "challenges", chalId);
+            const chalSnap = await getDoc(chalRef);
+            if (!chalSnap.exists()) continue;
             
-            const rules = chalDoc.data();
+            const rules = chalSnap.data();
             const type = rules.challengeType || 'distance';
             const goal = rules.goalValue || rules.goal_miles || 1.0;
             
-            // Add session progress to dossier
             const addedProgress = (type === 'count') ? sessionPins : sessionMiles;
             const currentProgress = quest.progress || 0;
             const newProgress = parseFloat((currentProgress + addedProgress).toFixed(2));
@@ -402,28 +402,21 @@ export async function updateUserChallenges(userId, sessionMiles, sessionPins) {
             quest.progress = newProgress;
             updatesMade = true;
 
-            // Check for mission completion
             if (newProgress >= goal) {
                 quest.status = 'completed';
                 quest.completed_at = serverTimestamp();
                 
-                // Trigger Medal Presentation
+                // Award Badge via community logic
                 const comm = await import('./community.js');
-                comm.awardBadge(
-                    userId, 
-                    rules.title, 
-                    "Mission objective secured. Medal awarded.", 
-                    rules.badge_icon || "🏆"
-                );
+                comm.awardBadge(userId, rules.title, "Objective Secured!", rules.badge_icon || "🏆");
             }
         }
 
         if (updatesMade) {
             await updateDoc(userRef, { active_quests: activeQuests });
-            console.log("Dossier updated with mission progress.");
         }
 
     } catch (error) {
-        console.error("Challenge Engine Error:", error);
+        console.error("Dossier Update Failure:", error);
     }
 }
