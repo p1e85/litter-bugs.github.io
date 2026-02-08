@@ -1,9 +1,11 @@
+
 /**
  * A collection of reusable utility functions for data conversion and calculations.
  */
 
 // --- DATA CONVERSION UTILITIES ---
-// Translates [lng, lat] (Mapbox) to {lng: val, lat: val} (Firestore)
+// These functions translate data structures between what Mapbox expects ([lng, lat])
+// and what is more cleanly stored in Firestore ({lng: val, lat: val}).
 
 export function convertRouteForFirestore(coordsArray) {
     if (!coordsArray) return [];
@@ -12,6 +14,7 @@ export function convertRouteForFirestore(coordsArray) {
 
 export function convertRouteFromFirestore(coordsData) {
     if (!coordsData || coordsData.length === 0) return [];
+    // Handles older data format for backward compatibility
     if (Array.isArray(coordsData[0])) {
         return coordsData;
     }
@@ -42,16 +45,20 @@ export function convertPinsFromFirestore(pinsData) {
 
 // --- DATA MIGRATION ---
 
+/**
+ * Checks for an old, incompatible data format in local storage and clears it.
+ */
 export function checkAndClearOldData() {
     const guestSessionsJSON = localStorage.getItem('guestSessions');
     if (guestSessionsJSON) {
         try {
             const guestSessions = JSON.parse(guestSessionsJSON);
             if (guestSessions.length > 0 && guestSessions[0].route && Array.isArray(guestSessions[0].route[0])) {
-                alert("The app has been updated. Old local sessions cleared for compatibility.");
+                alert("The app has been updated. Your old locally saved sessions are no longer compatible and will be cleared.");
                 localStorage.removeItem('guestSessions');
             }
         } catch (error) {
+            console.error("Error parsing old guest sessions, clearing data.", error);
             localStorage.removeItem('guestSessions');
         }
     }
@@ -60,45 +67,29 @@ export function checkAndClearOldData() {
 // --- CALCULATION UTILITIES ---
 
 /**
- * Unified Haversine Formula
- * Calculates distance between coordinates in MILES.
- * @param {Array<Array<number>>} coordinates - [[lng, lat], [lng, lat]]
- * @returns {number} Distance in miles.
+ * Calculates the total distance of a route in meters using the Haversine formula.
+ * @param {Array<Array<number>>} coordinates - An array of [lng, lat] coordinates.
+ * @returns {number} The total distance in meters.
  */
 export function calculateRouteDistance(coordinates) {
-    if (!coordinates || coordinates.length < 2) return 0;
-    
-    const R = 3958.8; // Earth's radius in MILES
     let totalDistance = 0;
+    if (coordinates.length < 2) return 0;
 
     for (let i = 0; i < coordinates.length - 1; i++) {
-        const [lon1, lat1] = coordinates[i];
-        const [lon2, lat2] = coordinates[i + 1];
+        const p1 = { lat: coordinates[i][1], lng: coordinates[i][0] };
+        const p2 = { lat: coordinates[i + 1][1], lng: coordinates[i + 1][0] };
+        const R = 6371e3; // Earth's radius in meters
+        const φ1 = p1.lat * Math.PI / 180;
+        const φ2 = p2.lat * Math.PI / 180;
+        const Δφ = (p2.lat - p1.lat) * Math.PI / 180;
+        const Δλ = (p2.lng - p1.lng) * Math.PI / 180;
 
-        const dLat = (lat2 - lat1) * (Math.PI / 180);
-        const dLon = (lon2 - lon1) * (Math.PI / 180);
-        
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                  
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        totalDistance += R * c;
+
+        totalDistance += R * c; // Distance in meters
     }
     return totalDistance;
-}
-
-/**
- * Gets distance between two points in MILES. Used for event proximity.
- */
-export function getDistanceInMiles(lat1, lon1, lat2, lon2) {
-    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-    const R = 3958.8; 
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-    return R * c;
 }
