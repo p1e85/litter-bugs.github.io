@@ -6,333 +6,123 @@ import { clearCurrentSession } from './data.js';
 
 let locationWatcher = null;
 
-/**
- * Finds the user's current location and places a one-time marker on the map.
- */
 export function findMe() {
-    const findMeBtn = document.getElementById('findMeBtn');
-
-    // State 0: First click -> Center the user
+    const btn = document.getElementById('findMeBtn');
     if (state.findMeState === 0) {
         navigator.geolocation.getCurrentPosition(position => {
             const coords = [position.coords.longitude, position.coords.latitude];
-            state.map.flyTo({ center: coords, zoom: 16, bearing: 0, pitch: 0 });
-
+            state.map.flyTo({ center: coords, zoom: 16 });
             if (state.findMeMarker) state.findMeMarker.remove();
             state.findMeMarker = new mapboxgl.Marker().setLngLat(coords).addTo(state.map);
-
-            findMeBtn.classList.add('active');
+            btn.classList.add('active');
             state.findMeState = 1;
-
-            if (locationWatcher) navigator.geolocation.clearWatch(locationWatcher);
             locationWatcher = navigator.geolocation.watchPosition(pos => {
-                const newCoords = [pos.coords.longitude, pos.coords.latitude];
-                state.findMeMarker.setLngLat(newCoords);
-
-                if (state.findMeState === 2 && typeof pos.coords.heading === 'number' && pos.coords.heading !== null) {
-                    state.map.easeTo({ bearing: pos.coords.heading });
-                }
+                state.findMeMarker.setLngLat([pos.coords.longitude, pos.coords.latitude]);
             }, null, { enableHighAccuracy: true });
-
-        }, () => alert("Could not get your location."), { enableHighAccuracy: true });
-    }
-    // State 1: Second click -> Tilt and orient to heading
-    else if (state.findMeState === 1) {
-        state.map.easeTo({ pitch: 60, zoom: 17 });
-        findMeBtn.innerHTML = '🧭'; // Change to a compass icon
-        state.findMeState = 2;
-    }
-    // State 2: Third click -> Revert to North-up view
-    else if (state.findMeState === 2) {
-        state.map.easeTo({ pitch: 0, bearing: 0 });
-        findMeBtn.innerHTML = '📍'; // Change back to pin icon
-        state.findMeState = 1;
+        });
+    } else {
+        resetFindMeState();
     }
 }
 
-/**
- * Toggles the location tracking state (on/off).
- */
 export function toggleTracking() {
-    const trackBtn = document.getElementById('trackBtn');
     if (state.trackingWatcher) {
-        // --- Stop Tracking ---
         navigator.geolocation.clearWatch(state.trackingWatcher);
         state.trackingWatcher = null;
-        trackBtn.textContent = '🛰️ Start Tracking';
-        trackBtn.classList.remove('tracking');
-
+        document.getElementById('trackBtn').textContent = '🛰️ Start Tracking';
         document.getElementById('pictureBtn').disabled = true;
-
-        // Clear the pulsing user location dot
-        if (state.map.getSource('user-location-point')) {
-            state.map.getSource('user-location-point').setData({ type: 'Feature', geometry: { type: 'Point', coordinates: [] } });
-        }
         showCleanupSummary();
     } else {
-        // --- Start Tracking (show safety modal first) ---
         document.getElementById('safetyModal').style.display = 'flex';
     }
 }
 
-/**
- * Begins watching the user's position to draw a route.
- * This is called after the user agrees to the safety modal.
- */
 export function startTracking() {
     clearCurrentSession();
-    const trackBtn = document.getElementById('trackBtn');
     state.trackingStartTime = new Date();
-    state.cleanupPhoto = null; 
-
-    // Center map on user's starting location
-    navigator.geolocation.getCurrentPosition(pos => {
-        state.map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 16 });
-    });
-
     state.trackingWatcher = navigator.geolocation.watchPosition(pos => {
-        const newCoord = [pos.coords.longitude, pos.coords.latitude];
-        state.routeCoordinates.push(newCoord);
-
-        // Update the route line on the map
-        if (state.map.getSource('user-route')) {
-            state.map.getSource('user-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: state.routeCoordinates } });
-        }
-        // Update the pulsing user location dot
-        if (state.map.getSource('user-location-point')) {
-            state.map.getSource('user-location-point').setData({ type: 'Feature', geometry: { type: 'Point', coordinates: newCoord } });
-        }
-    }, () => {
-        alert("Error watching position. Please ensure location services are enabled.");
-    }, { enableHighAccuracy: true });
-
-    trackBtn.textContent = '🛑 Stop Tracking';
-    trackBtn.classList.add('tracking');
-
+        const coord = [pos.coords.longitude, pos.coords.latitude];
+        state.routeCoordinates.push(coord);
+        if (state.map.getSource('user-route')) state.map.getSource('user-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: state.routeCoordinates } });
+    }, null, { enableHighAccuracy: true });
+    document.getElementById('trackBtn').textContent = '🛑 Stop Tracking';
     document.getElementById('pictureBtn').disabled = false;
 }
 
-/**
- * Handles the process of selecting, compressing, and pinning a photo.
- */
 export async function handlePhoto(event) {
-    const pictureBtn = document.getElementById('pictureBtn');
-    const originalButtonText = pictureBtn.innerHTML;
-    if (!event.target.files || event.target.files.length === 0) {
-        event.target.value = '';
-        return;
-    }
+    if (!event.target.files[0]) return;
     const file = event.target.files[0];
-
-    pictureBtn.innerHTML = '...';
-    pictureBtn.disabled = true;
-
-    // Compress the image before uploading
-    const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
-    let processedFile;
-    try {
-        processedFile = await imageCompression(file, options);
-    } catch (error) {
-        console.error("Image compression error:", error);
-        alert("Error processing image.");
-        pictureBtn.innerHTML = originalButtonText;
-        pictureBtn.disabled = false;
-        event.target.value = '';
-        return;
-    }
-
-    // Get current location to tag the photo
-    navigator.geolocation.getCurrentPosition(async (position) => {
-        const coords = [position.coords.longitude, position.coords.latitude];
-        const defaultTitle = `Pin ${state.photoPins.length + 1}`;
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const coords = [pos.coords.longitude, pos.coords.latitude];
         const timestamp = Date.now();
-        let pinInfo;
-
-        // --- Handle photo based on login state ---
+        let url = "";
         if (state.currentUser) {
-            // Logged-in user: Upload to Firebase Storage
-            try {
-                const storageRef = ref(storage, `photos/${state.currentUser.uid}/${timestamp}-${processedFile.name}`);
-                const snapshot = await uploadBytes(storageRef, processedFile);
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                pinInfo = { id: `pin-${timestamp}`, coords, imageURL: downloadURL, title: defaultTitle, category: 'Other' };
-            } catch (error) {
-                console.error("Error uploading photo:", error);
-                alert("Photo upload failed.");
-            }
-        } else {
-            // Guest user: Store image as Base64 data URL
-            pinInfo = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(processedFile);
-                reader.onload = e => resolve({ id: `pin-${timestamp}`, coords, image: e.target.result, title: defaultTitle, category: 'Other' });
-            });
+            const sRef = ref(storage, `photos/${state.currentUser.uid}/${timestamp}.jpg`);
+            await uploadBytes(sRef, file);
+            url = await getDownloadURL(sRef);
         }
-
-        if (pinInfo) {
-            state.photoPins.push(pinInfo);
-            const newMarker = createAndAddMarker(pinInfo, 'user');
-            newMarker.togglePopup(); 
-            updateUserPinsSource();
-        }
-
-        pictureBtn.innerHTML = originalButtonText;
-        pictureBtn.disabled = false;
-        event.target.value = '';
-    }, () => {
-        alert("Could not get location. Photo was not pinned.");
-        pictureBtn.innerHTML = originalButtonText;
-        pictureBtn.disabled = false;
-        event.target.value = '';
-    }, { enableHighAccuracy: true });
+        const pin = { id: timestamp, coords, imageURL: url, title: `Pin ${state.photoPins.length + 1}`, category: 'Other' };
+        state.photoPins.push(pin);
+        createAndAddMarker(pin, 'user');
+        updateUserPinsSource();
+    });
 }
 
-/**
- * Calculates and displays the summary of the completed tracking session.
- */
 function showCleanupSummary() {
-    if (!state.trackingStartTime) return;
-
-    const durationMs = new Date() - state.trackingStartTime;
-    const distanceMeters = calculateRouteDistance(state.routeCoordinates);
-    const pinsCount = state.photoPins.length;
-
-    const distanceMiles = (distanceMeters * 0.000621371).toFixed(2);
-    const minutes = Math.floor(durationMs / 60000);
-    const seconds = ((durationMs % 60000) / 1000).toFixed(0);
-
-    document.getElementById('summaryDistance').textContent = `${distanceMiles} mi`;
-    document.getElementById('summaryPins').textContent = pinsCount;
-    document.getElementById('summaryDuration').textContent = `${minutes}m ${seconds}s`;
+    const dist = calculateRouteDistance(state.routeCoordinates);
+    document.getElementById('summaryDistance').textContent = `${dist.toFixed(2)} mi`;
+    document.getElementById('summaryPins').textContent = state.photoPins.length;
     document.getElementById('summaryModal').style.display = 'flex';
-
-    state.trackingStartTime = null; 
+    
+    if (state.currentUser) {
+        updateUserChallenges(state.currentUser.uid, dist, state.photoPins.length);
+    }
 }
 
 /**
- * Shares the cleanup results using the Web Share API.
+ * Updates Mission Progress
+ * Unified to use the profile 'active_quests' field.
  */
-export async function shareCleanupResults() {
-    const distance = document.getElementById('summaryDistance').textContent;
-    const pins = document.getElementById('summaryPins').textContent;
-    const shareText = `I just cleaned up ${distance} and pinned ${pins} items with the Litter Troopers app! Join the movement and help clean our planet. #LitterTroopers #Cleanup`;
+export async function updateUserChallenges(userId, milesCleaned, itemsPinned) {
+    try {
+        const userRef = doc(db, "publicProfiles", userId);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) return;
 
-    const shareData = {
-        title: 'My Litter Troopers Cleanup!',
-        text: shareText,
-        url: 'https://www.littertroopers.com/' 
-    };
+        const data = userSnap.data();
+        const quests = data.active_quests || {};
+        let changed = false;
 
-    if (state.cleanupPhoto) {
-        const file = new File([state.cleanupPhoto], "cleanup_stats.jpg", {
-            type: state.cleanupPhoto.type,
-            lastModified: new Date().getTime()
-        });
-        shareData.files = [file];
-    }
+        for (const [id, quest] of Object.entries(quests)) {
+            if (quest.status !== 'active') continue;
+            
+            // Fetch challenge rules
+            const chalSnap = await getDoc(doc(db, "challenges", id));
+            if (!chalSnap.exists()) continue;
+            const rules = chalSnap.data();
 
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-        try {
-            await navigator.share(shareData);
-            console.log('Cleanup shared successfully!');
-        } catch (err) {
-            console.error('Share was canceled or failed:', err);
-        }
-    } else {
-        try {
-            let fallbackText = shareText + " " + shareData.url;
-            if (state.cleanupPhoto) {
-                fallbackText += "\n\n(A photo was also taken, but it can't be copied to the clipboard.)";
+            const oldProg = quest.progress || 0;
+            const added = (rules.challengeType === 'count') ? itemsPinned : milesCleaned;
+            quest.progress = parseFloat((oldProg + added).toFixed(2));
+            
+            const goal = rules.goalValue || rules.goal_miles;
+            if (quest.progress >= goal) {
+                quest.status = 'completed';
+                const comm = await import('./community.js');
+                comm.awardBadge(userId, rules.title, "Mission Accomplished!", rules.badge_icon || "🏆");
             }
-            await navigator.clipboard.writeText(fallbackText);
-            alert('Cleanup stats copied to clipboard!');
-        } catch (err) {
-            console.error('Failed to copy to clipboard: ', err);
-            alert('Sharing is not supported on this browser.');
+            changed = true;
         }
-    }
+
+        if (changed) await updateDoc(userRef, { active_quests: quests });
+        
+    } catch (e) { console.error("Quest Update Failed:", e); }
 }
 
 export function resetFindMeState() {
-    if (locationWatcher) {
-        navigator.geolocation.clearWatch(locationWatcher);
-        locationWatcher = null;
-    }
-    if (state.findMeMarker) {
-        state.findMeMarker.remove();
-        state.findMeMarker = null;
-    }
-    document.getElementById('findMeBtn').classList.remove('active');
-    document.getElementById('findMeBtn').innerHTML = '📍';
+    if (locationWatcher) navigator.geolocation.clearWatch(locationWatcher);
+    if (state.findMeMarker) state.findMeMarker.remove();
+    state.findMeMarker = null;
     state.findMeState = 0;
-}
-
-/**
- * Updates the user's active challenges based on the session data.
- * NEW: Handles 'count' challenges and Badge Awarding
- */
-export async function updateUserChallenges(userId, sessionDistance, itemsCollected) {
-    try {
-        // 1. Get all active challenges for this user
-        const q = query(
-            collection(db, "activeChallenges"), 
-            where("userId", "==", userId),
-            where("status", "==", "active")
-        );
-        
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) return;
-
-        // 2. Loop through them and update progress
-        const updates = [];
-        
-        // Dynamically import community to award badges (avoids circular dependency)
-        let communityModule = null;
-
-        for (const docSnap of querySnapshot.docs) {
-            const data = docSnap.data();
-            let newProgress = data.progress;
-            
-            // --- LOGIC SWITCH: Check Type ---
-            if (data.type === 'distance') {
-                newProgress += sessionDistance;
-            } else if (data.type === 'count') {
-                const itemsToAdd = itemsCollected || 0; 
-                newProgress += itemsToAdd;
-            }
-            
-            // 3. Check for Completion
-            let newStatus = data.status;
-            if (newProgress >= data.goal) {
-                newStatus = 'completed';
-                newProgress = data.goal; // Cap it
-                
-                // --- AWARD BADGE ---
-                try {
-                    if (!communityModule) communityModule = await import('./community.js');
-                    const icon = data.type === 'distance' ? '🏃' : '🗑️';
-                    
-                    await communityModule.awardBadge(
-                        userId, 
-                        data.title, 
-                        `Completed the ${data.title} challenge.`,
-                        icon
-                    );
-                } catch (e) { console.error("Badge Error:", e); }
-            }
-            
-            // Prepare the update
-            updates.push(updateDoc(doc(db, "activeChallenges", docSnap.id), {
-                progress: newProgress,
-                status: newStatus,
-                lastUpdated: new Date()
-            }));
-        }
-        
-        await Promise.all(updates);
-        console.log("Challenges updated successfully.");
-        
-    } catch (error) {
-        console.error("Error updating challenges:", error);
-    }
+    document.getElementById('findMeBtn').classList.remove('active');
 }
