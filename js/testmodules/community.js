@@ -494,44 +494,53 @@ function showPopup(badgeKey) {
 // --- POI Listeners & Meetups ---
 
 export function setupPoiClickListeners() {
-    const poiLayers = ['poi-label', 'transit-label', 'airport-label', 'natural-point-label', 'natural-line-label', 'water-point-label', 'water-line-label', 'waterway-label'];
-    
-    poiLayers.forEach(layerId => {
-        if (state.map.getLayer(layerId)) {
-            state.map.on('click', layerId, (e) => {
-                if (e.features.length > 0) {
-                    const feature = e.features[0];
-                    const name = feature.properties.name || "Unknown Location";
-                    const coords = e.lngLat; 
+    if (!state.map) return;
 
-                    const popupHTML = `
-                        <div>
-                            <strong>${name}</strong>
-                            <div class="poi-popup-buttons">
-                                <button class="modal-button schedule-btn">Schedule Meetup</button>
-                                <button class="modal-button view-btn">View Meetups</button>
-                            </div>
-                        </div>`;
+    state.map.on('click', (e) => {
+        // Query features at the clicked point that belong to the 'poi-label' layer
+        const features = state.map.queryRenderedFeatures(e.point, {
+            layers: ['poi-label'] 
+        });
+
+        if (!features.length) return;
+
+        const feature = features[0];
+        const name = feature.properties.name || "Designated Area";
+        const coords = feature.geometry.coordinates;
+
+        // Ensure the coordinates are in the correct format [lng, lat]
+        const lngLat = Array.isArray(coords[0]) ? coords[0] : coords;
+
+        // Create the Tactical Briefing Popup
+        new mapboxgl.Popup({ offset: 25, closeButton: true })
+            .setLngLat(lngLat)
+            .setHTML(`
+                <div class="poi-briefing">
+                    <div class="poi-header">
+                        <h3>📍 Mission Site</h3>
+                    </div>
+                    <div class="poi-body">
+                        <strong style="display:block; margin-bottom:5px; color:#333;">${name}</strong>
+                        <p>Status: Ready for Recon<br>City: Chicago</p>
                         
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat(coords)
-                        .setHTML(popupHTML)
-                        .addTo(state.map);
+                        <button class="modal-button primary" 
+                                style="width:100%; padding:10px; font-weight:bold; background:#4A7C59; border:none; color:white; border-radius:6px; cursor:pointer;"
+                                onclick="window.openMeetupForm('${name.replace(/'/g, "\\'")}', ${lngLat[1]}, ${lngLat[0]})">
+                            📅 SCHEDULE MEETUP
+                        </button>
+                    </div>
+                </div>
+            `)
+            .addTo(state.map);
+    });
 
-                    popup.getElement().querySelector('.schedule-btn').addEventListener('click', () => {
-                        openMeetupModal(name, coords.lat, coords.lng);
-                        popup.remove();
-                    });
+    // Change cursor to pointer when hovering over a POI
+    state.map.on('mouseenter', 'poi-label', () => {
+        state.map.getCanvas().style.cursor = 'pointer';
+    });
 
-                    popup.getElement().querySelector('.view-btn').addEventListener('click', () => {
-                        openViewMeetupsModal(name);
-                        popup.remove();
-                    });
-                }
-            });
-            state.map.on('mouseenter', layerId, () => { state.map.getCanvas().style.cursor = 'pointer'; });
-            state.map.on('mouseleave', layerId, () => { state.map.getCanvas().style.cursor = ''; });
-        }
+    state.map.on('mouseleave', 'poi-label', () => {
+        state.map.getCanvas().style.cursor = '';
     });
 }
 
