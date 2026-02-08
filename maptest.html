@@ -332,11 +332,18 @@
 
 <div id="eventsModal" class="modal-overlay">
     <div class="modal-content">
-        <h3>📅 Local Events</h3>
-        <div id="eventsList">
-            </div>
+        <button class="close-btn">&times;</button>
+        <h2>📅 Local Cleanups</h2>
         
-        <button id="btnEventsBack" class="modal-button secondary">Back to Menu</button>
+        <div id="eventsList" class="scrollable-list">
+            </div>
+
+        <button id="createMeetupBtn" class="modal-button btn-primary" onclick="openModal('meetupModal')">
+            ➕ Host a Cleanup
+        </button>
+        <button id="btnEventsBack" class="modal-button btn-secondary">
+            ← Back to Hub
+        </button>
     </div>
 </div>
     
