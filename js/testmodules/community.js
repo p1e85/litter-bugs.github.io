@@ -601,26 +601,18 @@ export async function handleMeetupSubmit() {
     }
 }
 
-// --- Fetch All Events (With Pagination & Admin Delete) ---
-// --- EVENTS / MEETUPS SYSTEM ---
-
+// --- EVENTS / MEETUPS SYSTEM (Fixed: Uses 'eventDate') ---
 export async function fetchAndDisplayAllEvents() {
     const list = document.getElementById('eventsList');
-    if (!list) {
-        console.error("Error: Element 'eventsList' not found in HTML.");
-        return;
-    }
+    if (!list) return;
 
     list.innerHTML = '<p style="text-align:center;">Scanning for local signals...</p>';
 
     try {
-        // 1. Query the "meetups" collection
-        // Note: We are ordering by date. 
-        // If you want to show ONLY future events, we would add: where("date", ">=", new Date().toISOString())
-        // For now, we show EVERYTHING so you can verify your data loads.
+        // 1. Query using the correct field "eventDate"
         const q = query(
             collection(db, "meetups"),
-            orderBy("date", "asc")
+            orderBy("eventDate", "asc") // Sort by date
         );
 
         const querySnapshot = await getDocs(q);
@@ -630,43 +622,64 @@ export async function fetchAndDisplayAllEvents() {
             list.innerHTML = `
                 <div style="text-align:center; padding:20px; color:#666;">
                     <h3>No Active Signals</h3>
-                    <p>There are no upcoming cleanups scheduled.</p>
+                    <p>There are no scheduled cleanups.</p>
                 </div>
             `;
             return;
         }
 
-        // 2. Loop through events and create cards
+        // 2. Loop and Create Cards
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const eventId = docSnap.id;
+            
+            // --- DATE & TIME FORMATTING ---
+            let dateStr = "Date TBD";
+            let timeStr = "";
+            let isPast = false;
 
-            // Basic Date Formatting
-            let dateDisplay = data.date;
-            try {
-                // If it's a Timestamp, convert it
-                if (data.date && data.date.seconds) {
-                    dateDisplay = new Date(data.date.seconds * 1000).toLocaleDateString();
+            if (data.eventDate && data.eventDate.seconds) {
+                const dateObj = new Date(data.eventDate.seconds * 1000);
+                
+                // Check if the event is in the past
+                if (dateObj < new Date()) {
+                    isPast = true; 
                 }
-            } catch (e) {}
+
+                // Format the Date (e.g., "Jan 25, 2026")
+                dateStr = dateObj.toLocaleDateString(undefined, { 
+                    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
+                });
+
+                // Format the Time (e.g., "8:00 PM")
+                timeStr = dateObj.toLocaleTimeString(undefined, { 
+                    hour: 'numeric', minute: '2-digit' 
+                });
+            }
+
+            // Visual style for Past vs Upcoming
+            const cardOpacity = isPast ? '0.6' : '1';
+            const statusLabel = isPast ? '<span style="color:red; font-size:0.8em;">(ENDED)</span>' : '';
 
             const card = document.createElement('div');
-            card.className = 'hub-card'; // Reuse your card styling
+            card.className = 'hub-card'; 
             card.style.display = 'flex';
             card.style.flexDirection = 'column';
             card.style.gap = '5px';
             card.style.textAlign = 'left';
-            card.style.borderLeft = '4px solid #4682B4'; // Blue accent for events
+            card.style.borderLeft = isPast ? '4px solid #ccc' : '4px solid #4682B4';
+            card.style.opacity = cardOpacity;
 
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
-                        <h3 style="margin:0; font-size:1.1em;">${data.title || 'Untitled Event'}</h3>
+                        <h3 style="margin:0; font-size:1.1em;">
+                            ${data.title || 'Untitled Event'} ${statusLabel}
+                        </h3>
                         <div style="font-size:0.9em; color:#666;">
-                            📅 <strong>${dateDisplay}</strong> @ ${data.time || 'TBD'}
+                            📅 <strong>${dateStr}</strong> @ ${timeStr}
                         </div>
                     </div>
-                    <span style="font-size:1.5em;">📍</span>
+                    <span style="font-size:1.5em;">${isPast ? '🏁' : '📍'}</span>
                 </div>
                 
                 <p style="font-size:0.9em; margin:5px 0; color:#444;">
@@ -674,13 +687,14 @@ export async function fetchAndDisplayAllEvents() {
                 </p>
 
                 <div style="font-size:0.85em; color:#888;">
-                    <strong>Location:</strong> ${data.location || 'Unknown'}
+                    <strong>Location:</strong> ${data.poiName || data.location || 'Unknown'}
                 </div>
 
+                ${!isPast ? `
                 <button class="modal-button btn-secondary" style="margin-top:10px; font-size:0.8em; padding:5px 10px;" 
                     onclick="alert('RSVP feature coming soon!')">
                     👋 I'll be there
-                </button>
+                </button>` : ''}
             `;
 
             list.appendChild(card);
