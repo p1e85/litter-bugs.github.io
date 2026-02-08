@@ -645,22 +645,6 @@ if (btnFinalizeSquad) {
 //   fetchLocalSquads(); // Refresh list every time it opens
 //});
 
-    
-
-// Locate the Initialize button and wire up the click event
-const btnFinalizeSquad = document.getElementById('btnFinalizeSquad');
-
-if (btnFinalizeSquad) {
-    btnFinalizeSquad.onclick = () => {
-        // Safety check to ensure the function is imported correctly
-        if (typeof initializeSquad === 'function') {
-            initializeSquad();
-        } else {
-            console.error("ReferenceError: initializeSquad is not available in ui.js");
-        }
-    };
-}
-
 document.getElementById('btnFinalizeSquad').addEventListener('click', initializeSquad);
     
     // Generic Close Listeners
