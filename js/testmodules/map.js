@@ -9,35 +9,33 @@ import { showPublicProfile } from './ui.js';
 export function initializeMap() {
     mapboxgl.accessToken = 'pk.eyJ1IjoicDFjcmVhdGlvbnMiLCJhIjoiY2p6ajZvejJmMDZhaTNkcWpiN294dm12eCJ9.8ckNT6kfuJry7K7GAeIuxw';
     
-    // 1. Initialize the Map
+    // 1. Initialize the Map centered on Chicago
     state.map = new mapboxgl.Map({
         container: 'map',
         style: mapStyles[state.currentStyleIndex].url,
-        //center: [-87.66, 42.01], // Centered on Rogers Park
-        center: -87.6298, 41.8781,
-        zoom: 13
+        center: [-87.6298, 41.8781], // Chicago Loop Center
+        zoom: 10.5
     });
 
     // 2. Initialize the Geocoder
     const geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
-        mapboxgl: mapboxgl, // CRITICAL: Fixes the getZoom error
+        mapboxgl: mapboxgl,
         types: 'country,region,place,postcode,locality,neighborhood,address,poi', 
         proximity: {
-            longitude: state.map.getCenter().lng,
-            latitude: state.map.getCenter().lat
+            longitude: -87.6298,
+            latitude: 41.8781
         },
         placeholder: 'Search for parks, addresses, or landmarks...',
-        marker: false // Set to false because we are adding a custom Target marker below
+        marker: false // Using custom Target marker below
     });
     
-    // Append Geocoder to your UI container
     const geocoderContainer = document.getElementById('geocoder-container');
     if (geocoderContainer) {
         geocoderContainer.appendChild(geocoder.onAdd(state.map));
     }
 
-    // 3. THE FLY-TO LOGIC
+    // 3. THE FLY-TO & STYLED POPUP LOGIC
     geocoder.on('result', (event) => {
         const coords = event.result.geometry.coordinates;
         const name = event.result.text;
@@ -46,17 +44,34 @@ export function initializeMap() {
 
         state.map.flyTo({
             center: coords,
-            zoom: 15.5,       // Tactical zoom level
-            pitch: 45,         // Tilt the map for a 3D perspective
+            zoom: 15.5,
+            pitch: 45,
             bearing: 0,
-            essential: true,   // Respects motion preferences
-            duration: 3000     // 3 seconds for a smooth "glide"
+            essential: true,
+            duration: 3000
         });
 
-        // Add a temporary "Target" marker at the searched POI
-        const targetMarker = new mapboxgl.Marker({ color: '#dc3545' }) // Red for Target
+        // Add a tactical "Target" marker at the searched POI
+        new mapboxgl.Marker({ color: '#dc3545' }) 
             .setLngLat(coords)
-            .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>Target: ${name}</h3><p>Scout this area for litter.</p>`))
+            .setPopup(new mapboxgl.Popup({ offset: 25, closeButton: true })
+                .setHTML(`
+                    <div class="poi-briefing">
+                        <div class="poi-header">
+                            <h3>📍 Mission Site</h3>
+                        </div>
+                        <div class="poi-body">
+                            <strong style="display:block; margin-bottom:5px; color:#333;">${name}</strong>
+                            <p>Status: Ready for Recon<br>City: Chicago</p>
+                            
+                            <button class="modal-button primary" 
+                                    style="width:100%; padding:10px; font-weight:bold; background:#4A7C59; border:none; color:white; border-radius:6px; cursor:pointer;"
+                                    onclick="window.openMeetupForm('${name.replace(/'/g, "\\'")}', ${coords[1]}, ${coords[0]})">
+                                📅 SCHEDULE MEETUP
+                            </button>
+                        </div>
+                    </div>
+                `))
             .addTo(state.map);
     });
     
@@ -70,7 +85,6 @@ export function initializeMap() {
         console.log("Geocoder proximity updated to map center:", newCenter);
     });
 
-    // Handle Search Input focus (Mobile Keyboard Fix)
     const searchInput = document.querySelector('#geocoder-container .mapboxgl-ctrl-geocoder--input');
     if (searchInput) {
         searchInput.setAttribute('readonly', 'readonly');
@@ -79,11 +93,10 @@ export function initializeMap() {
         };
     }
 
-    // Map Load Logic
     state.map.on('load', () => {
         initializeMapLayers();
         setupPoiClickListeners(); // From community.js
-        setupSectorVisuals();     // Ensure sectors are ready
+        setupSectorVisuals();
     });
 
     state.map.on('zoom', toggleMarkerVisibility);
@@ -93,7 +106,6 @@ export function initializeMap() {
  * Sets up the initial GeoJSON sources and layers for routes and pins.
  */
 function initializeMapLayers() {
-  // User's route line
   if (!state.map.getSource('user-route')) {
     state.map.addSource('user-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
   }
@@ -107,7 +119,6 @@ function initializeMapLayers() {
     });
   }
 
-  // User's current location dot
   if (!state.map.getSource('user-location-point')) {
     state.map.addSource('user-location-point', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', 'coordinates': [] } } });
   }
@@ -140,7 +151,6 @@ export function changeMapStyle() {
         setupSectorVisuals(); 
         updateSwarmPulse();   
         
-        // Respect the Sector Toggle state
         const sectorBtn = document.getElementById('toggleSectorsBtn');
         const isSectorsActive = sectorBtn && sectorBtn.classList.contains('active');
         
