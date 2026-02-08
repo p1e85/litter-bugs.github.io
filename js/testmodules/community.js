@@ -5,39 +5,17 @@ import {
     getDownloadURL, runTransaction 
 } from './firebase.js';
 import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config.js';
-import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
+// PHASE 2 UPDATE: Importing unified math from utils.js
+import { 
+    convertRouteForFirestore, 
+    convertPinsForFirestore, 
+    convertRouteFromFirestore, 
+    convertPinsFromFirestore,
+    calculateRouteDistance,
+    getDistanceInMiles 
+} from './utils.js';
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
-
-
-// --- Helper Function: Calculate Distance ---
-function calculateRouteDistance(coords) {
-    if (!coords || coords.length < 2) return 0;
-    const R = 3958.8;
-    let totalDistance = 0;
-    for (let i = 0; i < coords.length - 1; i++) {
-        const [lon1, lat1] = coords[i];
-        const [lon2, lat2] = coords[i + 1];
-        const dLat = (lat2 - lat1) * (Math.PI / 180);
-        const dLon = (lon2 - lon1) * (Math.PI / 180);
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        totalDistance += R * c;
-    }
-    return totalDistance;
-}
-
-// --- Helper: Get Distance for Events ---
-function getDistanceInMiles(lat1, lon1, lat2, lon2) {
-    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-    const R = 3958.8; 
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-    return R * c;
-}
 
 // --- Community View (Updated with God Mode) ---
 export async function fetchAndDisplayCommunityRoutes() {
@@ -319,7 +297,6 @@ export async function populatePublishedRoutesList() {
 }
 
 async function deletePublishedRoute(routeId) {
-    // Only confirm if not already confirmed by the UI calling this
     try {
         await deleteDoc(doc(db, "publishedRoutes", routeId));
         alert("Route deleted from the community map.");
@@ -343,11 +320,9 @@ export async function loadProfileForEditing() {
             document.getElementById('locationInput').value = profileData.location || '';
             document.getElementById('coffeeLinkInput').value = profileData.buyMeACoffeeLink || '';
 
-            // --- TITLE LOGIC ---
             const titleSelect = document.getElementById('titleSelect');
             if (titleSelect) {
                 titleSelect.value = profileData.selectedTitle || '';
-                // Manually trigger the "Requirement" text update
                 titleSelect.dispatchEvent(new Event('change'));
             }
         }
@@ -362,8 +337,6 @@ export async function saveProfile() {
     const bio = document.getElementById('bioInput').value;
     const location = document.getElementById('locationInput').value;
     const coffeeLink = document.getElementById('coffeeLinkInput').value;
-    
-    // Get the key (e.g., 'og_9') from the dropdown
     const selectedTitle = document.getElementById('titleSelect').value;
 
     try {
@@ -372,7 +345,7 @@ export async function saveProfile() {
             bio, 
             location, 
             buyMeACoffeeLink: coffeeLink,
-            selectedTitle: selectedTitle // SAVE THE KEY
+            selectedTitle: selectedTitle 
         });
         alert("Profile updated successfully!");
         document.getElementById('profileModal').style.display = 'none';
@@ -389,9 +362,6 @@ export async function fetchAndDisplayLeaderboard(metric) {
     
     try {
         const profilesRef = collection(db, "publicProfiles");
-
-        // 🛡️ THE FIX: Added 'where(metric, ">", 0)' 
-        // This ignores anyone with 0 pins or 0 distance.
         const q = query(
             profilesRef, 
             where(metric, ">", 0), 
@@ -413,11 +383,11 @@ export async function fetchAndDisplayLeaderboard(metric) {
             const profileData = doc.data();
             const li = document.createElement('li');
             li.dataset.userid = doc.id;
-            
             li.classList.toggle('current-user-entry', state.currentUser && doc.id === state.currentUser.uid);
             
+            // Phase 2 Math: metric totals are in Miles, so just display.
             const score = metric === 'totalDistance' 
-                ? `${((profileData.totalDistance || 0) * 0.000621371).toFixed(2)} mi` 
+                ? `${(profileData.totalDistance || 0).toFixed(2)} mi` 
                 : (profileData.totalPins || 0);
 
             li.innerHTML = `
@@ -452,7 +422,8 @@ export async function fetchAndDisplayMyStats() {
             return;
         }
         const profileData = publicProfileSnap.data();
-        const distanceMiles = ((profileData.totalDistance || 0) * 0.000621371).toFixed(2);
+        // Phase 2: data is already stored in Miles
+        const distanceMiles = (profileData.totalDistance || 0).toFixed(2);
         let statsHTML = `
             <div class="my-stats-grid">
                 <div class="stat-card"><div class="my-stats-value">${profileData.totalPins || 0}</div><div class="my-stats-label">Items Pinned</div></div>
@@ -478,16 +449,17 @@ export async function fetchAndDisplayMyStats() {
     }
 }
 
+// PHASE 1 FIX: Synced to static HTML ID 'achievementModal'
 function showPopup(badgeKey) {
     const badge = allBadges[badgeKey];
     if (!badge) return;
-    const Modal = document.getElementById('Modal');
-    // Assuming you have modal structure for badges
-    if(Modal) {
-        Modal.querySelector('.badge-icon').textContent = badge.icon;
-        document.getElementById('badgeName').textContent = badge.name;
-        document.getElementById('badgeDescription').textContent = badge.description;
-        Modal.style.display = 'flex';
+    const modal = document.getElementById('achievementModal');
+    if(modal) {
+        const iconEl = modal.querySelector('.achievement-icon');
+        if(iconEl) iconEl.textContent = badge.icon;
+        document.getElementById('achievementName').textContent = badge.name;
+        document.getElementById('achievementDescription').textContent = badge.description;
+        modal.style.display = 'flex';
     }
 }
 
@@ -497,7 +469,6 @@ export function setupPoiClickListeners() {
     if (!state.map) return;
 
     state.map.on('click', (e) => {
-        // Query features at the clicked point that belong to the 'poi-label' layer
         const features = state.map.queryRenderedFeatures(e.point, {
             layers: ['poi-label'] 
         });
@@ -508,10 +479,11 @@ export function setupPoiClickListeners() {
         const name = feature.properties.name || "Designated Area";
         const coords = feature.geometry.coordinates;
 
-        // Ensure the coordinates are in the correct format [lng, lat]
         const lngLat = Array.isArray(coords[0]) ? coords[0] : coords;
 
-        // Create the Tactical Briefing Popup
+        // Corrected variable names to avoid "rawName is not defined" error
+        const escapedName = name.replace(/'/g, "\\'");
+
         new mapboxgl.Popup({ offset: 25, closeButton: true })
             .setLngLat(lngLat)
             .setHTML(`
@@ -520,7 +492,7 @@ export function setupPoiClickListeners() {
                         <h3>📍 MISSION SITE</h3>
                     </div>
                     <div class="poi-body">
-                        <strong style="display:block; margin-bottom:10px; color:#333;">${rawName}</strong>
+                        <strong style="display:block; margin-bottom:10px; color:#333;">${name}</strong>
                         
                         <button class="modal-button" 
                                 style="width:100%; margin-bottom:8px; padding:10px; background:#f0f0f0; border:1px solid #ccc; border-radius:6px; cursor:pointer;"
@@ -539,7 +511,6 @@ export function setupPoiClickListeners() {
             .addTo(state.map);
     });
 
-    // Change cursor to pointer when hovering over a POI
     state.map.on('mouseenter', 'poi-label', () => {
         state.map.getCanvas().style.cursor = 'pointer';
     });
@@ -554,7 +525,6 @@ function openMeetupModal(poiName, lat, lng) {
         alert("Please log in to schedule a meetup.");
         return;
     }
-    
     document.getElementById('meetupLocationName').textContent = poiName;
     document.getElementById('poiNameInput').value = poiName;
     document.getElementById('meetupLat').value = lat;
@@ -570,8 +540,6 @@ export function validateMeetupForm() {
     const dateVal = document.getElementById('meetupDateInput').value;
     const safetyChecked = document.getElementById('safetyCheckbox').checked;
     const createBtn = document.getElementById('createMeetupBtn');
-    
-    // Profanity check removed for brevity, assume utility exists or skip
     createBtn.disabled = !(title && description && dateVal && safetyChecked);
 }
 
@@ -618,7 +586,6 @@ export async function handleMeetupSubmit() {
     }
 }
 
-// --- Fetch All Events (With Pagination & Admin Delete) ---
 export async function fetchAndDisplayAllEvents() {
     const eventsList = document.getElementById('eventsList');
     if (!eventsList) return;
@@ -629,7 +596,6 @@ export async function fetchAndDisplayAllEvents() {
     let userPos = null;
     let isAdmin = false;
 
-    // Parallel Fetch for GPS & Admin Role
     try {
         const [posResult, profileSnap] = await Promise.all([
             new Promise((resolve, reject) => {
@@ -758,7 +724,6 @@ export async function fetchAndDisplayAllEvents() {
                 eventsList.appendChild(li);
             });
 
-            // Load More Logic
             const hasMoreLocal = visibleCount < allEvents.length;
             const mightHaveMoreDB = allEvents.length === dbLimit;
 
@@ -825,7 +790,6 @@ async function deleteMeetup(meetupId) {
     }
 }
 
-// --- Like Functionality ---
 export async function toggleRouteLike(routeId) {
     if (!state.currentUser) {
         alert("Please log in to like a route.");
@@ -859,8 +823,6 @@ export async function toggleRouteLike(routeId) {
         return null;
     }
 }
-
-// --- Challenges & Achievements (RESTORED & FIXED) ---
 
 export async function openAchievementsModal() {
     const grid = document.getElementById('achievementsList');
@@ -962,10 +924,8 @@ export async function openEventBadgesModal() {
     }
 }
 
-// --- Public Challenges UI ---
-// Replacing "openCurrentChallenges" with "loadPublicChallenges" to match your desired UI flow
 export async function openCurrentChallenges() {
-    const listContainer = document.getElementById('activeChallengesList'); // Ensure this ID matches your HTML
+    const listContainer = document.getElementById('publicChallengeList'); 
     if (!listContainer) return;
     listContainer.innerHTML = "<p>Loading quests...</p>";
 
@@ -983,7 +943,6 @@ export async function openCurrentChallenges() {
             return;
         }
 
-        // Sort: Active Joined -> New -> Completed
         challenges.sort((a, b) => {
             const statA = myQuests[a.id] ? myQuests[a.id].status : 'new';
             const statB = myQuests[b.id] ? myQuests[b.id].status : 'new';
@@ -1035,7 +994,7 @@ export async function openCurrentChallenges() {
                     if (!state.currentUser) { alert("Please login first!"); return; }
                     btn.innerText = "Joining...";
                     await joinChallenge(chal.id, chal.title, state.currentUser.uid);
-                    openCurrentChallenges(); // Refresh
+                    openCurrentChallenges(); 
                 });
             }
             listContainer.appendChild(card);
@@ -1046,7 +1005,6 @@ export async function openCurrentChallenges() {
     }
 }
 
-// Replacing openPastChallenges with real logic
 export async function openPastChallenges(type) {
     const content = document.getElementById('pastChallengesContent');
     content.innerHTML = `<p>Loading ${type} history...</p>`;
@@ -1103,7 +1061,7 @@ export async function createNewChallenge(title, description, type, goal, timeLim
             description: description,
             challengeType: type || 'distance',
             goalValue: Number(goal),
-            goal_miles: Number(goal), // Legacy support
+            goal_miles: Number(goal), 
             timeLimit: timeLimit ? Number(timeLimit) : null,
             badge_icon: badgeIcon || "🏅",
             created_at: serverTimestamp(),
@@ -1121,7 +1079,7 @@ export async function deleteChallenge(challengeId) {
     try {
         await deleteDoc(doc(db, "challenges", challengeId));
         alert("🗑️ Challenge Deleted!");
-        openAdminChallengeModal(); // Refresh list
+        openAdminChallengeModal(); 
     } catch (e) {
         console.error("Error deleting:", e);
         alert("Error: " + e.message);
@@ -1134,7 +1092,6 @@ export async function getAdminChallenges() {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-// --- NEW: Open Admin Modal with Clone Support ---
 export function openAdminChallengeModal() {
     const list = document.getElementById('adminChallengeList');
     if (!list) return;
@@ -1142,14 +1099,11 @@ export function openAdminChallengeModal() {
     const modal = document.getElementById('adminChallengeModal');
     if (modal) modal.style.display = 'flex';
 
-    // Clone Helper
     const fillFormWith = (data) => {
-        document.getElementById('challengeTitleInput').value = data.title;
-        document.getElementById('challengeDescInput').value = data.description;
-        document.getElementById('challengeGoalInput').value = data.goalValue || data.goal_miles;
-        document.getElementById('challengeTypeInput').value = data.challengeType || 'distance';
-        document.getElementById('challengeStartInput').value = ''; 
-        document.getElementById('challengeEndInput').value = '';
+        document.getElementById('adminChalTitle').value = data.title;
+        document.getElementById('adminChalDesc').value = data.description;
+        document.getElementById('adminChalGoal').value = data.goalValue || data.goal_miles;
+        document.getElementById('adminChalType').value = data.challengeType || 'distance';
         alert(`Cloned "${data.title}"! Set new dates to restart it.`);
     };
 
@@ -1193,7 +1147,6 @@ export async function joinChallenge(challengeId, challengeTitle, userId) {
         return true;
     } catch (e) {
         console.error("Error joining challenge:", e);
-        // Fallback for new users without map field
         const userRef = doc(db, "users", userId);
         const setObj = { active_quests: {} };
         setObj.active_quests[challengeId] = {
@@ -1219,8 +1172,6 @@ export async function getUserQuests(userId) {
         return {};
     }
 }
-
-// --- CHALLENGE TRACKING ---
 
 export async function updateChallengeProgress(userId, distanceMiles) {
     const userRef = doc(db, "users", userId);
@@ -1289,7 +1240,7 @@ export async function updateChallengeProgress(userId, distanceMiles) {
 
 export async function grantTitle(userId, titleKey) {
     const profileRef = doc(db, "publicProfiles", userId);
-    let newlyUnlocked = false; // Track if this is a fresh unlock
+    let newlyUnlocked = false; 
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -1302,11 +1253,10 @@ export async function grantTitle(userId, titleKey) {
             if (!unlockedTitles.includes(titleKey)) {
                 unlockedTitles.push(titleKey);
                 transaction.update(profileRef, { unlockedTitles: unlockedTitles });
-                newlyUnlocked = true; // Mark as new!
+                newlyUnlocked = true; 
             }
         });
 
-        // If it's a new unlock, let the user know!
         if (newlyUnlocked && allTitles[titleKey]) {
             alert(`🏆 NEW TITLE UNLOCKED: ${allTitles[titleKey].name}`);
         }
@@ -1316,9 +1266,6 @@ export async function grantTitle(userId, titleKey) {
     }
 }
 
-/**
- * Checks if the user qualifies for any new titles based on their updated stats.
- */
 export async function checkForTitleMilestones(userId, routeCoords) {
     try {
         const profileRef = doc(db, "publicProfiles", userId);
@@ -1329,44 +1276,32 @@ export async function checkForTitleMilestones(userId, routeCoords) {
         const totalPins = data.totalPins || 0;
         const totalRoutes = data.totalRoutes || 0;
 
-        // 1. PIN MILESTONES
         if (totalPins >= 50) await grantTitle(userId, 'trash_wizard');
         if (totalPins >= 100) await grantTitle(userId, 'eco_legend');
-
-        // 2. ROUTE MILESTONES
         if (totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
 
-        // 3. GEOGRAPHIC MILESTONES (Rogers Park)
         const [startLon, startLat] = routeCoords[0];
         const sectorId = getSectorFromCoords(startLon, startLat);
 
         if (sectorId) {
-            // Track how many routes this user has done in RP
             const rpCount = (data.rpRoutesCount || 0) + 1;
             await updateDoc(profileRef, { rpRoutesCount: rpCount });
-
-            // Unlock Pioneer after 5 routes in Rogers Park
             if (rpCount >= 5) await grantTitle(userId, 'rp_pioneer');
         }
 
-        // --- 4. TIME-BASED MILESTONES ---
         const now = new Date();
-        const hour = now.getHours(); // 0-23 format
+        const hour = now.getHours(); 
 
         if (hour < 9) {
-            // Early Bird: Before 9:00 AM
             const earlyCount = (data.earlyBirdCount || 0) + 1;
             await updateDoc(profileRef, { earlyBirdCount: earlyCount });
             if (earlyCount >= 5) await grantTitle(userId, 'early_bird');
-            
         } 
 
         if (hour >= 19) {
-            // Night Owl: After 7:00 PM
             const nightCount = (data.nightOwlCount || 0) + 1;
             await updateDoc(profileRef, { nightOwlCount: nightCount });
             if (nightCount >= 5) await grantTitle(userId, 'night_owl');
-            
     }
 
     } catch (error) {
@@ -1375,18 +1310,12 @@ export async function checkForTitleMilestones(userId, routeCoords) {
 }
 
 function getSectorFromCoords(lon, lat) {
-// The "West Side" (RP-05) now capped at Howard Street (42.0190)
-    // New slope calculation for the Ridge curb between Howard and Devon
     const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
-    
-    // Checks if the user is South of Howard, but North of Devon
     if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeBoundary && lon <= -87.6750) {
         return 'RP-05';
     }
-
-    // 2. Check the other rectangular sectors (RP-01 thru RP-04)
     for (const [id, bounds] of Object.entries(RP_SECTORS)) {
-        if (id === 'RP-05') continue; // Skip since we checked it above
+        if (id === 'RP-05') continue;
         if (lat >= bounds.minLat && lat <= bounds.maxLat &&
             lon >= bounds.minLon && lon <= bounds.maxLon) {
             return id;
@@ -1395,57 +1324,39 @@ function getSectorFromCoords(lon, lat) {
     return null;
 }
 
-/**
- * Updates the visual "Pulse" of sectors based on recent cleanup activity.
- */
 export async function updateSwarmPulse() {
     try {
         const publishedRoutesRef = collection(db, "publishedRoutes");
         const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
-        
         const q = query(publishedRoutesRef, where("timestamp", ">=", twoDaysAgo));
         const querySnapshot = await getDocs(q);
-
         const activityLog = { 'RP-01': 0, 'RP-02': 0, 'RP-03': 0, 'RP-04': 0, 'RP-05': 0 };
 
-        // FIX: Ensure we are iterating the snapshot correctly
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            
-            // Check if route exists and has at least one coordinate pair
             if (data.route && Array.isArray(data.route) && data.route.length > 0) {
-                // Mapbox/GeoJSON usually stores as [lng, lat]
                 const firstPoint = data.route[0];
-                const lon = firstPoint[0];
-                const lat = firstPoint[1];
-
-                const sectorId = getSectorFromCoords(lon, lat); 
+                const sectorId = getSectorFromCoords(firstPoint[0], firstPoint[1]); 
                 if (sectorId && activityLog.hasOwnProperty(sectorId)) {
                     activityLog[sectorId]++;
                 }
             }
         });
 
-        // Apply the "Glow" to the map layers
         Object.entries(activityLog).forEach(([id, count]) => {
             const layerId = `layer-${id}`;
             if (state.map.getLayer(layerId)) {
-                // 3+ cleanups = heavy glow, 1-2 = medium, 0 = subtle
                 const opacity = count >= 3 ? 0.5 : (count > 0 ? 0.3 : 0.15);
                 state.map.setPaintProperty(layerId, 'fill-opacity', opacity);
             }
         });
-
-        console.log("🔥 Swarm Pulse updated:", activityLog);
     } catch (err) {
-        console.error("❌ Swarm Pulse error:", err);
+        console.error("Swarm Pulse error:", err);
     }
 }
 
 export async function initializeSquad() {
     const btn = document.getElementById('btnFinalizeSquad');
-    
-    // 1. Double-Click Protection
     if (btn.disabled) return; 
 
     const name = document.getElementById('newSquadName').value.trim();
@@ -1454,11 +1365,10 @@ export async function initializeSquad() {
     const bio = document.getElementById('newSquadBio').value.trim();
 
     if (!name || callsign.length < 3) {
-        alert("Initialization Failed: Please provide a Squad Name and a 3-4 character Callsign.");
+        alert("Initialization Failed: Squad Name and a 3-4 character Callsign required.");
         return;
     }
 
-    // 2. Lock the UI
     btn.disabled = true;
     btn.innerText = "INITIALIZING...";
 
@@ -1475,23 +1385,13 @@ export async function initializeSquad() {
             status: "active",
             createdAt: new Date() 
         };
-
-        // 3. Save to Firebase
         await addDoc(collection(db, "squads"), squadData);
-
-        alert(`Unit [${callsign}] ${name} has been officially initialized.`);
-
-        // 4. Reset UI and Refresh
-        if (typeof window.showSquadRegistry === 'function') {
-            window.showSquadRegistry();
-        }
+        alert(`Unit [${callsign}] ${name} initialized.`);
+        window.showSquadRegistry();
         fetchLocalSquads();
-        
     } catch (error) {
-        console.error("Critical Failure during initialization:", error);
-        alert("Tactical Error: Could not reach the database.");
-        
-        // 5. Unlock if it fails so the user can try again
+        console.error(error);
+        alert("Tactical Error: Database unreachable.");
         btn.disabled = false;
         btn.innerText = "INITIALIZE SQUAD";
     }
@@ -1500,275 +1400,125 @@ export async function initializeSquad() {
 export async function fetchLocalSquads() {
     const listContainer = document.getElementById('localSquadsList');
     if (!listContainer) return;
-
-    // Show loading state
-    listContainer.innerHTML = '<p class="loading-text" style="text-align: center; padding: 20px;">📡 Establishing uplink with Sector Command...</p>';
+    listContainer.innerHTML = '<p style="text-align: center; padding: 20px;">📡 Establishing uplink...</p>';
 
     try {
-        const squadsRef = collection(db, "squads");
-        const q = query(squadsRef, orderBy("createdAt", "desc"));
+        const q = query(collection(db, "squads"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-            listContainer.innerHTML = `
-                <p style="text-align: center; padding: 20px; color: #777;">
-                    No active units found in this sector.
-                </p>`;
+            listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: #777;">No active units found.</p>';
             return;
         }
 
         listContainer.innerHTML = '';
-
         querySnapshot.forEach((doc) => {
             const squad = doc.data();
-            const squadId = doc.id;
-            
             const card = document.createElement('div');
             card.className = 'hub-card';
             card.style.display = 'flex';
             card.style.justifyContent = 'space-between';
             card.style.alignItems = 'center';
             card.style.padding = '15px';
-            
-            // Note: viewSquadIntel('${squadId}') ensures the ID is passed as a string
             card.innerHTML = `
-                <div class="hub-text-wrap" style="text-align: left;">
+                <div style="text-align: left;">
                     <h3 style="margin: 0; font-size: 1.1rem;">[${squad.callsign}] ${squad.squadName}</h3>
-                    <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #666;">
-                        ${squad.homeSector} • ${squad.memberCount || 1} Members
-                    </p>
+                    <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #666;">${squad.homeSector} • ${squad.memberCount || 1} Members</p>
                 </div>
-                <button class="modal-button btn-secondary" style="width: auto; padding: 8px 15px; margin: 0;" 
-                        onclick="viewSquadIntel('${squadId}')">
-                    Intel
-                </button>
+                <button class="modal-button btn-secondary" style="width: auto; padding: 8px 15px; margin: 0;" onclick="viewSquadIntel('${doc.id}')">Intel</button>
             `;
             listContainer.appendChild(card);
         });
-
     } catch (error) {
-        console.error("Uplink Failed:", error);
-        listContainer.innerHTML = '<p style="color: var(--color-accent-danger); text-align: center;">⚠️ Tactical Scan Failed. Check connection.</p>';
+        listContainer.innerHTML = '<p style="color: red; text-align: center;">⚠️ Tactical Scan Failed.</p>';
     }
 }
 
 export async function fetchSquadDetails(squadId) {
     const intelView = document.getElementById('squadIntelView');
     if (!intelView) return;
-
-    // 1. Loading State
-    intelView.innerHTML = '<p style="text-align: center; padding: 20px;">🛰️ Downloading unit dossiers...</p>';
+    intelView.innerHTML = '<p style="text-align: center; padding: 20px;">🛰️ Downloading dossier...</p>';
 
     try {
-        const squadRef = doc(db, "squads", squadId);
-        const squadSnap = await getDoc(squadRef);
-
+        const squadSnap = await getDoc(doc(db, "squads", squadId));
         if (squadSnap.exists()) {
             const squad = squadSnap.data();
-            
-            // 2. Security & Membership Checks
             const currentUid = state.currentUser?.uid;
-            const isGlobalAdmin = state.currentUser && state.currentUser.role === 'admin';
             const isLeader = currentUid === squad.leaderId;
-            const hasControl = isGlobalAdmin || isLeader;
             const isMember = squad.members && squad.members.includes(currentUid);
 
-            // 3. Build the Intel UI
             intelView.innerHTML = `
-                <button class="modal-button secondary" onclick="showSquadRegistry()" style="width: auto; padding: 5px 10px; font-size: 0.8rem; margin-bottom: 15px;">
-                    ← Back to Registry
-                </button>
-                
+                <button class="modal-button secondary" onclick="showSquadRegistry()" style="width: auto; padding: 5px 10px; font-size: 0.8rem; margin-bottom: 15px;">← Back</button>
                 <h2 style="margin: 0; font-size: 1.8rem;">[${squad.callsign}] ${squad.squadName}</h2>
-                <p style="text-align: left; color: #4A7C59; font-weight: bold; margin-top: 5px;">
-                    SECTOR OPS: ${squad.homeSector}
-                </p>
-                
+                <p style="text-align: left; color: #4A7C59; font-weight: bold; margin-top: 5px;">SECTOR OPS: ${squad.homeSector}</p>
                 <div class="safety-disclaimer" style="background: #f0f0f0; border-left: 4px solid #4A7C59; color: #333; margin: 20px 0; text-align: left;">
                     <strong>MISSION PROFILE</strong>
-                    <p style="margin-top: 5px; font-size: 0.95rem; line-height: 1.4;">
-                        ${squad.bio || "No mission profile provided for this unit."}
-                    </p>
+                    <p style="margin-top: 5px; font-size: 0.95rem; line-height: 1.4;">${squad.bio || "No mission profile."}</p>
                 </div>
-
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h4 style="margin: 0;">UNIT ROSTER</h4>
-                    <span style="background: #eee; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">
-                        ${squad.memberCount || 1} ACTIVE
-                    </span>
+                    <span style="background: #eee; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">${squad.memberCount || 1} ACTIVE</span>
                 </div>
-
-                <div id="squadRosterList" style="min-height: 100px;">
-                    </div>
-
-                <div class="squad-action-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; padding-bottom: 20px;">
-                    ${hasControl ? `
-                        <div style="background: rgba(220, 53, 69, 0.05); border: 1px dashed #dc3545; padding: 15px; border-radius: 8px;">
-                            <p style="color: #dc3545; font-size: 0.8rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase;">
-                                ⚠️ COMMAND OVERRIDE: ${isGlobalAdmin ? 'SYSTEM ADMIN' : 'UNIT LEADER'}
-                            </p>
-                            <button class="modal-button btn-danger" onclick="handleDisband('${squadId}', '${squad.squadName}')" style="margin: 0;">
-                                ☢️ DISBAND UNIT
-                            </button>
-                        </div>
+                <div id="squadRosterList" style="min-height: 100px;"></div>
+                <div class="squad-action-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                    ${(state.currentUser?.role === 'admin' || isLeader) ? `
+                        <button class="modal-button btn-danger" onclick="handleDisband('${squadId}', '${squad.squadName}')">☢️ DISBAND UNIT</button>
                     ` : isMember ? `
-                        <p style="color: #4A7C59; font-size: 0.8rem; font-weight: bold; text-align: center; margin-bottom: 10px;">
-                            CURRENT ASSIGNMENT: ACTIVE DUTY
-                        </p>
-                        <button class="modal-button btn-secondary" onclick="handleLeave('${squadId}', '${squad.squadName}')" style="margin: 0;">
-                            🚶 LEAVE SQUAD
-                        </button>
+                        <button class="modal-button btn-secondary" onclick="handleLeave('${squadId}', '${squad.squadName}')">🚶 LEAVE SQUAD</button>
                     ` : `
-                        <button id="btnJoinSquad" class="launch-btn" onclick="requestToJoinSquad('${squadId}')" style="width: 100%; margin: 0;">
-                            ⚡ REQUEST TO JOIN UNIT
-                        </button>
+                        <button class="launch-btn" onclick="requestToJoinSquad('${squadId}')" style="width: 100%;">⚡ JOIN UNIT</button>
                     `}
-                </div>
-            `;
-            
-            // 4. Trigger the Roster Scan (Pass the Leader ID for the Star)
-            if (squad.members && squad.members.length > 0) {
-                renderRoster(squad.members, squad.leaderId);
-            }
-
-        } else {
-            intelView.innerHTML = '<p style="text-align: center; padding: 40px;">⚠️ UNIT NOT FOUND</p>';
+                </div>`;
+            if (squad.members) renderRoster(squad.members, squad.leaderId);
         }
-    } catch (error) {
-        console.error("Intel Retrieval Failed:", error);
-        intelView.innerHTML = '<p style="text-align: center; padding: 40px; color: #dc3545;">⚠️ UPLINK ERROR</p>';
-    }
-}
-
-export async function disbandSquad(squadId, squadName) {
-    // 1. Double-Check Confirmation
-    const confirmed = confirm(`DANGER: Are you sure you want to permanently disband [${squadName}]? This cannot be undone.`);
-    if (!confirmed) return;
-
-    try {
-        const squadRef = doc(db, "squads", squadId);
-        
-        // 2. Remove from Firebase
-        await deleteDoc(squadRef);
-        
-        alert(`Unit [${squadName}] has been decommissioned.`);
-
-        // 3. Return to Registry and Refresh
-        showSquadRegistry();
-        fetchLocalSquads();
-
-    } catch (error) {
-        console.error("Decommission Failed:", error);
-        alert("Tactical Error: Could not delete unit. Check permissions.");
-    }
-
-    
+    } catch (error) { intelView.innerHTML = '<p>⚠️ UPLINK ERROR</p>'; }
 }
 
 async function renderRoster(memberIds, leaderId) {
     const rosterContainer = document.getElementById('squadRosterList');
     if (!rosterContainer) return;
-
     try {
         let rosterHTML = '';
-        let totalSquadPins = 0;
-        let totalSquadMiles = 0;
-
         for (const uid of memberIds) {
-            const userRef = doc(db, "users", uid);
-            const userSnap = await getDoc(userRef);
-
+            const userSnap = await getDoc(doc(db, "users", uid));
             if (userSnap.exists()) {
                 const userData = userSnap.data();
-                
                 const isLeader = uid === leaderId;
-                const isSystemAdmin = userData.role === 'admin';
-                
-                // --- FIELD MAPPING FIX ---
-                // Prioritizing 'username' as per your public profile structure
-                const name = userData.username || userData.displayName || 'Unknown Trooper';
-                const pins = userData.totalPins || 0;
-                const miles = userData.totalDistance || 0;
-
-                totalSquadPins += pins;
-                totalSquadMiles += miles;
-                
+                const name = userData.username || 'Trooper';
                 rosterHTML += `
-                    <div class="member-bio-card" style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${isLeader ? 'var(--color-support-gold)' : '#eee'};">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div class="member-rank-icon" style="font-size: 1.2rem; background: #f8f9fa; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid ${isLeader ? 'var(--color-support-gold)' : 'var(--color-primary-green)'}; cursor: pointer;" 
-                                 onclick="handleViewProfile('${uid}')">
-                                ${isLeader ? '⭐' : '👤'}
-                            </div>
-                            <div class="member-info" style="flex-grow: 1;">
-                                <h5 style="margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px; cursor: pointer;" 
-                                    onclick="handleViewProfile('${uid}')">
-                                    ${name} 
-                                    ${isLeader ? '<span style="background: var(--color-support-gold); color: #fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 800;">Leader</span>' : ''}
-                                </h5>
-                                <p style="margin: 0; font-size: 0.8rem; color: #666;">
-                                    ${userData.title || 'Trooper'} • Level ${userData.level || 1}
-                                </p>
-                            </div>
+                    <div class="member-bio-card" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${isL ? 'gold' : '#eee'};">
+                        <div style="font-size: 1.2rem; background: #f8f9fa; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid ${isLeader ? 'gold' : '#4A7C59'}; cursor: pointer;" onclick="handleViewProfile('${uid}')">
+                            ${isLeader ? '⭐' : '👤'}
                         </div>
-                        
-                        <div style="display: flex; gap: 10px; margin-top: 5px; padding-top: 8px; border-top: 1px solid #f0f0f0;">
-                            <div style="flex: 1; text-align: center; background: #f8f9fa; border-radius: 6px; padding: 4px;">
-                                <span style="display: block; font-size: 0.65rem; color: #888; text-transform: uppercase;">Pins</span>
-                                <span style="font-weight: bold; color: var(--color-primary-green);">${pins}</span>
-                            </div>
-                            <div style="flex: 1; text-align: center; background: #f8f9fa; border-radius: 6px; padding: 4px;">
-                                <span style="display: block; font-size: 0.65rem; color: #888; text-transform: uppercase;">Miles</span>
-                                <span style="font-weight: bold; color: var(--color-secondary-blue);">${Number(miles).toFixed(1)}</span>
-                            </div>
+                        <div style="flex-grow: 1;">
+                            <h5 style="margin: 0; cursor: pointer;" onclick="handleViewProfile('${uid}')">${name}</h5>
+                            <p style="margin: 0; font-size: 0.8rem; color: #666;">${userData.title || 'Trooper'}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="font-weight: bold; color: var(--color-primary-green);">${userData.totalPins || 0}</span>
                         </div>
                     </div>`;
             }
         }
-
-        const totalsHeader = `
-            <div style="background: linear-gradient(135deg, #4A7C59, #3e684b); color: white; border-radius: 10px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                <div>
-                    <span style="display: block; font-size: 0.7rem; text-transform: uppercase; opacity: 0.8;">Squad Pins</span>
-                    <span style="font-size: 1.5rem; font-weight: 800;">${totalSquadPins}</span>
-                </div>
-                <div style="width: 1px; background: rgba(255,255,255,0.2);"></div>
-                <div>
-                    <span style="display: block; font-size: 0.7rem; text-transform: uppercase; opacity: 0.8;">Squad Miles</span>
-                    <span style="font-size: 1.5rem; font-weight: 800;">${totalSquadMiles.toFixed(1)}</span>
-                </div>
-            </div>
-        `;
-
-        rosterContainer.innerHTML = totalsHeader + (rosterHTML || '<p style="text-align: center; color: #999;">No active profiles found.</p>');
-
-    } catch (err) {
-        console.error("Roster Scan Failed:", err);
-    }
+        rosterContainer.innerHTML = rosterHTML;
+    } catch (err) { console.error(err); }
 }
 
 export async function leaveSquad(squadId, squadName) {
-    if (!state.currentUser) return;
-
-    const confirmed = confirm(`Are you sure you want to exit [${squadName}]?`);
-    if (!confirmed) return;
-
+    if (!state.currentUser || !confirm(`Confirm Unit Departure: ${squadName}?`)) return;
     try {
-        const squadRef = doc(db, "squads", squadId);
-        
-        // Update Firebase: Remove UID and drop the count by 1
-        await updateDoc(squadRef, {
+        await updateDoc(doc(db, "squads", squadId), {
             members: arrayRemove(state.currentUser.uid),
             memberCount: increment(-1)
         });
-
-        alert(`You have officially left [${squadName}].`);
-
-        // Refresh the view to show the "Join" button again
+        alert("Departure confirmed.");
         fetchSquadDetails(squadId);
-
-    } catch (error) {
-        console.error("Extraction Failed:", error);
-        alert("Tactical Error: Could not process unit departure.");
-    }
+    } catch (error) { alert("Departure failed."); }
 }
+
+// Global Bridge
+window.viewSquadIntel = (id) => fetchSquadDetails(id);
+window.handleDisband = (id, name) => disbandSquad(id, name);
+window.handleLeave = (id, name) => leaveSquad(id, name);
+window.handleViewProfile = (uid) => showPublicProfile(uid);
+window.showMeetupsList = (name) => openViewMeetupsModal(name);
