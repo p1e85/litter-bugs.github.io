@@ -363,7 +363,7 @@ export function attachEventListeners() {
             const userId = e.target.closest('li').dataset.userid;
             if (userId) {
                 elements.leaderboardModal.style.display = 'none';
-                showPublicProfile(userId);
+                (userId);
             }
         }
     });
@@ -1072,6 +1072,8 @@ async function loadPastChallenges(filterType) {
 export async function showPublicProfile(userId) {
     const modal = document.getElementById('publicProfileModal');
     const content = document.getElementById('publicProfileContent');
+    const supportBtn = document.getElementById('profileSupportBtn');
+    
     content.innerHTML = '<p>Loading profile...</p>';
     modal.style.display = 'flex';
 
@@ -1084,13 +1086,19 @@ export async function showPublicProfile(userId) {
         }
         const data = docSnap.data();
 
-        // --- NEW TITLE LOOKUP LOGIC ---
-        // Converts the saved key (og_9) into the display name (The Original Nine)
+        // --- MEMBER SINCE LOGIC ---
+        let joinedDateStr = "Legacy Member";
+        if (data.joinedAt) {
+            const date = data.joinedAt.toDate ? data.joinedAt.toDate() : new Date(data.joinedAt);
+            joinedDateStr = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+
+        // --- TITLE LOOKUP LOGIC ---
         const titleDisplay = (data.selectedTitle && allTitles[data.selectedTitle]) 
-            ? `<p style="margin:-5px 0 10px; font-weight:bold; color:#4A7C59; font-size:0.9em;">${allTitles[data.selectedTitle].name}</p>` 
+            ? `<p style="margin:-5px 0 5px; font-weight:bold; color:#4A7C59; font-size:0.9em; text-transform:uppercase;">${allTitles[data.selectedTitle].name}</p>` 
             : '';
 
-        // 2. Get Badges
+        // 2. Get Badges (Your original detailed layout)
         const badgesSnap = await getDocs(query(collection(db, "publicProfiles", userId, "badges"), orderBy("date", "desc")));
         let badgesHTML = '';
         if (badgesSnap.empty) {
@@ -1102,7 +1110,7 @@ export async function showPublicProfile(userId) {
                 const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-left:4px;">x${count}</span>` : '';
                 
                 badgesHTML += `
-                    <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:80px; text-align:center;">
+                    <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:80px; text-align:center; border:1px solid #eee;">
                         <div style="font-size:2em;">${badge.icon || '🏆'}</div>
                         <div style="font-size:0.8em; font-weight:bold; margin-top:5px;">${badge.title}</div>
                         ${countBadge}
@@ -1112,21 +1120,39 @@ export async function showPublicProfile(userId) {
             });
         }
 
-        // 3. Render
+        // --- SUPPORT BUTTON LOGIC ---
+        if (supportBtn) {
+            if (data.coffeeLink) {
+                supportBtn.style.display = 'block';
+                supportBtn.onclick = () => window.open(data.coffeeLink, '_blank');
+            } else {
+                supportBtn.style.display = 'none';
+            }
+        }
+
+        // 3. Render (Merging your original style with the Date)
         content.innerHTML = `
             <div style="text-align:center;">
                 <img src="${data.photoURL || 'https://via.placeholder.com/100'}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #4A7C59;">
-                <h2 style="margin:10px 0;">${data.username}</h2>
+                <h2 style="margin:10px 0 5px;">${data.username}</h2>
                 
                 ${titleDisplay}
+
+                <p style="margin: 0 0 15px; font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Trooper Since ${joinedDateStr}
+                </p>
                 
-                <p style="color:#666;">${data.bio || 'No bio yet.'}</p>
-                <div style="margin:15px 0; font-size:0.9em; background:#e8f5e9; padding:10px; border-radius:8px; display:inline-block;">
-                    <strong>${data.totalDistance ? data.totalDistance.toFixed(1) : 0}</strong> miles cleaned
+                <p style="color:#666; margin-bottom:15px;">${data.bio || 'No bio yet.'}</p>
+                
+                <div style="margin:15px 0; font-size:0.9em; background:#e8f5e9; padding:10px; border-radius:8px; display:inline-block; border:1px solid #c8e6c9;">
+                    <strong style="color:#2e7d32;">${data.totalDistance ? data.totalDistance.toFixed(1) : 0}</strong> miles cleaned
+                    <span style="margin:0 5px; color:#ccc;">|</span>
+                    <strong style="color:#1565c0;">${data.totalPins || 0}</strong> items pinned
                 </div>
             </div>
-            <h3 style="border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">Badges</h3>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
+
+            <h3 style="border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px; font-size:1.1rem;">Mission Badges</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:10px;">
                 ${badgesHTML}
             </div>
         `;
@@ -1353,87 +1379,3 @@ export async function deleteUserChallenge(challengeId) {
 // Bridge for HTML
 window.handleDeleteMission = (id) => deleteUserChallenge(id);
 
-export async function showPublicProfile(userId) {
-    const modal = document.getElementById('publicProfileModal');
-    const content = document.getElementById('publicProfileContent');
-    const supportBtn = document.getElementById('profileSupportBtn');
-
-    if (!content) return;
-
-    content.innerHTML = '<p style="text-align:center; padding:20px;">Establishing uplink...</p>';
-    modal.style.display = 'flex';
-
-    try {
-        const docSnap = await getDoc(doc(db, "publicProfiles", userId));
-        if (!docSnap.exists()) {
-            content.innerHTML = '<p style="text-align:center; padding:20px;">Profile not found.</p>';
-            return;
-        }
-        const data = docSnap.data();
-
-        // --- NEW: DATE JOINED LOGIC ---
-        let joinedDateStr = "Legacy Member";
-        if (data.joinedAt) {
-            const date = data.joinedAt.toDate ? data.joinedAt.toDate() : new Date(data.joinedAt);
-            joinedDateStr = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        }
-
-        const titleDisplay = (data.selectedTitle && allTitles[data.selectedTitle]) 
-            ? `<p style="margin:-5px 0 5px; font-weight:bold; color:#4A7C59; font-size:0.9em; text-transform:uppercase;">${allTitles[data.selectedTitle].name}</p>` 
-            : '';
-
-        const badgesSnap = await getDocs(query(collection(db, "publicProfiles", userId, "badges"), orderBy("date", "desc")));
-        let badgesHTML = '';
-        badgesSnap.forEach(b => {
-            const badge = b.data();
-            badgesHTML += `
-                <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:75px; text-align:center; border:1px solid #eee;">
-                    <div style="font-size:1.8rem;">${badge.icon || '🏆'}</div>
-                    <div style="font-size:0.7rem; font-weight:bold; margin-top:5px; line-height:1;">${badge.title}</div>
-                </div>`;
-        });
-
-        if (supportBtn) {
-            if (data.coffeeLink) {
-                supportBtn.style.display = 'block';
-                supportBtn.onclick = () => window.open(data.coffeeLink, '_blank');
-            } else {
-                supportBtn.style.display = 'none';
-            }
-        }
-
-        content.innerHTML = `
-            <div style="text-align:center;">
-                <img src="${data.photoURL || 'https://via.placeholder.com/100'}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #4A7C59; margin-bottom:10px;">
-                <h2 style="margin:0;">${data.username}</h2>
-                ${titleDisplay}
-                
-                <p style="margin: 0; font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">
-                    Member Since ${joinedDateStr}
-                </p>
-
-                <p style="color:#666; font-size:0.9rem; margin:15px 0;">${data.bio || 'No bio provided.'}</p>
-                
-                <div style="margin:15px 0; display:flex; justify-content:center; gap:10px;">
-                    <div style="background:#e8f5e9; padding:8px 15px; border-radius:8px; border:1px solid #c8e6c9;">
-                        <strong style="display:block; font-size:1.1rem; color:#2e7d32;">${data.totalDistance ? data.totalDistance.toFixed(1) : 0}</strong>
-                        <span style="font-size:0.7rem; text-transform:uppercase; color:#666;">Miles</span>
-                    </div>
-                    <div style="background:#e3f2fd; padding:8px 15px; border-radius:8px; border:1px solid #bbdefb;">
-                        <strong style="display:block; font-size:1.1rem; color:#1565c0;">${data.totalPins || 0}</strong>
-                        <span style="font-size:0.7rem; text-transform:uppercase; color:#666;">Pins</span>
-                    </div>
-                </div>
-            </div>
-
-            <h4 style="border-bottom:1px solid #eee; padding-bottom:5px; margin:20px 0 10px; font-size:0.8rem; text-transform:uppercase; color:#888;">Mission Medals</h4>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">
-                ${badgesHTML || '<p style="color:#999; font-size:0.8rem;">No medals archived yet.</p>'}
-            </div>
-        `;
-
-    } catch (err) {
-        console.error("Dossier Retrieval Failed:", err);
-        content.innerHTML = '<p style="text-align:center; padding:20px; color:#dc3545;">⚠️ Failed to retrieve Trooper data.</p>';
-    }
-}
