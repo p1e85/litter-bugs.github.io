@@ -602,172 +602,94 @@ export async function handleMeetupSubmit() {
 }
 
 // --- Fetch All Events (With Pagination & Admin Delete) ---
+// --- EVENTS / MEETUPS SYSTEM ---
+
 export async function fetchAndDisplayAllEvents() {
-    const eventsList = document.getElementById('eventsList');
-    if (!eventsList) return;
-    eventsList.innerHTML = '<li><div style="text-align:center; padding:20px;">📡 Locating events near you...</div></li>';
+    const list = document.getElementById('eventsList');
+    if (!list) {
+        console.error("Error: Element 'eventsList' not found in HTML.");
+        return;
+    }
 
-    let dbLimit = 25;
-    let visibleCount = 4;
-    let userPos = null;
-    let isAdmin = false;
+    list.innerHTML = '<p style="text-align:center;">Scanning for local signals...</p>';
 
-    // Parallel Fetch for GPS & Admin Role
     try {
-        const [posResult, profileSnap] = await Promise.all([
-            new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-            }).catch(e => null),
-            state.currentUser ? getDoc(doc(db, "publicProfiles", state.currentUser.uid)) : Promise.resolve(null)
-        ]);
+        // 1. Query the "meetups" collection
+        // Note: We are ordering by date. 
+        // If you want to show ONLY future events, we would add: where("date", ">=", new Date().toISOString())
+        // For now, we show EVERYTHING so you can verify your data loads.
+        const q = query(
+            collection(db, "meetups"),
+            orderBy("date", "asc")
+        );
 
-        if (posResult) userPos = { lat: posResult.coords.latitude, lng: posResult.coords.longitude };
-        if (profileSnap && profileSnap.exists() && profileSnap.data().role === 'admin') isAdmin = true;
-    } catch (err) { console.log("Init error:", err); }
+        const querySnapshot = await getDocs(q);
+        list.innerHTML = ""; // Clear loader
 
-    const loadAndRender = async () => {
-        try {
-            const existingBtn = document.getElementById('loadMoreEventsBtn');
-            if(existingBtn) existingBtn.querySelector('button').innerText = "Loading...";
+        if (querySnapshot.empty) {
+            list.innerHTML = `
+                <div style="text-align:center; padding:20px; color:#666;">
+                    <h3>No Active Signals</h3>
+                    <p>There are no upcoming cleanups scheduled.</p>
+                </div>
+            `;
+            return;
+        }
 
-            const today = new Date();
-            const q = query(
-                collection(db, "meetups"), 
-                where("eventDate", ">=", today),
-                orderBy("eventDate", "asc"), 
-                limit(dbLimit)
-            );
+        // 2. Loop through events and create cards
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const eventId = docSnap.id;
 
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                eventsList.innerHTML = `<div style="text-align:center; padding:30px; color:#666;"><h3>No upcoming events.</h3><p>Be the first to schedule a cleanup!</p></div>`;
-                return;
-            }
-
-            let allEvents = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                let dist = null;
-                if (userPos && data.coordinates) {
-                    dist = getDistanceInMiles(userPos.lat, userPos.lng, data.coordinates.lat, data.coordinates.lng);
+            // Basic Date Formatting
+            let dateDisplay = data.date;
+            try {
+                // If it's a Timestamp, convert it
+                if (data.date && data.date.seconds) {
+                    dateDisplay = new Date(data.date.seconds * 1000).toLocaleDateString();
                 }
-                allEvents.push({ id: doc.id, ...data, distance: dist });
-            });
+            } catch (e) {}
 
-            if (userPos) {
-                allEvents.sort((a, b) => {
-                    const distA = a.distance !== null ? a.distance : 99999;
-                    const distB = b.distance !== null ? b.distance : 99999;
-                    return distA - distB;
-                });
-            }
+            const card = document.createElement('div');
+            card.className = 'hub-card'; // Reuse your card styling
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.gap = '5px';
+            card.style.textAlign = 'left';
+            card.style.borderLeft = '4px solid #4682B4'; // Blue accent for events
 
-            eventsList.innerHTML = ''; 
-            const eventsToShow = allEvents.slice(0, visibleCount);
-
-            eventsToShow.forEach(event => {
-                const dateObj = event.eventDate ? event.eventDate.toDate() : event.createdAt.toDate();
-                const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-                const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-
-                let distanceBadge = '';
-                if (event.distance !== null) {
-                    const distText = event.distance < 0.2 ? "📍 Nearby" : `${event.distance.toFixed(1)} mi away`;
-                    distanceBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; margin-left:8px;">${distText}</span>`;
-                } else if (userPos) {
-                     distanceBadge = `<span style="background:#f5f5f5; color:#888; padding:3px 8px; border-radius:12px; font-size:0.75em;">🌎 Global</span>`;
-                }
-
-                const isOwner = state.currentUser && state.currentUser.uid === event.organizerId;
-                const canDelete = isOwner || isAdmin;
-
-                const li = document.createElement('li');
-                li.className = "event-card"; 
-                li.style.borderBottom = "1px solid #eee";
-                li.style.padding = "15px";
-                li.style.marginBottom = "10px";
-                li.style.background = "white";
-                li.style.borderRadius = "8px";
-                li.style.cursor = "pointer";
-
-                li.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:start;">
-                        <div style="width:100%;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                                <strong style="font-size:1.1em; color:#333;">${event.title}</strong>
-                                <div>
-                                    ${distanceBadge}
-                                    ${canDelete ? `<button class="delete-event-btn" data-id="${event.id}" style="background:#ffebee; color:#c62828; border:none; border-radius:4px; padding:2px 6px; font-size:0.8em; margin-left:5px; cursor:pointer;">🗑️ Delete</button>` : ''}
-                                </div>
-                            </div>
-                            <div style="color: #4A7C59; font-weight: 600; font-size: 0.9em; margin-bottom: 5px;">
-                                📅 ${dateStr} @ ${timeStr}
-                            </div>
-                            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">
-                                📍 ${event.poiName} <br>
-                                👤 Host: ${event.organizerName}
-                            </div>
-                            <p style="margin: 0; font-size: 0.9em; color:#444; line-height:1.4;">${event.description}</p>
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <h3 style="margin:0; font-size:1.1em;">${data.title || 'Untitled Event'}</h3>
+                        <div style="font-size:0.9em; color:#666;">
+                            📅 <strong>${dateDisplay}</strong> @ ${data.time || 'TBD'}
                         </div>
                     </div>
-                `;
-
-                li.addEventListener('click', () => {
-                    if (event.coordinates) {
-                        document.getElementById('eventsModal').style.display = 'none';
-                        document.getElementById('hubModal').style.display = 'none';
-                        document.getElementById('menuModal').style.display = 'none';
-                        state.map.flyTo({ center: [event.coordinates.lng, event.coordinates.lat], zoom: 16, essential: true });
-                        new mapboxgl.Popup().setLngLat([event.coordinates.lng, event.coordinates.lat])
-                            .setHTML(`<div style="text-align:center;"><strong>${event.title}</strong><br><span style="font-size:0.9em; color:#666;">${event.poiName}</span><br><span style="font-size:0.8em; color:#4A7C59;">📅 ${dateStr} @ ${timeStr}</span></div>`)
-                            .addTo(state.map);
-                    } else {
-                        alert("⚠️ This event doesn't have GPS data attached.");
-                    }
-                });
-
-                if (canDelete) {
-                    const delBtn = li.querySelector('.delete-event-btn');
-                    delBtn.addEventListener('click', async (e) => {
-                        e.stopPropagation(); 
-                        if (confirm(`⚠️ GOD MODE: Delete "${event.title}"?`)) {
-                            await deleteDoc(doc(db, "meetups", event.id));
-                            alert("Event deleted.");
-                            loadAndRender(); 
-                        }
-                    });
-                }
-                eventsList.appendChild(li);
-            });
-
-            // Load More Logic
-            const hasMoreLocal = visibleCount < allEvents.length;
-            const mightHaveMoreDB = allEvents.length === dbLimit;
-
-            if (hasMoreLocal || mightHaveMoreDB) {
-                const btnContainer = document.createElement('div');
-                btnContainer.id = "loadMoreEventsBtn";
-                btnContainer.style.textAlign = "center";
-                btnContainer.style.padding = "10px";
-                const btn = document.createElement('button');
-                btn.className = "modal-button secondary"; 
-                btn.style.width = "auto";
+                    <span style="font-size:1.5em;">📍</span>
+                </div>
                 
-                if (hasMoreLocal) {
-                    btn.innerText = `Load More (${allEvents.length - visibleCount} nearby)`;
-                    btn.onclick = () => { visibleCount += 4; loadAndRender(); };
-                } else {
-                    btn.innerText = `Search Wider Area 📡`;
-                    btn.onclick = () => { dbLimit += 25; visibleCount += 4; loadAndRender(); };
-                }
-                btnContainer.appendChild(btn);
-                eventsList.appendChild(btnContainer);
-            }
+                <p style="font-size:0.9em; margin:5px 0; color:#444;">
+                    ${data.description || 'No details provided.'}
+                </p>
 
-        } catch (error) { console.error(error); eventsList.innerHTML = '<li>Error loading events.</li>'; }
-    };
-    loadAndRender();
+                <div style="font-size:0.85em; color:#888;">
+                    <strong>Location:</strong> ${data.location || 'Unknown'}
+                </div>
+
+                <button class="modal-button btn-secondary" style="margin-top:10px; font-size:0.8em; padding:5px 10px;" 
+                    onclick="alert('RSVP feature coming soon!')">
+                    👋 I'll be there
+                </button>
+            `;
+
+            list.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Error loading events:", error);
+        list.innerHTML = '<p style="color:red; text-align:center;">Error retrieving communication.</p>';
+    }
 }
 
 function openViewMeetupsModal(poiName) {
