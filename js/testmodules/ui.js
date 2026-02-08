@@ -227,14 +227,6 @@ export function attachEventListeners() {
     
     // --- MAIN MENU NAVIGATION ---
     elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
-
-    // 1. Community Hub (Challenges)
-    if (elements.communityChallengeBtn) {
-        elements.communityChallengeBtn.addEventListener('click', () => {
-            elements.menuModal.style.display = 'none';
-            elements.challengeMenuModal.style.display = 'flex';
-        });
-    }
     
     // 2. Main Menu: Achievements
     if (elements.btnAchievements) {
@@ -621,31 +613,32 @@ document.getElementById('toggleSectorsBtn').addEventListener('click', () => {
 });
 
 // --- SQUADS NAVIGATION ---
-    const hubSquadsBtn = document.getElementById('hubSquadsBtn');
-    if (hubSquadsBtn) {
-        hubSquadsBtn.addEventListener('click', () => {
-            openModal('squadsModal');
-            // Ensure it always opens to the list, not a half-filled form
-            if (typeof switchSquadView === 'function') {
-                switchSquadView('registry');
-            }
-            // Load the data
-            if (typeof fetchLocalSquads === 'function') {
-                fetchLocalSquads(); 
-            }
-        });
-    }
+const hubSquadsBtn = document.getElementById('hubSquadsBtn');
+if (hubSquadsBtn) {
+    hubSquadsBtn.addEventListener('click', () => {
+        openModal('squadsModal');
+        // Ensure it always opens to the list, not a half-filled form
+        if (typeof switchSquadView === 'function') {
+            switchSquadView('registry');
+        }
+        // Load the data
+        if (typeof fetchLocalSquads === 'function') {
+            fetchLocalSquads(); 
+        }
+    });
+}
 
-    const btnFinalizeSquad = document.getElementById('btnFinalizeSquad');
-    if (btnFinalizeSquad) {
-        btnFinalizeSquad.addEventListener('click', () => {
-             if (typeof initializeSquad === 'function') {
-                initializeSquad();
-            } else {
-                console.error("initializeSquad function missing");
-            }
-        });
-    }
+const btnFinalizeSquad = document.getElementById('btnFinalizeSquad');
+if (btnFinalizeSquad) {
+    btnFinalizeSquad.addEventListener('click', () => {
+         // Safety check
+         if (typeof initializeSquad === 'function') {
+            initializeSquad();
+        } else {
+            console.error("initializeSquad function missing");
+        }
+    });
+}
     
 //    document.getElementById('hubSquadsBtn').addEventListener('click', () => {
 //    openModal('squadsModal');
