@@ -1,7 +1,9 @@
 // js/main.js
 
-import { initializeUI } from './testmodules/ui.js';
-import { checkAndClearOldData } from './testmodules/utils.js';
+//import { initializeUI } from './testmodules/ui.js';
+//import { checkAndClearOldData } from './testmodules/utils.js';
+import { initializeUI } from './ui.js';
+import { checkAndClearOldData } from './utils.js';
 
 /**
  * This is the main entry point of the application.
