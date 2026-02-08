@@ -56,26 +56,27 @@ export function initializeMap() {
             .setLngLat(coords)
             .setPopup(new mapboxgl.Popup({ offset: 25, closeButton: true })
                 .setHTML(`
-    <div class="poi-briefing">
-        <div class="poi-header">
-            <h3>📍 MISSION SITE</h3>
-        </div>
-        <div class="poi-body">
-            <strong style="display:block; font-size:1.1rem; color:#222;">${name}</strong>
-            <p style="font-size:0.8rem; color:#666; margin:4px 0 12px;">Chicago Deployment Zone</p>
-            
-            <div id="poi-missions-list" class="poi-active-missions">
-                <p style="font-size:0.75rem; color:#999; font-style:italic;">Scanning archives for active meetups...</p>
-            </div>
+                    <div class="poi-briefing">
+                        <div class="poi-header">
+                            <h3>📍 MISSION SITE</h3>
+                        </div>
+                        <div class="poi-body">
+                            <strong style="display:block; margin-bottom:10px; color:#333;">${rawName}</strong>
+                            
+                            <button class="modal-button" 
+                                    style="width:100%; margin-bottom:8px; padding:10px; background:#f0f0f0; border:1px solid #ccc; border-radius:6px; cursor:pointer;"
+                                    onclick="window.showMeetupsList('${escapedName}', ${coords[1]}, ${coords[0]})">
+                                🔍 VIEW MEETUPS
+                            </button>
 
-            <button class="modal-button primary" 
-                    style="width:100%; margin-top:12px; padding:10px; font-weight:bold; background:#4A7C59; border:none; color:white; border-radius:6px; cursor:pointer;"
-                    onclick="window.openMeetupForm('${name.replace(/'/g, "\\'")}', ${coords[1]}, ${coords[0]})">
-                📅 SCHEDULE MEETUP
-            </button>
-        </div>
-    </div>
-`))
+                            <button class="modal-button primary" 
+                                    style="width:100%; padding:10px; background:#4A7C59; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;"
+                                    onclick="window.openMeetupForm('${escapedName}', ${coords[1]}, ${coords[0]})">
+                                📅 SCHEDULE MEETUP
+                            </button>
+                        </div>
+                    </div>
+                `))
             .addTo(state.map);
     });
     
