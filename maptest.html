@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,12 +38,12 @@
         </div>
     </div>
 
+
     <div class="map-wrapper">
-        <div id="map"></div>
-        <button id="findMeBtn" class="control-btn">📍</button>
-        <button id="logTrashBtn" class="control-btn" style="bottom: 90px; right: 20px; font-size: 20px;">🔢</button>
-        <button id="pictureBtn" class="control-btn" disabled>📸</button>
-        <input type="file" id="cameraInput" accept="image/*" capture style="display: none;">
+    <div id="map"></div>
+      <button id="findMeBtn" class="control-btn">📍</button>
+      <button id="pictureBtn" class="control-btn" disabled>📸</button>
+      <input type="file" id="cameraInput" accept="image/*" capture style="display: none;">
     </div>
 
     <div class="bottom-container">
@@ -53,7 +54,7 @@
             </div>
             <div id="guestContent">
                 <span>Guest Mode</span>
-                <button id="loginBtn">Log In / Sign Up</button>
+                <button id="loginSignupBtn">Log In / Sign Up</button>
             </div>
         </div>
     </div>
@@ -80,38 +81,38 @@
         </div>
     </div>
 
-    <div id="logTrashModal" class="modal-overlay">
-        <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <h3>Bulk Item Log</h3>
-            <p>Entering multiple items found in one spot?</p>
-            <input type="number" id="trashCountInput" placeholder="How many items?" min="1">
-            <button id="confirmTrashBtn" class="modal-button btn-primary">Log Items</button>
-        </div>
-    </div>
-
     <div id="infoModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
             <h2>About Litter Troopers</h2>
             <div class="info-modal-body">
-                <h4>The Mission</h4>
-                <p>Cleaning up our neighborhoods into a visible achievement.</p>
+                <h4>The Mission (Why)</h4>
+                <p>Litter Troopers transforms the chore of cleaning up our neighborhoods into a visible and rewarding achievement...</p>
+                <h4>How to Use the App</h4>
+                <ol class="info-list">
+                    <li><strong>Start Tracking:</strong> Open the menu and press 'Start Tracking'...</li>
+                    <li><strong>Pin Litter:</strong> When you find litter, press the 'Pin Picture' camera button...</li>
+                    <li><strong>Manage Data:</strong> Use the 'Data Management' button to save, load, or export...</li>
+                    <li><strong>Publish:</strong> When logged in, 'Publish to Community' shares your completed route...</li>
+                    <li><strong>Community View:</strong> Toggle the 'Community View' button to see all routes...</li>
+                </ol>
             </div>
-            <p class="tos-link-container">Review the <a href="#" id="viewTermsLink">Terms of Use</a>.</p>
+            <p class="tos-link-container">You can review the full <a href="#" id="viewTermsLink">Terms of Use</a> at any time.</p>
         </div>
     </div>
     
     <div id="termsModal" class="modal-overlay">
          <div class="modal-content">
             <h2>Terms of Use</h2>
-            <div class="terms-box" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; font-size: 0.8rem;">
-                <p><strong>AGE REQUIREMENT:</strong> 18+ to use this Service.</p>
-                <p>This Service documents refuse and provides community connection.</p>
+            <div class="terms-box">
+                <p><strong>AGE REQUIREMENT:</strong> You must be 18 years of age or older to use this Service...</p>
+                <p><strong>1. Description of Service:</strong> This Service is for the sole purpose of identifying and documenting refuse...</p>
+                <p><strong>2. Prohibited Content:</strong> You may NOT upload any photograph containing people, illegal activities...</p>
+                <p><strong>3. Disclaimer:</strong> This Service is provided "AS IS". Your use of this service is entirely at your own risk...</p>
             </div>
-            <div class="agreement-section" style="margin-top: 15px;">
+            <div class="agreement-section">
                 <input type="checkbox" id="termsCheckbox">
-                <label for="termsCheckbox">I agree to the Terms of Use.</label>
+                <label for="termsCheckbox">I have read, understood, and agree to the Terms of Use.</label>
             </div>
             <button id="agreeBtn" class="modal-button btn-danger" disabled>I Agree</button>
         </div>
@@ -120,21 +121,23 @@
     <div id="authModal" class="modal-overlay">
         <div class="modal-content auth-modal">
             <button class="close-btn">&times;</button>
-            <h2 id="authTitle">Create Account</h2>
-            <p id="authSubtitle">Or <a href="#" id="switchAuthModeLink">log in.</a></p>
+            <h2 id="authTitle">Create a Litter Troopers Account</h2>
+            <p id="authSubtitle">Or <a href="#" id="switchAuthModeLink">log in to an existing account.</a></p>
             <form id="authForm" class="auth-form signup-mode">
                 <input type="text" id="usernameInput" placeholder="Public Username">
-                <input type="email" id="emailInput" placeholder="Email">
-                <input type="password" id="passwordInput" placeholder="Password">
-                <a href="#" id="forgotPasswordLink" style="font-size: 0.8em; color: #4A7C59; display: none;">Forgot Password?</a>
+                <input type="email" id="emailInput" placeholder="Email (for login)">
+                <input type="password" id="passwordInput" placeholder="Password (min. 6 characters)">
+                <a href="#" id="forgotPasswordLink" style="font-size: 0.8em; color: #4A7C59; text-decoration: none; margin-left: 5px; display: none;">Forgot Password?</a>
                 <div id="ageGateContainer" class="age-gate-container">
                     <input type="checkbox" id="ageCheckbox">
-                    <label for="ageCheckbox">I am 18 or older.</label>
+                    <label for="ageCheckbox">I certify that I am 18 years of age or older.</label>
                 </div>
                 <button id="authActionBtn" class="btn-primary" disabled>Sign Up</button>
             </form>
+            <hr>
+            
             <button id="skipBtn" class="skip-button">Skip for now</button>
-            <p id="authError" class="error-message" style="color: red; font-size: 0.8rem;"></p>
+            <p id="authError" class="error-message"></p>
         </div>
     </div>
 
@@ -145,8 +148,9 @@
             <button id="saveBtn" class="modal-button">💾 Save Private Session</button>
             <button id="loadBtn" class="modal-button">📂 Load Private Session</button>
             <button id="centerOnRouteBtn" class="modal-button disabled">🎯 Find Route</button>
-            <button id="managePublicationsBtn" class="modal-button manage">📚 Manage Publications</button>
+            <button id="managePublicationsBtn" class="modal-button manage">📚 Manage My Publications</button>
             <hr>
+            <p>Export your current session as a GeoJSON file.</p>
             <button id="exportBtn" class="modal-button btn-support export">📄 Export as GeoJSON</button>
         </div>
     </div>
@@ -154,29 +158,44 @@
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>Edit Your Profile</h2>
+            <h2>Edit Your Public Profile</h2>
             <div class="profile-form">
-                <label for="bioInput">Short Bio</label>
-                <textarea id="bioInput" maxlength="150"></textarea>
-                <label for="titleSelect">🏆 My Trooper Title</label>
-                <select id="titleSelect"></select>
-                <small id="titleRequirement">Select a title to see requirements.</small>
+            <label for="bioInput">Short Bio</label>
+            <textarea id="bioInput" placeholder="Tell the community a little about yourself..." maxlength="150"></textarea>
+                <div class="profile-section" style="margin-bottom: 20px; text-align: left;">
+                    <label for="titleSelect" style="display: block; font-weight: bold; color: #4A7C59; margin-bottom: 5px;">
+                        🏆 My Trooper Title
+                    </label>
+                    <select id="titleSelect" class="modal-input" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                        <option value="">No Title Selected</option>
+                    </select>
+                    <small id="titleRequirement" style="display: block; margin-top: 5px; color: #888; font-style: italic;">
+                        Select a title to see how to unlock it.
+                    </small>
+                </div>
                 <label for="locationInput">Location</label>
-                <input type="text" id="locationInput">
+                <input type="text" id="locationInput" placeholder="e.g., Chicago, IL" maxlength="50">
                 <label for="coffeeLinkInput">"Buy Me a Coffee" Link</label>
-                <input type="url" id="coffeeLinkInput">
+                <input type="url" id="coffeeLinkInput" placeholder="https://www.buymeacoffee.com/yourname">
                 <button id="saveProfileBtn" class="modal-button btn-primary">Save Profile</button>
-                <button id="deleteAccountBtn" class="modal-button btn-danger">Delete Account</button>
+                <hr>
+                <button id="deleteAccountBtn" class="modal-button btn-danger">Permanently Delete Account</button>
             </div>
         </div>
     </div>
 
     <div id="publicProfileModal" class="modal-overlay">
         <div class="modal-content profile-modal">
-            <button id="closePublicProfile" class="close-btn">&times;</button>
-            <div id="publicProfileContent">
-                <p>Loading profile...</p>
-            </div>
+            <button class="close-btn">&times;</button>
+            <h2 id="profileUsername"></h2>
+            <p id="profileLocation" class="profile-location"></p>
+            <p id="profileBio" class="profile-bio"></p>
+            <hr>
+            <h4>Lifetime Stats</h4>
+            <div id="profileStats" class="profile-stats-grid"></div>
+            <hr>
+            <h4>Achievements</h4>
+            <div id="profileAchievements" class="badge-container"></div>
             <button id="profileSupportBtn" class="modal-button btn-support">☕ Support Them</button>
         </div>
     </div>
@@ -185,19 +204,24 @@
         <div class="modal-content summary-modal">
             <button class="close-btn">&times;</button>
             <h2>Great Job!</h2>
+            <p>Here's a summary of your cleanup session:</p>
             <div class="summary-stats">
                 <div><span class="stat-value" id="summaryDistance">0.0 mi</span><span class="stat-label">Distance</span></div>
-                <div><span class="stat-value" id="summaryPins">0</span><span class="stat-label">Pins</span></div>
+                <div><span class="stat-value" id="summaryPins">0</span><span class="stat-label">Items Pinned</span></div>
                 <div><span class="stat-value" id="summaryDuration">0m 0s</span><span class="stat-label">Duration</span></div>
             </div>
+
             <div class="summary-photo-section">
                 <button id="addCleanupPhotoBtn" class="modal-button btn-secondary">📸 Add Cleanup Photo</button>
-                <div id="cleanupPhotoPreviewContainer" style="display: none;">
-                    <img id="cleanupPhotoPreview" src="#" alt="Preview" style="max-width: 150px; border-radius: 8px;">
+                <hr>
+                <p style="margin-bottom: 5px; font-style: italic;">Your Cleanup Photo:</p>
+                <div id="cleanupPhotoPreviewContainer" style="margin-top: 15px; display: none;">
+                    
+                    <img id="cleanupPhotoPreview" src="#" alt="Cleanup Photo Thumbnail" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid #ccc;">
                 </div>
                 <input type="file" id="cleanupCameraInput" accept="image/*" capture style="display: none;">
             </div>
-            <button id="shareBtn" class="modal-button btn-primary">📣 Share Results</button>
+            <button id="shareBtn" class="modal-button btn-primary">📣 Share Your Cleanup!</button>
             <button id="summaryOkBtn" class="ok-btn modal-button btn-secondary">Awesome!</button>
         </div>
     </div>
@@ -205,23 +229,24 @@
     <div id="sessionsModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>Cloud Sessions</h2>
+            <h2>Load a Private Session</h2>
+            <p>Select a previously saved session to load it onto the map.</p>
             <ul id="sessionList" class="session-list"></ul>
         </div>
     </div>
-
     <div id="localSessionsModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>Local Sessions</h2>
+            <h2>Load a Local Session</h2>
+            <p>Select a session saved on this browser to load it.</p>
             <ul id="localSessionList" class="session-list"></ul>
         </div>
     </div>
-
     <div id="publishedRoutesModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>My Contributions</h2>
+            <h2>Manage My Published Routes</h2>
+            <p>Here you can view and permanently delete your contributions to the community map.</p>
             <ul id="publishedRoutesList" class="session-list"></ul>
         </div>
     </div>
@@ -229,24 +254,25 @@
     <div id="safetyModal" class="modal-overlay">
         <div class="modal-content safety-modal">
             <button class="close-btn">&times;</button>
-            <h2>Safety First!</h2>
+            <h2>Be Safe Out There!</h2>
+            <p>A quick reminder before you start your cleanup:</p>
             <ul class="info-list">
-                <li>Wear gloves.</li>
-                <li>Be aware of traffic.</li>
-                <li>Avoid hazardous items.</li>
+                <li><strong>Gear Up:</strong> Always consider using gloves and sturdy trash bags.</li>
+                <li><strong>Be Aware:</strong> Watch out for traffic, sharp objects, and wildlife.</li>
+                <li><strong>Don't Risk It:</strong> If an item looks hazardous or is in an unsafe location, leave it. Your safety is the top priority!</li>
             </ul>
-            <button id="safetyModalOkBtn" class="ok-btn modal-button btn-danger">Let's Go!</button>
+            <button id="safetyModalOkBtn" class="ok-btn modal-button btn-danger">Got it, Let's Go!</button>
         </div>
     </div>
 
     <div id="leaderboardModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>Leaderboard</h2>
+            <h2>Community Leaderboard</h2>
             <div class="leaderboard-tabs">
                 <button class="leaderboard-tab" id="myStatsBtn">My Stats</button>
-                <button class="leaderboard-tab active" data-metric="totalPins">Pins</button>
-                <button class="leaderboard-tab" data-metric="totalDistance">Distance</button>
+                <button class="leaderboard-tab active" data-metric="totalPins">Most Pins</button>
+                <button class="leaderboard-tab" data-metric="totalDistance">Most Distance</button>
             </div>
             <ol id="leaderboardList" class="leaderboard-list"></ol>
             <div id="myStatsContainer" class="my-stats-container" style="display: none;"></div>
@@ -256,7 +282,7 @@
     <div id="achievementModal" class="modal-overlay">
         <div class="modal-content achievement-modal">
             <span class="achievement-icon"></span>
-            <h2>Unlocked!</h2>
+            <h2>Achievement Unlocked!</h2>
             <h3 id="achievementName"></h3>
             <p id="achievementDescription"></p>
             <button id="achievementOkBtn" class="ok-btn modal-button">Awesome!</button>
@@ -265,10 +291,12 @@
 
     <div id="achievementsModal" class="modal-overlay">
         <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <h3 id="achievementsTitle">🏆 My Medals</h3>
-            <div id="achievementsList" class="achievements-grid" style="max-height: 400px; overflow-y: auto;"></div>
-            <button id="achievementListBackBtn" class="modal-button secondary">Back</button>
+            <h3 id="achievementsTitle">🏆 Achievements</h3>
+            
+            <div id="achievementsList" class="achievements-grid" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                </div>
+
+            <button id="achievementListBackBtn" class="modal-button secondary" style="margin-top: 15px;">Back to Menu</button>
         </div>
     </div>
     
@@ -278,38 +306,45 @@
             <h3>Schedule Meetup</h3>
             <p>Location: <span id="meetupLocationName"></span></p>
             <input type="hidden" id="poiNameInput">
+    
             <input type="hidden" id="meetupLat">
             <input type="hidden" id="meetupLng">
-            <input type="text" id="meetupTitleInput" placeholder="Event Title">
+            
+            <input type="text" id="meetupTitleInput" placeholder="Event Title (e.g., Sunday Cleanup)" maxlength="50">
+            
             <input type="datetime-local" id="meetupDateInput">
-            <textarea id="meetupDescriptionInput" placeholder="Mission plan..." rows="3"></textarea>
-            <div class="safety-disclaimer">Organize in public places. Safety is your responsibility.</div>
-            <label class="checkbox-container">
-                <input type="checkbox" id="meetupPublicToggle" checked>
-                <span>Post to Public Mission Board</span>
-            </label>
-            <div style="display:flex; align-items:center; gap:10px; margin: 10px 0;">
-                <input type="checkbox" id="safetyCheckbox">
-                <label for="safetyCheckbox" style="font-size: 0.8rem;">I understand the safety risks.</label>
+            
+            <textarea id="meetupDescriptionInput" placeholder="Describe the plan..." rows="3" maxlength="200"></textarea>
+            <div class="safety-disclaimer">
+                <strong>Safety First:</strong> You are organizing a public event. For your safety and the safety of others, always meet in well-lit, public places and be aware of your surroundings. Litter Troopers is a platform for connecting people; we are not responsible for any incidents that occur at user-organized meetups.
             </div>
+            <div>
+                <input type="checkbox" id="safetyCheckbox">
+                <label for="safetyCheckbox">I agree to follow local safety guidelines.</label>
+            </div>
+            <p id="profanityWarning">Please keep language clean.</p>
+            
             <button id="createMeetupBtn" class="modal-button primary" disabled>Schedule</button>
+            
         </div>
     </div>
 
-    <div id="eventsModal" class="modal-overlay">
-        <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <h3>📅 Local Missions</h3>
-            <div id="eventsList" style="max-height: 350px; overflow-y: auto;"></div>
-            <button id="btnEventsBack" class="modal-button secondary">Back</button>
-        </div>
+<div id="eventsModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>📅 Local Events</h3>
+        <div id="eventsList">
+            </div>
+        
+        <button id="btnEventsBack" class="modal-button secondary">Back to Menu</button>
     </div>
+</div>
     
     <div id="viewMeetupsModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
             <h2>Scheduled Meetups</h2>
-            <p>Location: <strong id="viewMeetupsLocationName"></strong></p>
+                <p class="modal-subtitle">See cleanup events organized by the community at this location.</p>
+                <p>Location: <strong id="viewMeetupsLocationName"></strong></p>
             <ul id="meetupsList" class="session-list"></ul>
         </div>
     </div>
@@ -318,25 +353,33 @@
         <div class="modal-content hub-modal">
             <button class="close-btn">&times;</button>
             <h2>Community Hub</h2>
+            <p class="modal-subtitle">Connect, challenge, and clean together.</p>
+            
             <div class="hub-grid">
                 <div class="hub-card" id="hubChallengesBtn">
                     <span class="hub-icon">🏆</span>
                     <h3>Challenges</h3>
+                    <p>Join weekly goals and track progress.</p>
                 </div>
+
                 <div class="hub-card" id="hubEventsBtn">
                     <div class="calendar-icon">
                         <div class="cal-header"></div>
                         <div class="cal-body" id="dynamicDateDay">1</div>
                     </div>
-                    <h3>Events</h3>
+                    <h3>Local Events</h3>
+                    <p>Find or host cleanup meetups nearby.</p>
                 </div>
+
                 <div class="hub-card squad-btn-compact feed-btn-hero" id="hubFeedBtn">
                     <span class="hub-icon">📸</span>
                     <h3>Activity Feed</h3>
+                    <p>See the latest cleanups from around the world.</p>
                 </div>
                 <div class="hub-card squad-btn-compact" id="hubSquadsBtn">
                     <span class="hub-icon">🛡️</span>
                     <h3>Squads</h3>
+                    <p>Join a unit or invade</p>
                 </div>
             </div>
         </div>
@@ -345,106 +388,219 @@
     <div id="feedModal" class="modal-overlay">
         <div class="modal-content feed-modal">
             <button class="close-btn">&times;</button>
-            <h2>Activity Feed</h2>
-            <div id="feedContainer" class="feed-container"></div>
-        </div>
-    </div>
-
-    <div id="squadsModal" class="modal-overlay">
-        <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <div class="admin-header"><h3>🛡️ Squad Command</h3></div>
-            <div id="squadRegistryView">
-                <button id="btnCreateSquad" class="modal-button btn-primary" onclick="window.openCreateSquadForm()">➕ Form New Squad</button>
-                <div id="localSquadsList" class="session-list"></div>
-            </div>
-            <div id="squadIntelView" style="display: none;"></div>
-            <div id="squadCreateView" style="display: none;">
-                <button class="modal-button secondary" onclick="window.showSquadRegistry()">← Back</button>
-                <h3>Form Squad</h3>
-                <div class="form-group">
-                    <label>Squad Name</label>
-                    <input type="text" id="newSquadName">
-                </div>
-                <div class="form-row">
-                    <div class="form-group" style="flex:1;"><label>Callsign</label><input type="text" id="newSquadCallsign" maxlength="4"></div>
-                    <div class="form-group" style="flex:1;"><label>Sector</label>
-                        <select id="newSquadHomeSector">
-                            <option value="RP-01">RP-01</option><option value="RP-02">RP-02</option>
-                            <option value="RP-03">RP-03</option><option value="RP-04">RP-04</option>
-                            <option value="RP-05">RP-05</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Mission Statement</label>
-                    <textarea id="newSquadBio" maxlength="150"></textarea>
-                </div>
-                <button id="btnFinalizeSquad" class="launch-btn" style="width: 100%;">Initialize Squad</button>
+            <h2>Community Activity</h2>
+            <p class="modal-subtitle">Real-time updates from fellow Troopers.</p>
+            
+            <div id="feedContainer" class="feed-container">
+                <div class="feed-loader">Scanning the globe for cleanups...</div>
             </div>
         </div>
     </div>
 
+<div id="squadsModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('squadsModal')">&times;</button>
+        
+        <div class="admin-header">
+            <h3>🛡️ Squad Command</h3>
+            <p id="userSquadStatusText">Scanning tactical status...</p>
+        </div>
+
+        <div id="squadRegistryView">
+            <div class="menu-buttons-vertical" style="margin-bottom: 20px;">
+                <button id="btnCreateSquad" class="modal-button btn-primary" onclick="openCreateSquadForm()">➕ Form New Squad</button>
+            </div>
+
+            <h4 style="text-align: left; margin-bottom: 10px; font-size: 0.9rem; color: #666; text-transform: uppercase;">Local Units in Rogers Park</h4>
+            
+            <div id="localSquadsList" class="session-list" style="max-height: 350px; overflow-y: auto;">
+                <p style="text-align: center; padding: 20px; color: #999;">No squads found. Be the first to lead.</p>
+            </div>
+        </div>
+
+        <div id="squadIntelView" style="display: none;">
+            <button class="modal-button secondary" onclick="showSquadRegistry()" style="padding: 5px; font-size: 0.8rem; width: auto; margin-bottom: 15px;">
+                ← Back to Registry
+            </button>
+
+            <div id="squadIntelHeader" style="text-align: left;">
+                <h2 id="intelSquadName" style="margin: 0; text-align: left;">Squad Name</h2>
+                <span id="intelSquadCallsign" style="color: var(--color-primary-green); font-weight: bold; letter-spacing: 1px;">[CALLSIGN]</span>
+            </div>
+
+            <div class="safety-disclaimer" style="margin: 15px 0; background: #f0f4f1; border-color: var(--color-primary-green);">
+                <strong>Mission Statement</strong>
+                <p id="intelSquadBio" style="font-style: italic; margin: 5px 0 0 0;">"No bio provided."</p>
+            </div>
+
+            <h4 style="text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">Active Roster</h4>
+            <div id="squadRosterList" class="feed-container" style="max-height: 200px;">
+                </div>
+
+            <button id="btnRequestJoin" class="modal-button launch-btn" style="margin-top: 20px; width: 100%;">
+                REQUEST TO JOIN UNIT
+            </button>
+        </div>
+
+        <div id="squadCreateView" style="display: none;">
+    <button class="modal-button secondary" onclick="showSquadRegistry()" style="padding: 5px; font-size: 0.8rem; width: auto; margin-bottom: 15px;">
+        ← Back to Registry
+    </button>
+    
+    <h3>Form New Squad</h3>
+    
+    <div class="squad-form-container">
+        <div class="form-group">
+            <label>Squad Name</label>
+            <input type="text" id="newSquadName" placeholder="e.g. Rogers Park Rangers" maxlength="30">
+        </div>
+
+        <div class="form-row" style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+                <label>Callsign (4 Chars)</label>
+                <input type="text" id="newSquadCallsign" placeholder="RPR1" maxlength="4" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Home Sector</label>
+                <select id="newSquadHomeSector">
+                    <option value="RP-01">RP-01</option>
+                    <option value="RP-02">RP-02</option>
+                    <option value="RP-03">RP-03</option>
+                    <option value="RP-04">RP-04</option>
+                    <option value="RP-05">RP-05</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Squad Mission</label>
+            <textarea id="newSquadBio" rows="3" placeholder="Mission focus..." maxlength="150"></textarea>
+        </div>
+    </div>
+
+    <button id="btnFinalizeSquad" class="launch-btn" style="width: 100%;">
+        🚀 INITIALIZE SQUAD
+    </button>
+</div>
+
+    </div>
+</div>
+    
     <div id="challengeMenuModal" class="modal-overlay">
-        <div class="modal-content">
-            <button class="close-btn">&times;</button>
+        <div class="modal-content" style="text-align: center;">
             <h3>🚀 Challenge Central</h3>
+            <p>Complete challenges to earn badges and climb the leaderboard!</p>
+            
             <div class="menu-buttons-vertical">
-                <button id="btnAdminPanel" class="modal-button" style="display: none; background: #dc3545; color: white;">🛠️ Admin Panel</button>
-                <button id="btnCurrentChallenges" class="modal-button btn-primary">⚡ Current Challenges</button>
-                <button id="btnPastChallenges" class="modal-button btn-secondary">📜 Mission History</button>
+                <button id="btnAdminPanel" class="modal-button" style="display: none; background-color: #dc3545; color: white; border-color: #dc3545;">🛠️ Admin: Create Challenge</button>
+                
+                <button id="btnCurrentChallenges" class="modal-button primary">⚡ Current Challenges</button>
+                <button id="btnPastChallenges" class="modal-button secondary btn-secondary">📜 Past Challenges</button>
+                
+                <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 5px 0;">
+                
                 <button id="btnViewEventBadges" class="modal-button btn-secondary">⚔️ Event Badges</button>
             </div>
-            <button id="btnchallengeMenuBack" class="modal-button secondary">Back to Hub</button>
+            
+            <button class="close-btn">&times;</button>
+             <button id="btnchallengeMenuBack" class="modal-button secondary">Back to Hub</button>
         </div>
     </div>
 
     <div id="activeChallengesModal" class="modal-overlay">
         <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <h3>⚡ Active Quests</h3>
-            <div id="publicChallengeList"></div>
-            <button id="btnBackFromCurrent" class="modal-button secondary">Back</button>
+            
+            <h3>⚡ Active Challenges</h3>
+            <p>Join a quest to earn badges!</p>
+            
+            <div id="publicChallengeList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                <p>Loading quests...</p>
+            </div>
+
+            <div style="margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 10px;">
+                <button id="btnBackFromCurrent" class="modal-button secondary">Back to Menu</button>
+            </div>
         </div>
     </div>
 
     <div id="pastChallengesModal" class="modal-overlay">
         <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <h3>📜 History</h3>
+            <h3>📜 Challenge History</h3>
+            
             <div class="modal-tabs">
                 <button class="modal-tab active" id="tabCompleted">Completed</button>
-                <button class="modal-tab" id="tabUncompleted">Incomplete</button>
+                <button class="modal-tab" id="tabUncompleted">Uncompleted</button>
             </div>
-            <div id="pastChallengesContent"></div>
-            <button id="btnPastChallengesBack" class="modal-button secondary">Back</button>
+
+            <div id="pastChallengesContent" class="scrollable-list">
+            </div>
+            
+            <button id="btnPastChallengesBack" class="modal-button secondary">Back to Menu</button>
         </div>
     </div>
 
     <div id="adminChallengeModal" class="modal-overlay">
         <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <div class="admin-header"><h3>🛠 Admin Command</h3></div>
-            <button onclick="window.runGlobalCleanup()" style="background:#dc3545; color:white; width:100%; padding: 10px; margin-bottom: 20px;">🧹 Run Global Cleanup</button>
-            <div class="admin-form-container">
-                <div class="form-group"><label>Title</label><input type="text" id="adminChalTitle"></div>
-                <div class="form-group"><label>Briefing</label><textarea id="adminChalDesc"></textarea></div>
-                <div class="form-row">
-                    <div class="form-group"><label>Type</label><select id="adminChalType"><option value="distance">Distance</option><option value="count">Count</option></select></div>
-                    <div class="form-group"><label>Goal</label><input type="number" id="adminChalGoal"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Time (Mins)</label><input type="number" id="adminChalTime"></div>
-                    <div class="form-group"><label>Icon</label><input type="text" id="adminChalBadge" value="🏅"></div>
-                </div>
-                <div class="form-group"><label>Expire Date</label><input type="date" id="adminChalExpire"></div>
-                <button id="btnSaveChallenge" class="launch-btn" style="width: 100%;">Launch Quest</button>
-                <hr>
-                <div id="adminChallengeList"></div>
-            </div>
+<button class="close-btn">&times;</button>
+
+<div class="admin-header">
+    <h3>🛠 Admin Command Center</h3>
+    <p>Design a new global quest.</p>
+</div>
+
+<div class="admin-form-container">
+    <div class="form-group">
+        <label>Quest Title</label>
+        <input type="text" id="adminChalTitle" placeholder="e.g. The Weekend Warrior">
+    </div>
+
+    <div class="form-group">
+        <label>Brief Briefing</label>
+        <textarea id="adminChalDesc" rows="3" placeholder="Explain the mission objectives..."></textarea>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group half">
+            <label>Type</label>
+            <select id="adminChalType">
+                <option value="distance">📏 Distance (Miles)</option>
+                <option value="count">🗑 Item Count</option>
+            </select>
+        </div>
+        <div class="form-group half">
+            <label>Target Goal</label>
+            <input type="number" id="adminChalGoal" placeholder="e.g. 50">
         </div>
     </div>
 
+    <div class="form-row">
+        <div class="form-group half">
+            <label>Time Limit (Mins)</label>
+            <input type="number" id="adminChalTime" placeholder="Optional">
+        </div>
+        <div class="form-group half">
+            <label>Badge Icon</label>
+            <input type="text" id="adminChalBadge" value="🏅" style="text-align:center; font-size:1.2em;">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Quest Expires On</label>
+        <input type="date" id="adminChalExpire">
+    </div>
+
+    <button id="btnSaveChallenge" class="modal-button launch-btn">
+        🚀 LAUNCH CHALLENGE
+    </button>
+    
+    <hr>
+    
+    <h3>Manage Active Challenges</h3>
+    <div id="adminChallengeList" style="max-height: 200px; overflow-y: auto; text-align: left;">
+        <p>Loading...</p>
+    </div>
+</div>
+    
     <script src="js/maintest.js" type="module"></script>
 
 </body>
