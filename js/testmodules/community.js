@@ -1167,3 +1167,82 @@ window.requestToJoinSquad = (id) => {
         fetchSquadDetails(id);
     });
 };
+
+/**
+ * VISUALIZATION ENGINE: The Swarm Pulse
+ * Queries the last 48 hours of missions and updates the opacity of sector layers
+ * to create a "heat map" effect of recent activity.
+ */
+export async function updateSwarmPulse() {
+    try {
+        const publishedRoutesRef = collection(db, "publishedRoutes");
+        // Calculate timestamp for 48 hours ago
+        const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+        
+        const q = query(publishedRoutesRef, where("timestamp", ">=", twoDaysAgo));
+        const querySnapshot = await getDocs(q);
+        
+        // Initialize counters for the 5 key sectors
+        const activityLog = { 'RP-01': 0, 'RP-02': 0, 'RP-03': 0, 'RP-04': 0, 'RP-05': 0 };
+
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            // Use the starting point of the route to determine the sector
+            if (data.route && Array.isArray(data.route) && data.route.length > 0) {
+                // GeoJSON format is [lng, lat]
+                const firstPoint = data.route[0];
+                const sectorId = getSectorFromCoords(firstPoint[0], firstPoint[1]); 
+                
+                if (sectorId && activityLog.hasOwnProperty(sectorId)) {
+                    activityLog[sectorId]++;
+                }
+            }
+        });
+
+        // Update the Mapbox layer paint properties dynamically
+        Object.entries(activityLog).forEach(([id, count]) => {
+            const layerId = `layer-${id}`; // Assumes layers are named 'layer-RP-01', etc.
+            
+            if (state.map && state.map.getLayer(layerId)) {
+                // Opacity Logic:
+                // 0 activity = 0.15 (Base visibility)
+                // 1-2 missions = 0.25 (Light glow)
+                // 3+ missions = 0.45 (High intensity glow)
+                const opacity = count >= 3 ? 0.45 : (count > 0 ? 0.25 : 0.15);
+                
+                state.map.setPaintProperty(layerId, 'fill-opacity', opacity);
+            }
+        });
+        
+        console.log("Swarm Pulse Updated:", activityLog);
+
+    } catch (err) {
+        console.error("Swarm Pulse Engine Failure:", err);
+    }
+}
+
+/**
+ * CRITICAL MATH: Determines sector based on GPS coordinates.
+ * Includes custom polygon logic for the West Side Ridge (RP-05).
+ */
+function getSectorFromCoords(lon, lat) {
+    // West Side (RP-05) Custom Sloped Boundary Logic
+    // Calculates the "Ridge Curb" line to separate RP-05 from RP-04
+    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
+    
+    // Check if point is WEST of the Ridge Line (RP-05)
+    if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeBoundary && lon <= -87.6750) {
+        return 'RP-05';
+    }
+    
+    // Check standard rectangular sectors (RP-01 to RP-04) from config
+    for (const [id, bounds] of Object.entries(RP_SECTORS)) {
+        if (id === 'RP-05') continue; // Already checked above
+        
+        if (lat >= bounds.minLat && lat <= bounds.maxLat &&
+            lon >= bounds.minLon && lon <= bounds.maxLon) {
+            return id;
+        }
+    }
+    return null;
+}
