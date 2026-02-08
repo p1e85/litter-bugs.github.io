@@ -1041,52 +1041,6 @@ async function renderRoster(memberIds, leaderId) {
    ========================================================================== */
 
 /**
- * Evaluates dossier stats to award rank-based titles.
- * PHASE 2 MATH: Operates in Miles. PHASE 5: Standardized on publicProfiles.
- */
-export async function checkForTitleMilestones(userId, routeCoords) {
-    try {
-        const snap = await getDoc(doc(db, "publicProfiles", userId));
-        if (!snap.exists()) return;
-        const d = snap.data();
-        
-        // --- Rank Triggers: Pin Counts ---
-        if (d.totalPins >= 10) await grantTitle(userId, 'scout');
-        if (d.totalPins >= 50) await grantTitle(userId, 'trash_wizard');
-        if (d.totalPins >= 100) await grantTitle(userId, 'eco_legend');
-        if (d.totalPins >= 250) await grantTitle(userId, 'waste_wrangler');
-        if (d.totalPins >= 1000) await grantTitle(userId, 'planet_guardian');
-        
-        // --- Rank Triggers: Mission Volume ---
-        if (d.totalRoutes >= 1) await grantTitle(userId, 'recruit');
-        if (d.totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
-        if (d.totalRoutes >= 50) await grantTitle(userId, 'road_runner');
-        
-        // --- Temporal Achievements ---
-        const currentHour = new Date().getHours();
-        if (currentHour < 9) {
-            const count = (d.earlyBirdCount || 0) + 1;
-            await updateDoc(doc(db, "publicProfiles", userId), { earlyBirdCount: count });
-            if (count >= 5) await grantTitle(userId, 'early_bird');
-        } else if (currentHour >= 19) {
-            const count = (d.nightOwlCount || 0) + 1;
-            await updateDoc(doc(db, "publicProfiles", userId), { nightOwlCount: count });
-            if (count >= 5) await grantTitle(userId, 'night_owl');
-        }
-        
-        // --- ROGERS PARK SECTOR INTEL (Custom Ridge math) ---
-        if (routeCoords && routeCoords.length > 0) {
-            const sectorId = getSectorFromCoords(routeCoords[0][0], routeCoords[0][1]);
-            if (sectorId === 'RP-05') {
-                const count = (d.rpRoutesCount || 0) + 1;
-                await updateDoc(doc(db, "publicProfiles", userId), { rpRoutesCount: count });
-                if (count >= 5) await grantTitle(userId, 'rp_pioneer');
-            }
-        }
-    } catch (e) { console.error("Milestone Processor failure:", e); }
-}
-
-/**
  * Coordinate lookup with Rogers Park sloped boundary logic for West Side Sector.
  */
 function getSectorFromCoords(lon, lat) {
@@ -1171,23 +1125,6 @@ export async function leaveSquad(squadId, squadName) {
 /* ==========================================================================
    10. PROGRESSION & RANKS (The Milestone Matrix)
    ========================================================================== */
-
-/**
- * Grants a rank title to a user.
- */
-export async function grantTitle(userId, titleKey) {
-    const profileRef = doc(db, "publicProfiles", userId);
-    await runTransaction(db, async (t) => {
-        const d = await t.get(profileRef);
-        const unlocked = d.data().unlockedTitles || [];
-        if (!unlocked.includes(titleKey)) {
-            unlocked.push(titleKey);
-            t.update(profileRef, { unlockedTitles: unlocked });
-            // Alert user of promotion
-            alert(`🏆 NEW RANK ATTAINED: ${allTitles[titleKey]?.name || 'Elite Trooper'}`);
-        }
-    });
-}
 
 /**
  * Evaluates dossier stats against the milestone matrix.
@@ -1438,53 +1375,6 @@ export async function leaveSquad(squadId, squadName) {
 /* ==========================================================================
    10. PROGRESSION & RANKS (The Milestone Matrix)
    ========================================================================== */
-
-/**
- * Grants a rank title to a user.
- */
-export async function grantTitle(userId, titleKey) {
-    const profileRef = doc(db, "publicProfiles", userId);
-    await runTransaction(db, async (t) => {
-        const d = await t.get(profileRef);
-        const unlocked = d.data().unlockedTitles || [];
-        if (!unlocked.includes(titleKey)) {
-            unlocked.push(titleKey);
-            t.update(profileRef, { unlockedTitles: unlocked });
-            // Alert user of promotion
-            alert(`🏆 NEW RANK ATTAINED: ${allTitles[titleKey]?.name || 'Elite Trooper'}`);
-        }
-    });
-}
-
-/**
- * Evaluates dossier stats against the milestone matrix.
- * PHASE 2 MATH: Checks Miles and Count directly.
- */
-export async function checkForTitleMilestones(userId, routeCoords) {
-    try {
-        const snap = await getDoc(doc(db, "publicProfiles", userId));
-        if (!snap.exists()) return;
-        const d = snap.data();
-        
-        // --- Rank Checks ---
-        if (d.totalPins >= 10) await grantTitle(userId, 'scout');
-        if (d.totalPins >= 50) await grantTitle(userId, 'trash_wizard');
-        if (d.totalPins >= 100) await grantTitle(userId, 'eco_legend');
-        
-        if (d.totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
-        if (d.totalRoutes >= 50) await grantTitle(userId, 'road_runner');
-        
-        // --- Sector Intelligence (Rogers Park Ridge) ---
-        if (routeCoords && routeCoords.length > 0) {
-            const sid = getSectorFromCoords(routeCoords[0][0], routeCoords[0][1]);
-            if (sid === 'RP-05') {
-                const count = (d.rpRoutesCount || 0) + 1;
-                await updateDoc(doc(db, "publicProfiles", userId), { rpRoutesCount: count });
-                if (count >= 5) await grantTitle(userId, 'rp_pioneer');
-            }
-        }
-    } catch (e) { console.error("Milestone Error:", e); }
-}
 
 /**
  * Determines sector based on GPS coordinates.
