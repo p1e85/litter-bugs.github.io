@@ -13,7 +13,8 @@ export function initializeMap() {
     state.map = new mapboxgl.Map({
         container: 'map',
         style: mapStyles[state.currentStyleIndex].url,
-        center: [-87.66, 42.01], // Centered on Rogers Park
+        //center: [-87.66, 42.01], // Centered on Rogers Park
+        center: -87.6298, 41.8781,
         zoom: 13
     });
 
