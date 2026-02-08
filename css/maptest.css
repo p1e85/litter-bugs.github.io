@@ -645,3 +645,26 @@ button.close-btn:hover { color: var(--color-text-dark); }
     cursor: pointer;
     accent-color: #4A7C59; /* Makes the checkmark Trooper Green */
 }
+
+/* --- POI POPUP HEADER FIX --- */
+.poi-header {
+    background: #4A7C59 !important; /* Force Trooper Green Background */
+    padding: 15px 10px !important;
+    text-align: center;
+    border-bottom: 2px solid rgba(0,0,0,0.1);
+}
+
+.poi-header h3 {
+    margin: 0 !important;
+    color: #FFFFFF !important; /* Force Pure White Text for Readability */
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase !important;
+    line-height: 1.2 !important;
+}
+
+.poi-body {
+    padding: 20px 15px;
+    background: #fff;
+}
