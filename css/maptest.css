@@ -257,11 +257,24 @@ button.close-btn:hover { color: var(--color-text-dark); }
 .hub-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
 
 .hub-card {
-    background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    padding: 15px 20px; margin-bottom: 15px; border: 2px solid #eee;
-    position: relative; transition: all 0.2s ease; text-align: left;
-    cursor: pointer; box-sizing: border-box;
+    background: white; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    padding: 15px 20px; 
+    margin-bottom: 15px; 
+    border: 2px solid #eee;
+    position: relative; 
+    transition: all 0.2s ease; 
+    cursor: pointer; 
+    box-sizing: border-box;
+
+    /* NEW CENTERING RULES */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
+
 .hub-card:hover { border-color: #4A7C59; box-shadow: 0 8px 20px rgba(74, 124, 89, 0.2); z-index: 100; }
 .hub-card h4, .hub-card h3 { margin: 0 0 5px 0; font-size: 1.1em; color: #333; }
 .hub-card p { margin: 0 0 8px 0; font-size: 0.9em; color: #666; }
@@ -384,4 +397,11 @@ button.close-btn:hover { color: var(--color-text-dark); }
 
 #squadCreateView .form-group {
     margin-bottom: 20px !important;
+}
+
+.achievement-card.locked {
+    opacity: 0.6;              /* Makes it semi-transparent */
+    filter: grayscale(100%);   /* Removes all color */
+    background: #e0e0e0;       /* Darker gray background */
+    cursor: not-allowed;       /* Shows 'disabled' cursor on hover */
 }
