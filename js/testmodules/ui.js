@@ -14,8 +14,6 @@ import {
     getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents , initializeSquad, fetchLocalSquads
 } from './community.js';
 
-const allTitles = window.allTitles || {};
-
 // --- DOM Element Selection ---
 const elements = {
     // Admin Elements
