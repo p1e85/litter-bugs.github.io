@@ -1074,94 +1074,91 @@ export async function showPublicProfile(userId) {
     const content = document.getElementById('publicProfileContent');
     const supportBtn = document.getElementById('profileSupportBtn');
     
-    content.innerHTML = '<p>Loading profile...</p>';
+    // Reset view
+    content.innerHTML = '<p style="text-align:center; padding:20px;">Establishing uplink with Trooper dossier...</p>';
+    if (supportBtn) supportBtn.style.display = 'none'; 
     modal.style.display = 'flex';
 
     try {
-        // 1. Get Profile Data
+        // 1. Fetch Profile Data
         const docSnap = await getDoc(doc(db, "publicProfiles", userId));
         if (!docSnap.exists()) {
-            content.innerHTML = '<p>User profile not found.</p>';
+            content.innerHTML = '<p style="text-align:center; padding:20px;">Trooper not found in archives.</p>';
             return;
         }
         const data = docSnap.data();
 
-        // --- MEMBER SINCE LOGIC ---
+        // 2. Resolve Member Date
         let joinedDateStr = "Legacy Member";
         if (data.joinedAt) {
             const date = data.joinedAt.toDate ? data.joinedAt.toDate() : new Date(data.joinedAt);
             joinedDateStr = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         }
 
-        // --- TITLE LOOKUP LOGIC ---
+        // 3. Resolve Trooper Title
         const titleDisplay = (data.selectedTitle && allTitles[data.selectedTitle]) 
             ? `<p style="margin:-5px 0 5px; font-weight:bold; color:#4A7C59; font-size:0.9em; text-transform:uppercase;">${allTitles[data.selectedTitle].name}</p>` 
             : '';
 
-        // 2. Get Badges (Your original detailed layout)
+        // 4. Fetch Badges Sub-collection (Achievements)
         const badgesSnap = await getDocs(query(collection(db, "publicProfiles", userId, "badges"), orderBy("date", "desc")));
         let badgesHTML = '';
+        
         if (badgesSnap.empty) {
-            badgesHTML = '<p style="color:#888;">No badges yet.</p>';
+            badgesHTML = '<p style="color:#999; font-size:0.8rem; width:100%; text-align:center;">No medals archived yet.</p>';
         } else {
             badgesSnap.forEach(b => {
                 const badge = b.data();
                 const count = badge.count || 1;
-                const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-left:4px;">x${count}</span>` : '';
+                const countTag = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-left:4px;">x${count}</span>` : '';
                 
                 badgesHTML += `
-                    <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:80px; text-align:center; border:1px solid #eee;">
-                        <div style="font-size:2em;">${badge.icon || '🏆'}</div>
-                        <div style="font-size:0.8em; font-weight:bold; margin-top:5px;">${badge.title}</div>
-                        ${countBadge}
-                        <div style="font-size:0.7em; color:${badge.color || '#666'};">${badge.tier || 'Stone'}</div>
-                    </div>
-                `;
+                    <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:80px; text-align:center; border:1px solid #eee; flex-shrink:0;">
+                        <div style="font-size:1.8rem;">${badge.icon || '🏆'}</div>
+                        <div style="font-size:0.75rem; font-weight:bold; margin-top:5px; line-height:1.1;">${badge.title}</div>
+                        ${countTag}
+                        <div style="font-size:0.65rem; color:${badge.color || '#666'}; margin-top:3px;">${badge.tier || 'Stone'}</div>
+                    </div>`;
             });
         }
 
-        // --- SUPPORT BUTTON LOGIC ---
-        if (supportBtn) {
-            if (data.coffeeLink) {
-                supportBtn.style.display = 'block';
-                supportBtn.onclick = () => window.open(data.coffeeLink, '_blank');
-            } else {
-                supportBtn.style.display = 'none';
-            }
+        // 5. Handle Donation Button (Support Them)
+        if (supportBtn && data.coffeeLink) {
+            supportBtn.style.display = 'block';
+            supportBtn.onclick = () => window.open(data.coffeeLink, '_blank');
         }
 
-        // 3. Render (Merging your original style with the Date)
+        // 6. Inject Unified HTML
         content.innerHTML = `
             <div style="text-align:center;">
-                <img src="${data.photoURL || 'https://via.placeholder.com/100'}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #4A7C59;">
-                <h2 style="margin:10px 0 5px;">${data.username}</h2>
-                
+                <img src="${data.photoURL || 'https://via.placeholder.com/100'}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:3px solid #4A7C59; margin-bottom:10px;">
+                <h2 style="margin:0;">${data.username}</h2>
                 ${titleDisplay}
-
-                <p style="margin: 0 0 15px; font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">
+                
+                <p style="margin: 5px 0 15px; font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">
                     Trooper Since ${joinedDateStr}
                 </p>
+
+                <p style="color:#666; font-size:0.9rem; margin:15px 0; line-height:1.4;">${data.bio || 'This Trooper prefers to stay anonymous.'}</p>
                 
-                <p style="color:#666; margin-bottom:15px;">${data.bio || 'No bio yet.'}</p>
-                
-                <div style="margin:15px 0; font-size:0.9em; background:#e8f5e9; padding:10px; border-radius:8px; display:inline-block; border:1px solid #c8e6c9;">
+                <div style="margin:15px 0; font-size:0.9em; background:#e8f5e9; padding:10px 15px; border-radius:10px; display:inline-block; border:1px solid #c8e6c9;">
                     <strong style="color:#2e7d32;">${data.totalDistance ? data.totalDistance.toFixed(1) : 0}</strong> miles cleaned
-                    <span style="margin:0 5px; color:#ccc;">|</span>
-                    <strong style="color:#1565c0;">${data.totalPins || 0}</strong> items pinned
+                    <span style="margin:0 8px; color:#ccc;">|</span>
+                    <strong style="color:#1565c0;">${data.totalPins || 0}</strong> pins logged
                 </div>
             </div>
 
-            <h3 style="border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px; font-size:1.1rem;">Mission Badges</h3>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:10px;">
+            <h4 style="border-bottom:1px solid #eee; padding-bottom:5px; margin:25px 0 10px; font-size:0.8rem; text-transform:uppercase; color:#888; letter-spacing:1px;">Earned Medals</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; padding-bottom:10px;">
                 ${badgesHTML}
             </div>
         `;
+
     } catch (err) {
-        console.error("Error loading profile:", err);
-        content.innerHTML = '<p>Error loading profile.</p>';
+        console.error("Dossier Retrieval Error:", err);
+        content.innerHTML = '<p style="text-align:center; padding:20px; color:#dc3545;">⚠️ HQ Link Interrupted. Could not load Trooper data.</p>';
     }
 }
-
 export function populateTitleDropdown(unlockedTitles = []) {
     const titleSelect = document.getElementById('titleSelect');
     const requirementText = document.getElementById('titleRequirement');
