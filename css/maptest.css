@@ -484,3 +484,16 @@ button.close-btn:hover { color: var(--color-text-dark); }
     background: #ccc;
     cursor: not-allowed;
 }
+
+
+/* Styling for Locked Achievements */
+.achievement-card.locked {
+    filter: grayscale(100%);
+    opacity: 0.5;
+    background: #f0f0f0;
+    border-color: #ddd !important;
+}
+
+.achievement-card.locked .badge-icon {
+    filter: blur(1px); /* Optional: adds a slightly 'hidden' feel */
+}
