@@ -9,7 +9,8 @@
   --color-background-modal: #ffffff;
   --color-text-dark: #333333;
   --color-text-light: #ffffff;
-  --color-border: #ccc;
+  --color-border: #cccccc;
+  --color-shadow: rgba(0, 0, 0, 0.15);
 }
 
 body, html {
@@ -17,16 +18,17 @@ body, html {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: var(--color-text-dark);
   overflow: hidden;
+  background-color: #f0f0f0;
 }
 
 hr {
   border: none;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #eeeeee;
   margin: 15px 0;
 }
 
 /* =========================================
-   2. MAIN LAYOUT & MAP
+   2. MAIN LAYOUT & MAP CANVAS
    ========================================= */
 #map {
   position: absolute;
@@ -45,6 +47,7 @@ hr {
 
 .bottom-row {
   display: flex; justify-content: center; gap: 10px; pointer-events: auto;
+  flex-wrap: wrap;
 }
 
 .bottom-container {
@@ -53,618 +56,201 @@ hr {
 }
 
 /* =========================================
-   3. BUTTONS (GLOBAL)
+   3. BUTTON ARCHITECTURE (Global)
    ========================================= */
-.modal-button {
-  display: block; box-sizing: border-box; width: 100%; text-decoration: none;
-  text-align: center; padding: 12px; margin: 8px 0; font-size: 14px;
-  font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease;
-  border-radius: 8px; border: 1px solid #ccc;
-  background-color: #f0f0f0; color: var(--color-text-dark);
-}
-.modal-button:hover {
-  background-color: #e9e9e9;
+.modal-button, .launch-btn {
+  display: flex; align-items: center; justify-content: center;
+  box-sizing: border-box; width: 100%; text-decoration: none;
+  text-align: center; padding: 14px; margin: 8px 0; font-size: 14px;
+  font-weight: 700; cursor: pointer; transition: all 0.2s ease;
+  border-radius: 8px; border: 1px solid var(--color-border);
+  background-color: #f8f9fa; color: var(--color-text-dark);
 }
 
-.btn-primary { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
-.btn-primary:hover { background-color: #3e684b; border-color: #3e684b; }
+.btn-primary { background-color: var(--color-primary-green); color: white; border-color: var(--color-primary-green); }
+.btn-primary:hover { background-color: #3e684b; transform: translateY(-1px); }
 
-.btn-secondary { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
-.btn-secondary:hover { background-color: #3a6a92; border-color: #3a6a92; }
+.btn-secondary, .modal-button.secondary { 
+  background-color: transparent; 
+  border: 2px solid var(--color-primary-green); 
+  color: var(--color-primary-green); 
+}
+.btn-secondary:hover, .modal-button.secondary:hover { 
+  background-color: var(--color-primary-green); 
+  color: white; 
+  box-shadow: 0 4px 12px rgba(74, 124, 89, 0.3);
+}
 
-.btn-support { background-color: var(--color-support-gold); font-weight: bold; color: var(--color-text-dark); border-color: var(--color-support-gold); }
-.btn-support:hover { background-color: #c5a02e; border-color: #c5a02e; }
+.btn-support { background-color: var(--color-support-gold); color: #333; border-color: var(--color-support-gold); }
+.btn-support:hover { background-color: #c5a02e; }
 
-.btn-danger { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
-.btn-danger:hover { background-color: #b02a37; border-color: #b02a37; }
+.btn-danger { background-color: var(--color-accent-danger); color: white; border-color: var(--color-accent-danger); }
 
 .modal-button:disabled, #authActionBtn:disabled {
   background-color: #e9ecef !important; color: #adb5bd !important;
   border-color: #dee2e6 !important; cursor: not-allowed; opacity: 0.8;
 }
 
-.modal-button.secondary {
-    background-color: transparent;
-    border: 2px solid #4A7C59;
-    color: #4A7C59;
-    font-weight: 700;
-    transition: all 0.2s ease;
-    display: flex; align-items: center; justify-content: center;
-    gap: 8px; 
-}
-.modal-button.secondary:hover {
-    background-color: #4A7C59;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(74, 124, 89, 0.3);
-}
-.modal-button.secondary:active {
-    transform: translateY(0);
-}
-
-.top-bar-button, .community-button, #toggleSectorsBtn {
-  padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;
-  font-weight: 500; background-color: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(4px); border: 1px solid rgba(0, 0, 0, 0.1);
-  color: var(--color-text-dark); transition: background-color 0.2s ease;
-}
-.top-bar-button:hover, .community-button:hover, #toggleSectorsBtn:hover {
-  background-color: rgba(255, 255, 255, 0.9);
-}
-
-#toggleSectorsBtn.active {
-    background-color: var(--color-primary-green);
-    color: var(--color-text-light);
-    border-color: var(--color-primary-green);
-    font-weight: bold;
-}
-
+/* Floating Map Controls */
 #findMeBtn, #pictureBtn {
-  width: 50px; height: 50px; border-radius: 50%; background-color: var(--color-background-modal);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2); font-size: 24px; padding: 0;
-  outline: none; border: 1px solid var(--color-border); cursor: pointer;
+  width: 50px; height: 50px; border-radius: 50%; background-color: white;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 24px; padding: 0;
+  border: 1px solid var(--color-border); cursor: pointer; z-index: 2;
+  position: absolute; display: flex; align-items: center; justify-content: center;
 }
-#findMeBtn { position: absolute; bottom: 30px; left: 20px; z-index: 1; }
-#pictureBtn { position: absolute; bottom: 30px; right: 20px; z-index: 1; }
-
-#findMeBtn.active { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
-.modal-button.tracking { background-color: var(--color-accent-danger); color: var(--color-text-light); border-color: var(--color-accent-danger); }
-#pictureBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+#findMeBtn { bottom: 30px; left: 20px; }
+#pictureBtn { bottom: 30px; right: 20px; }
+#findMeBtn.active { background-color: var(--color-primary-green); color: white; }
 
 /* =========================================
-   4. MODALS (BASE STYLES)
+   4. MODAL ENGINE (Static Foundation)
    ========================================= */
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.6); z-index: 10; display: none;
-  justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.7); z-index: 1000; display: none;
+  justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;
+  backdrop-filter: blur(3px);
 }
+
 .modal-content {
-  background: var(--color-background-modal); padding: 20px; border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 100%; max-width: 500px;
-  position: relative; max-height: 90vh; overflow-y: auto;
-}
-.modal-content h2 {
-  text-align: center; margin-top: 0; margin-bottom: 25px;
-  font-size: 24px; color: var(--color-text-dark);
-}
-.modal-content p {
-  font-size: 14px; color: #666; text-align: center;
-  margin-top: -10px; margin-bottom: 15px;
-}
-.modal-subtitle { 
-  font-size: 15px; color: #666; text-align: center; margin-top: -15px; margin-bottom: 20px; 
+  background: var(--color-background-modal); padding: 30px 20px; border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4); width: 100%; max-width: 500px;
+  position: relative; max-height: 85vh; overflow-y: auto; text-align: center;
 }
 
-button.close-btn {
-  position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; color: #aaa;
-  cursor: pointer; background: none; border: none; padding: 0; line-height: 1;
+.close-btn {
+  position: absolute; top: 12px; right: 15px; font-size: 30px; font-weight: bold; 
+  color: #bbb; cursor: pointer; background: none; border: none; line-height: 1;
 }
-button.close-btn:hover { color: var(--color-text-dark); }
-
-#logoutBtn, #loginSignupBtn, .skip-button {
-  background: none; border: none; color: var(--color-secondary-blue); text-decoration: underline;
-  cursor: pointer; padding: 0; font-size: 14px; font-family: inherit;
-}
-.skip-button { color: #888; }
-#agreeBtn { width: 100%; box-sizing: border-box; margin-top: 20px; }
-#agreeBtn:disabled { background-color: #f8d7da !important; border-color: #f5c6cb !important; color: #721c24 !important; opacity: 0.7; }
 
 /* =========================================
-   5. MAP COMPONENTS & FORMS
+   5. TACTICAL MAPBOX POPUPS (The POI Fix)
    ========================================= */
-#geocoder-container { pointer-events: auto; flex-grow: 1; max-width: 75%; }
-#geocoder-container .mapboxgl-ctrl-geocoder {
-  width: 100%; max-width: none; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  border-radius: 8px; background-color: var(--color-background-modal);
+.mapboxgl-popup-content {
+  padding: 0 !important; 
+  border-radius: 12px !important; 
+  overflow: hidden !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important; 
+  border: 1px solid #333 !important;
+  min-width: 220px;
 }
 
-.user-status-display {
-  display: flex; align-items: center; background: rgba(255, 255, 255, 0.85);
-  border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: auto;
-  font-size: 14px; padding: 6px 12px;
-}
-.user-status-display span { margin-right: 10px; }
-#guestContent, #loggedInContent { display: flex; align-items: center; }
-
-.mapboxgl-popup-content { padding: 15px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px !important; }
-.pin-popup-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-.pin-popup-form input, .pin-popup-form select, .pin-popup-form button { width: 100%; box-sizing: border-box; }
-.pin-popup-form label { font-weight: 500; font-size: 0.9em; color: #555; margin-top: 8px; display: block; }
-
-.photo-marker {
-  width: 40px; height: 40px; border-radius: 50%;
-  background-size: cover; background-position: center;
-  border: 2px solid #4A7C59; box-shadow: 0 1px 3px rgba(0,0,0,0.3); cursor: pointer;
+/* MASTER HEADER: Forced White-on-Green contrast */
+.poi-header {
+  background: var(--color-primary-green) !important;
+  color: #ffffff !important;
+  padding: 15px 10px !important;
+  text-align: center;
+  border-bottom: 2px solid rgba(0,0,0,0.1);
 }
 
-.auth-form { display: flex; flex-direction: column; gap: 10px; }
-.auth-form.login-mode #usernameInput, .auth-form.login-mode #ageGateContainer { display: none; }
-.auth-form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-.age-gate-container { display: flex; align-items: center; gap: 5px; }
+.poi-header h3 {
+  margin: 0 !important;
+  color: #ffffff !important; 
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  line-height: 1.2 !important;
+}
+
+.poi-body {
+  padding: 20px 15px !important;
+  background: #ffffff !important;
+  text-align: center;
+}
+
+.poi-body strong { color: #333; font-size: 1.1rem; display: block; margin-bottom: 10px; }
+
+.mapboxgl-popup-close-button {
+  color: white !important; font-size: 1.3rem !important; padding: 8px !important;
+}
 
 /* =========================================
-   6. PROFILE, LEADERBOARD, STATS
+   6. HUB, CARDS & ACHIEVEMENTS
    ========================================= */
-.leaderboard-tabs { display: flex; justify-content: stretch; margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); }
-.leaderboard-tab { width: 100%; margin: 0; padding: 10px 12px; border: none; border-radius: 0; border-right: 1px solid var(--color-border); background-color: #f0f0f0; }
-.leaderboard-tab:last-child { border-right: none; }
-.leaderboard-tab.active { background-color: var(--color-primary-green); color: var(--color-text-light); font-weight: bold; }
-
-.leaderboard-list li { display: flex; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; font-size: 16px; }
-.leaderboard-rank { font-weight: bold; font-size: 1.1em; color: #888; width: 30px; text-align: center; }
-.leaderboard-name { flex-grow: 1; padding: 0 15px; font-weight: 500; }
-.leaderboard-name a { text-decoration: none; color: var(--color-primary-green); }
-.leaderboard-score { font-weight: bold; color: var(--color-text-dark); }
-.leaderboard-list li.current-user-entry { background-color: #e8f5e9; border-radius: 6px; }
-
-.my-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; margin-bottom: 20px; }
-.stat-card { background-color: #f9f9f9; border-radius: 8px; padding: 15px; text-align: center; border: 1px solid #eee; }
-.my-stats-value { font-size: 24px; font-weight: bold; color: var(--color-primary-green); }
-.my-stats-label { font-size: 14px; color: #666; margin-top: 5px; }
-.my-stats-container h4 { margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-.badge-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
-.badge-item { font-size: 28px; }
-
-.summary-modal h2::before { content: '🎉'; display: block; font-size: 48px; margin-bottom: 10px; }
-.summary-stats { display: flex; justify-content: space-around; gap: 15px; margin-bottom: 30px; }
-.summary-stats > div { background-color: #f9f9f9; border-radius: 8px; padding: 15px; flex-grow: 1; border: 1px solid #eee; }
-.stat-value { display: block; font-size: 26px; font-weight: bold; color: var(--color-primary-green); }
-.stat-label { display: block; font-size: 14px; color: #666; margin-top: 5px; }
-#cleanupPhotoPreviewContainer { display: flex; justify-content: center; align-items: center; min-height: 150px; margin-top: 10px; border: 1px dashed #ccc; }
-#cleanupPhotoPreview { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-.profile-form { display: flex; flex-direction: column; gap: 8px; }
-.profile-form label { font-weight: 500; margin-top: 10px; color: #555; text-align: left; }
-.profile-form input[type="text"], .profile-form input[type="url"], .profile-form textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-border); font-size: 14px; box-sizing: border-box; }
-.profile-form textarea { min-height: 80px; resize: vertical; }
-
-/* =========================================
-   7. DATA MANAGEMENT MODAL
-   ========================================= */
-#dataModal .modal-content h2 { border-bottom: 1px solid #eee; padding-bottom: 15px; }
-#dataModal .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: 15px; }
-#dataModal #saveBtn, #dataModal #loadBtn, #dataModal #exportBtn { background-color: var(--color-primary-green); color: var(--color-text-light); border-color: var(--color-primary-green); }
-#dataModal #centerOnRouteBtn, #dataModal #managePublicationsBtn { background-color: var(--color-secondary-blue); color: var(--color-text-light); border-color: var(--color-secondary-blue); }
-.session-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
-.session-list li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-
-/* =========================================
-   8. COMMUNITY HUB & FEED
-   ========================================= */
-.hub-modal { max-width: 500px; }
-.hub-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+.hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
 
 .hub-card {
-    background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    padding: 15px 20px; margin-bottom: 15px; border: 2px solid #eee;
-    position: relative; transition: all 0.2s ease; text-align: left;
-    cursor: pointer; box-sizing: border-box;
+  background: white; border-radius: 12px; border: 2px solid #eee;
+  padding: 20px; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; cursor: pointer;
+  transition: all 0.2s ease;
 }
-.hub-card:hover { border-color: #4A7C59; box-shadow: 0 8px 20px rgba(74, 124, 89, 0.2); z-index: 100; }
-.hub-card h4, .hub-card h3 { margin: 0 0 5px 0; font-size: 1.1em; color: #333; }
-.hub-card p { margin: 0 0 8px 0; font-size: 0.9em; color: #666; }
-.hub-icon { font-size: 2rem; margin-bottom: 10px; }
+.hub-card:hover { border-color: var(--color-primary-green); transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
-@media (min-width: 400px) {
-  .hub-grid { grid-template-columns: 1fr 1fr; }
-  .hub-card:last-child { grid-column: span 2; }
-}
+.hub-icon { font-size: 2.5rem; margin-bottom: 10px; width: 100%; display: block; }
 
-.feed-modal { max-width: 600px; height: 80vh; display: flex; flex-direction: column; }
-.feed-container { flex-grow: 1; overflow-y: auto; padding: 10px 5px; margin-top: 10px; }
-.feed-card { background: #fff; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 20px; overflow: hidden; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-.feed-header { padding: 12px; display: flex; align-items: center; gap: 10px; }
-.feed-avatar { width: 35px; height: 35px; background: var(--color-primary-green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-.feed-user-info h4 { margin: 0; font-size: 1rem; }
-.feed-user-info span { font-size: 0.75rem; color: #888; }
-.feed-photo { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #eee; }
-.feed-body { padding: 12px; }
-.feed-stats { display: flex; gap: 15px; font-size: 0.85rem; color: #555; margin-bottom: 8px; }
-.feed-stats strong { color: var(--color-primary-green); }
-.feed-caption { font-size: 0.9rem; line-height: 1.4; color: #333; }
-.feed-actions { margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
-.like-btn {
-  background: white; border: 1px solid #ccc; border-radius: 20px; padding: 5px 12px;
-  font-size: 14px; cursor: pointer; color: #555; transition: all 0.2s ease;
-  display: flex; align-items: center; gap: 5px;
-}
-.like-btn:hover { background-color: #f9f9f9; transform: scale(1.02); }
-.like-btn.active { background-color: #4A7C59; color: white; border-color: #4A7C59; }
+/* Achievement Badges */
+.achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 15px; }
+.achievement-card { padding: 15px; border-radius: 10px; background: #f9f9f9; border: 2px solid #eee; transition: transform 0.2s; }
+.achievement-card.unlocked { background: #fff; border-color: var(--color-support-gold); box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2); }
+.achievement-card.locked { opacity: 0.5; filter: grayscale(1); }
 
 /* =========================================
-   9. MEETUP / EVENTS MODAL
+   7. FORM & INPUT STYLING
    ========================================= */
-#meetupModal .modal-content, #viewMeetupsModal .modal-content { max-width: 550px; }
-.poi-popup-buttons { display: flex; gap: 8px; margin-top: 15px; }
-.poi-popup-buttons .modal-button { width: 100%; margin: 0; }
-#meetupDateInput { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-bottom: 15px; background-color: #f8f9fa; }
-#meetupDescriptionInput { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; min-height: 80px; }
-.safety-disclaimer { background-color: #fff8e1; border-left: 5px solid #ffc107; color: #664d03; padding: 15px; border-radius: 6px; margin: 15px 0; font-size: 0.85rem; }
-#createMeetupBtn { background-color: #4A7C59; color: white; font-weight: bold; margin-top: 15px; }
-.event-card { background: #f9f9f9; border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 8px; text-align: left; }
+.form-group { margin-bottom: 15px; text-align: left; }
+.form-group label { display: block; font-size: 0.75rem; font-weight: 800; color: #777; text-transform: uppercase; margin-bottom: 5px; }
 
-/* =========================================
-   10. CHALLENGES & ACHIEVEMENTS
-   ========================================= */
-#challengeMenuModal .modal-content { max-width: 500px; width: 100%; padding: 15px; display: flex; flex-direction: column; gap: 15px; min-height: 300px; }
-.menu-buttons-vertical { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px; }
-.menu-buttons-vertical .modal-button { display: flex; align-items: center; justify-content: flex-start; text-align: left; width: 100%; padding: 10px; font-size: 14px; margin: 0; gap: 10px; border-radius: 8px; border: 1px solid #ccc; }
-
-#btnViewAchievements { background-color: var(--color-support-gold); color: var(--color-text-dark); font-weight: bold; border-color: var(--color-support-gold); }
-#btnCurrentChallenges { background-color: #4A7C59; color: white; border-color: #4A7C59; }
-.modal-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 15px; }
-.modal-tab { flex: 1; padding: 10px; background: none; border: none; font-weight: bold; color: #888; cursor: pointer; }
-.modal-tab.active { color: #4A7C59; border-bottom: 3px solid #4A7C59; }
-
-.calendar-icon { display: inline-block; width: 40px; height: 40px; background-color: #ffffff; border: 2px solid #ccc; border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
-.cal-header { height: 12px; width: 100%; background-color: #dc3545; border-bottom: 1px solid #ccc; }
-.cal-body { height: 28px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; }
-
-.achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 15px; justify-items: center; }
-.achievement-card { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; padding: 10px; border-radius: 8px; background: #f5f5f5; }
-.achievement-icon { font-size: 3em; margin-bottom: 5px; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 50%; }
-.achievement-name { font-weight: bold; font-size: 0.9em; margin-top: 5px; color: #333; }
-.achievement-desc { font-size: 0.75em; color: #666; margin-top: 4px; line-height: 1.2; }
-.achievement-card.unlocked { background: white; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.5); border-color: #ffc107; }
-
-/* =========================================
-   11. ADMIN PANEL & FORMS
-   ========================================= */
-.admin-header { background: #f8f9fa; margin: -20px -20px 20px -20px; padding: 20px; border-bottom: 1px solid #eee; text-align: center; border-radius: 10px 10px 0 0; }
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; font-size: 0.85em; font-weight: 700; color: #555; margin-bottom: 5px; text-transform: uppercase; text-align: left; }
-.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-.form-row { display: flex; gap: 15px; }
-.launch-btn { background: linear-gradient(135deg, #dc3545, #c82333) !important; color: white !important; font-size: 1.1em; font-weight: 800; text-transform: uppercase; padding: 15px; margin-top: 10px; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4); cursor: pointer; }
-
-/* =========================================
-   12. SQUAD-SPECIFIC HUB UPGRADES (RE-RESTORED)
-   ========================================= */
-.squad-btn-compact { grid-column: 1 / -1 !important; display: flex !important; flex-direction: row !important; align-items: center; gap: 15px; padding: 10px 20px !important; box-sizing: border-box; }
-.squad-btn-compact .hub-icon { margin: 0 !important; font-size: 1.4rem; flex-shrink: 0; }
-.squad-btn-compact h3 { margin: 0 !important; font-size: 1rem !important; }
-.squad-btn-compact p { margin: 0 !important; font-size: 0.8rem !important; line-height: 1.1; }
-
-.feed-btn-hero { min-height: 90px !important; background: linear-gradient(to right, #ffffff, #f9f9f9); border-left: 4px solid var(--color-primary-green) !important; }
-.feed-btn-hero .hub-icon { font-size: 2rem !important; }
-.feed-btn-hero h3 { font-size: 1.2rem !important; }
-
-#hubSquadsBtn { min-height: 60px !important; margin-top: -5px; }
-
-/* =========================================
-   13. THE "SAFE" SQUAD MODAL OVERRIDE
-   ========================================= */
-/* THIS BLOCK ONLY AFFECTS THE SQUADS MODAL TO PREVENT BREAKING OTHER STYLES */
-#squadsModal .modal-content {
-    width: 95% !important;
-    max-width: 600px !important;
-    min-height: 550px !important; /* Force it to be spread out */
-    padding: 35px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 20px !important;
-    overflow-y: auto !important;
+input[type="text"], input[type="email"], input[type="password"], textarea, select {
+  width: 100%; padding: 12px; border: 1px solid var(--color-border);
+  border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: #fcfcfc;
 }
 
-#localSquadsList {
-    margin-top: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-#localSquadsList p {
-    padding: 40px 20px !important; /* Forces breathing room for the Scan Failed text */
-    line-height: 1.6 !important;
-    text-align: center !important;
-    font-size: 1.1em !important;
-}
-
-#squadCreateView .form-group {
-    margin-bottom: 20px !important;
-}
-
-/* FORCE CENTER: Hub Icons and Calendar Icons */
-.hub-grid .hub-card {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;    /* Centers horizontally */
-    justify-content: center !important; /* Centers vertically */
-    text-align: center !important;
-}
-
-/* Ensure the Calendar Icon specifically behaves as a centered block */
-.calendar-icon {
-    display: block !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    margin-bottom: 10px !important;
-}
-
-/* Ensure the standard Hub Icons don't lean left */
-.hub-icon {
-    display: block !important;
-    margin: 0 auto 10px auto !important;
-    text-align: center !important;
-    width: 100% !important;
-}
-
-/* --- MAPBOX POPUP STYLING (The POI Bubble) --- */
-.mapboxgl-popup-content {
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-    border: 1px solid #eee;
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-}
-
-.mapboxgl-popup-content h3 {
-    margin: 0 0 5px 0;
-    color: #4A7C59; /* Trooper Green */
-    font-size: 1.1rem;
-}
-
-.mapboxgl-popup-content p {
-    margin: 0 0 10px 0;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.mapboxgl-popup-close-button {
-    font-size: 1.2rem;
-    padding: 5px 8px;
-    color: #999;
-}
-
-/* --- SCHEDULE MEETUP MODAL STYLING --- */
-#meetupModal .modal-content {
-    border-top: 8px solid #4A7C59; /* Green header bar */
-    max-width: 400px;
-}
-
-#meetupModal h3 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 5px;
-}
-
-#meetupModal .safety-disclaimer {
-    background: #fff8e1;
-    border: 1px solid #ffe082;
-    padding: 10px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    margin: 15px 0;
-    color: #856404;
-}
-
-#meetupModal input, 
-#meetupModal textarea, 
-#meetupModal select {
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    box-sizing: border-box; /* Crucial for width alignment */
-}
-
-#meetupModal button.primary {
-    background: #4A7C59;
-    color: white;
-    font-weight: bold;
-    letter-spacing: 1px;
-    padding: 14px;
-    margin-top: 10px;
-}
-
-#meetupModal button.primary:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
-
-
-/* Styling for Locked Achievements */
-.achievement-card.locked {
-    filter: grayscale(100%);
-    opacity: 0.5;
-    background: #f0f0f0;
-    border-color: #ddd !important;
-}
-
-.achievement-card.locked .badge-icon {
-    filter: blur(1px); /* Optional: adds a slightly 'hidden' feel */
-}
-
-/* Container for the dynamic badges */
-#publicProfileContent {
-    max-height: 70vh; /* Prevents modal from growing too long */
-    overflow-y: auto;
-    padding: 10px;
-}
-
-/* Ensure badges look like physical medals */
-#publicProfileContent div[style*="background:#f9f9f9"] {
-    transition: transform 0.2s ease;
-    cursor: default;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-#publicProfileContent div[style*="background:#f9f9f9"]:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-/* Adjust the Support Button for better visibility */
-#profileSupportBtn {
-    width: 100%;
-    margin-top: 15px;
-    background-color: #ffdd00; /* Classic 'Coffee' yellow */
-    color: #333;
-    border: none;
-    font-weight: bold;
-    display: none; /* Controlled by logic */
-}
-
-/* --- TACTICAL POI POPUP OVERRIDES --- */
-.mapboxgl-popup-content {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 0; /* We handle padding inside for the header look */
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    border: 1px solid #ddd;
-    overflow: hidden;
-    min-width: 220px;
-}
-
-/* The "Header" area of the popup */
-.poi-header {
-    background: #4A7C59; /* Trooper Green */
-    color: white;
-    padding: 12px;
-    text-align: center;
-}
-
-.poi-header h3 {
-    margin: 0;
-    font-size: 1rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-/* The "Body" area */
-.poi-body {
-    padding: 15px;
-    text-align: center;
-}
-
-.poi-body p {
-    margin: 0 0 15px 0;
-    font-size: 0.85rem;
-    color: #555;
-    line-height: 1.4;
-}
-
-/* Customize the Mapbox "X" button */
-.mapboxgl-popup-close-button {
-    color: white;
-    font-size: 1.2rem;
-    padding: 5px;
-    right: 5px;
-    top: 5px;
-}
-
-/* Ensure the popup tip (the little triangle) matches the header color if it's at the top */
-.mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
-    border-bottom-color: #4A7C59;
-}
-
-/* Ensure the Mapbox popup content has zero padding so the header fills the space */
-.mapboxgl-popup-content {
-    padding: 0 !important;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid #333;
-}
-
-.poi-header {
-    background: #4A7C59;
-    color: white;
-    padding: 12px;
-    text-align: center;
-    border-bottom: 2px solid rgba(0,0,0,0.1);
-}
-
-.poi-header h3 {
-    margin: 0;
-    font-size: 0.9rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    font-weight: 800;
-}
-
-.poi-body {
-    padding: 15px;
-}
-
-/* Style for the active missions section */
-.poi-active-missions {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px dashed #ccc;
-    max-height: 150px;
-    overflow-y: auto;
-}
-
-.mission-item-mini {
-    background: #f8f9fa;
-    padding: 8px;
-    border-radius: 6px;
-    margin-bottom: 5px;
-    font-size: 0.8rem;
-    border-left: 3px solid #4A7C59;
-}
-
-/* --- SCHEDULE MEETUP CHECKBOX FIX --- */
 .checkbox-container {
-    display: flex;
-    align-items: center; /* Vertically centers checkbox with text */
-    gap: 10px;           /* Space between checkbox and text */
-    margin: 15px 0;
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: #444;
+  display: flex; align-items: center; gap: 10px; margin: 15px 0; cursor: pointer; text-align: left;
+}
+.checkbox-container input { width: 18px; height: 18px; accent-color: var(--color-primary-green); }
+
+/* =========================================
+   8. SQUAD & PROFILE Dossiers
+   ========================================= */
+#squadsModal .modal-content { max-width: 600px; padding: 35px; }
+#squadRosterList { margin-top: 15px; display: flex; flex-direction: column; gap: 12px; }
+
+.roster-card, .member-bio-card {
+  padding: 15px; background: #ffffff; border-radius: 12px; border: 1px solid #eee;
+  display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);
 }
 
-.checkbox-container input[type="checkbox"] {
-    width: 18px;         /* Specific size so it doesn't shrink */
-    height: 18px;
-    margin: 0;           /* Resets default browser margins */
-    cursor: pointer;
-    accent-color: #4A7C59; /* Makes the checkmark Trooper Green */
+.rank-orb, .member-rank-icon {
+  width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--color-primary-green);
+  display: flex; align-items: center; justify-content: center; background: #f8f9fa; flex-shrink: 0;
 }
 
-/* --- POI POPUP HEADER FIX --- */
-.poi-header {
-    background: #4A7C59 !important; /* Force Trooper Green Background */
-    padding: 15px 10px !important;
-    text-align: center;
-    border-bottom: 2px solid rgba(0,0,0,0.1);
+#profileSupportBtn {
+  width: 100%; margin-top: 15px; background-color: #ffdd00; color: #333;
+  border: none; font-weight: bold; padding: 12px; border-radius: 8px; cursor: pointer;
 }
 
-.poi-header h3 {
-    margin: 0 !important;
-    color: #FFFFFF !important; /* Force Pure White Text for Readability */
-    font-size: 0.95rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 1.5px !important;
-    text-transform: uppercase !important;
-    line-height: 1.2 !important;
+/* =========================================
+   9. STATS & LEADERBOARD
+   ========================================= */
+.my-stats-grid, .summary-stats { display: flex; justify-content: space-around; gap: 15px; margin: 20px 0; }
+.my-stats-grid > div, .summary-stats > div { 
+  background: #f8f9fa; border-radius: 12px; padding: 15px; flex: 1; 
+  border-bottom: 4px solid var(--color-primary-green); border: 1px solid #eee;
+}
+.stat-value, .my-stats-value { font-size: 1.5rem; font-weight: 900; color: var(--color-primary-green); display: block; }
+.stat-label, .my-stats-label { font-size: 0.7rem; color: #888; text-transform: uppercase; font-weight: bold; }
+
+/* =========================================
+   10. SEARCH & STATUS (Top UI)
+   ========================================= */
+#geocoder-container { pointer-events: auto; flex-grow: 1; max-width: 75%; }
+.user-status-display {
+  display: flex; align-items: center; background: rgba(255, 255, 255, 0.9);
+  padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  pointer-events: auto; font-size: 13px; font-weight: 600;
 }
 
-.poi-body {
-    padding: 20px 15px;
-    background: #fff;
+/* =========================================
+   11. ANIMATIONS & PULSE
+   ========================================= */
+@keyframes pulse-glow {
+  0% { fill-opacity: 0.15; }
+  50% { fill-opacity: 0.40; }
+  100% { fill-opacity: 0.15; }
 }
+.sector-pulse { animation: pulse-glow 3s infinite ease-in-out; }
