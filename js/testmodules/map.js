@@ -75,7 +75,7 @@ export function initializeMap() {
             </button>
         </div>
     </div>
-`)
+`))
             .addTo(state.map);
     });
     
