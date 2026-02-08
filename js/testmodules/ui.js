@@ -1376,3 +1376,36 @@ export async function deleteUserChallenge(challengeId) {
 // Bridge for HTML
 window.handleDeleteMission = (id) => deleteUserChallenge(id);
 
+/**
+ * Opens the Schedule Meetup modal and pre-fills location data.
+ * Attached to window so it can be called from Mapbox popups.
+ */
+export function openMeetupForm(poiName, lat, lng) {
+    console.log("📅 Opening Meetup Form for:", poiName, lat, lng);
+
+    const modal = document.getElementById('meetupModal');
+    const nameDisplay = document.getElementById('meetupLocationName');
+    
+    // Pre-fill the visible name and hidden coordinate fields
+    if (nameDisplay) nameDisplay.textContent = poiName;
+    
+    const latInput = document.getElementById('meetupLat');
+    const lngInput = document.getElementById('meetupLng');
+    const poiInput = document.getElementById('poiNameInput');
+    const titleInput = document.getElementById('meetupTitleInput');
+
+    if (latInput) latInput.value = lat;
+    if (lngInput) lngInput.value = lng;
+    if (poiInput) poiInput.value = poiName;
+    if (titleInput) titleInput.value = `Cleanup at ${poiName}`;
+
+    // Show the modal
+    if (modal) {
+        modal.style.display = 'flex';
+    } else {
+        console.error("Modal 'meetupModal' not found in DOM.");
+    }
+}
+
+// THE CRITICAL LINE: Expose it to the global window object
+window.openMeetupForm = openMeetupForm;
