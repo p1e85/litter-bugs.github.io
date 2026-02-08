@@ -1,33 +1,83 @@
-import { 
-    auth, db, 
-    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
-    onAuthStateChanged, deleteUser, sendPasswordResetEmail,
-    doc, setDoc, getDoc, serverTimestamp 
+import {
+    auth,
+    db,
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    deleteUser,
+    doc,
+    getDoc,
+    setDoc,
+    updateDoc,
+    collection,
+    query,
+    where,
+    getDocs,
+    deleteDoc,
+    sendPasswordResetEmail
 } from './firebase.js';
 import { state } from './config.js';
-import { updateLoggedInStatusUI, checkAdminPermissions, elements } from './ui.js';
-import { clearCurrentSession } from './data.js';
+import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
+import * as ui from './ui.js';
+import { grantTitle } from './community.js';
 
 /**
- * Listens for Auth state changes and initializes the user dossier.
+ * Sets up the listener that responds to changes in the user's login state.
+ * This is a core function that updates the UI and application state when a user
+ * logs in or out.
  */
 export function initializeAuthListener() {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             state.currentUser = user;
-            // PHASE 5 FIX: Standardizing on 'publicProfiles'
-            const profileRef = doc(db, "publicProfiles", user.uid);
-            const profileSnap = await getDoc(profileRef);
+            
+            try {
+                // 1. Check for private user docs
+                const userDocRef = doc(db, "users", user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists() && userDocSnap.data().totalPins === undefined) {
+                    await updateDoc(userDocRef, { totalPins: 0, totalDistance: 0, totalRoutes: 0 });
+                }
 
-            if (profileSnap.exists()) {
-                const profileData = profileSnap.data();
-                updateLoggedInStatusUI(true, profileData.username || user.email);
-                checkAdminPermissions(profileData);
-            } else {
-                // Fallback for legacy users missing a profile
-                updateLoggedInStatusUI(true, user.email);
+                // 2. Fetch the Public Profile (Where the 'role' lives)
+                const publicProfileRef = doc(db, "publicProfiles", user.uid);
+                const publicProfileSnap = await getDoc(publicProfileRef);
+                
+                let username;
+                let userProfileData = {}; // Store data here
+
+                if (publicProfileSnap.exists()) {
+                    userProfileData = publicProfileSnap.data(); // Get the actual data
+                    username = userProfileData.username;
+                    
+                    // ✅ CORRECT PLACE: Now that we have the data, check for Admin
+                    ui.checkAdminPermissions(userProfileData);
+
+                } else {
+                    // Create default profile if missing
+                    const defaultUsername = user.email.split('@')[0];
+                    userProfileData = {
+                        username: defaultUsername,
+                        bio: "This user is new to Litter Bugs!",
+                        location: "",
+                        badges: {},
+                        role: "user" // Default role
+                    };
+                    
+                    await setDoc(publicProfileRef, userProfileData);
+                    username = defaultUsername;
+                }
+                
+                // Update UI
+                updateLoggedInStatusUI(true, username);
+
+            } catch (error) {
+                console.error("Error fetching user profile:", error);
+                updateLoggedInStatusUI(false); 
             }
         } else {
+            // Logged Out
             state.currentUser = null;
             updateLoggedInStatusUI(false);
         }
@@ -35,108 +85,158 @@ export function initializeAuthListener() {
 }
 
 /**
- * Handles account creation and initializes the Master Dossier.
+ * Handles the user sign-up process.
  */
 export async function handleSignUp() {
-    const email = elements.emailInput.value.trim();
-    const password = elements.passwordInput.value;
-    const username = elements.usernameInput.value.trim();
+    const email = document.getElementById('emailInput').value;
+    const password = document.getElementById('passwordInput').value;
+    const username = document.getElementById('usernameInput').value;
+    const ageCheckbox = document.getElementById('ageCheckbox');
+    const authError = document.getElementById('authError');
+    authError.textContent = '';
+
+    if (!ageCheckbox.checked) {
+        authError.textContent = 'You must certify that you are 18 or older to sign up.';
+        return;
+    }
+    if (!username || username.trim().length < 3) {
+        authError.textContent = 'Username must be at least 3 characters.';
+        return;
+    }
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        const userId = userCredential.user.uid;
 
-        // PHASE 5 FIX: Initialize the publicProfiles entry immediately
-        await setDoc(doc(db, "publicProfiles", user.uid), {
-            uid: user.uid,
-            email: email,
-            username: username,
-            bio: "",
-            location: "",
-            photoURL: "",
-            buyMeACoffeeLink: "",
-            // Standardized Starting Stats (Miles)
-            totalDistance: 0.00,
+        // 1. Create a private user document for sensitive info
+        await setDoc(doc(db, "users", userId), {
+            email: userCredential.user.email,
             totalPins: 0,
+            totalDistance: 0,
             totalRoutes: 0,
-            earlyBirdCount: 0,
-            nightOwlCount: 0,
-            rpRoutesCount: 0,
-            // Progression Arrays
-            unlockedTitles: ['recruit'], 
-            selectedTitle: 'recruit',
-            badges: {},
-            active_quests: {},
-            role: "user",
-            joinedAt: serverTimestamp()
+            unlockedTitles: ['beta_trooper'] // Set initial array here too for safety
         });
 
-        alert("Trooper Registered! Your dossier has been initialized.");
-        elements.authModal.style.display = 'none';
+        // 2. Create a public profile document
+        await setDoc(doc(db, "publicProfiles", userId), {
+            username,
+            bio: "New recruit in the Litter Troopers squad!", // Updated name
+            location: "",
+            buyMeACoffeeLink: "",
+            badges: {},
+            totalPins: 0,
+            totalDistance: 0,
+            totalRoutes: 0,
+            unlockedTitles: ['beta_trooper'], // Matches the private doc
+            selectedTitle: "" // Default empty
+        });
+
+        // 3. --- REWARD HOOK ---
+        // This ensures the grant logic (and potential alert) fires correctly
+        await grantTitle(userId, 'beta_trooper');
+
+        // Optional: Close modal after success
+        if (elements.authModal) elements.authModal.style.display = 'none';
+
     } catch (error) {
-        console.error("Signup Error:", error);
-        document.getElementById('authError').textContent = error.message;
+        authError.textContent = error.message;
     }
 }
 
 /**
- * Handles secure login and pulls the Master Dossier into state.
+ * Handles the user login process.
  */
 export async function handleLogIn() {
-    const email = elements.emailInput.value.trim();
-    const password = elements.passwordInput.value;
+    //console.log('--- handleLogIn function started ---');
+    const email = document.getElementById('emailInput').value;
+    const password = document.getElementById('passwordInput').value;
+    const authError = document.getElementById('authError');
+    authError.textContent = '';
 
+try {
+    //console.log('Attempting Firebase sign in for:', email); // <-- ADD THIS
+    await signInWithEmailAndPassword(auth, email, password);
+    //console.log('Firebase sign in successful (or no error thrown)'); // <-- ADD THIS
+  } catch (error) {
+    //console.error('Firebase sign in failed:', error); // <-- ADD THIS (or confirm it exists)
+    authError.textContent = error.message;
+  }
+}
+
+/**
+ * Handles the user logout process.
+ */
+export async function handleLogOut() {
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        // Pull profile to ensure it exists
-        const profileSnap = await getDoc(doc(db, "publicProfiles", user.uid));
-        if (!profileSnap.exists()) {
-            console.warn("Dossier missing for user. Initializing legacy recovery...");
-            // (Optional: trigger a profile creation here if needed)
-        }
-
-        elements.authModal.style.display = 'none';
+        await signOut(auth);
     } catch (error) {
-        console.error("Login Error:", error);
-        document.getElementById('authError').textContent = "Access Denied: Check credentials.";
+        //console.error("Error signing out:", error);
+        alert("Failed to sign out.");
     }
 }
 
-export async function handleLogOut() {
-    if (confirm("Sign out of the sector? Unsaved mission data will be lost.")) {
-        try {
-            await signOut(auth);
-            clearCurrentSession();
-            location.reload(); // Hard reset to clear map state
-        } catch (error) {
-            console.error("Logout Error:", error);
+/**
+ * Handles the permanent deletion of a user's account and all associated data.
+ */
+export async function handleAccountDeletion() {
+    if (!state.currentUser) return;
+    if (!confirm("DANGER: Are you absolutely sure you want to permanently delete your account? This action cannot be undone.")) return;
+    if (!confirm("All of your private saved sessions and public routes will be deleted forever. Are you still sure?")) return;
+
+    try {
+        const userId = state.currentUser.uid;
+        //console.log("Starting account deletion for user:", userId);
+
+        // 1. Delete all private sessions
+        const privateSessionsQuery = query(collection(db, "users", userId, "privateSessions"));
+        const privateSessionsSnapshot = await getDocs(privateSessionsQuery);
+        await Promise.all(privateSessionsSnapshot.docs.map(d => deleteDoc(d.ref)));
+        //console.log("Private sessions deleted.");
+
+        // 2. Delete all published routes
+        const publishedRoutesQuery = query(collection(db, "publishedRoutes"), where("userId", "==", userId));
+        const publishedRoutesSnapshot = await getDocs(publishedRoutesQuery);
+        await Promise.all(publishedRoutesSnapshot.docs.map(d => deleteDoc(d.ref)));
+        //console.log("Published routes deleted.");
+
+        // 3. Delete user documents
+        await deleteDoc(doc(db, "users", userId));
+        await deleteDoc(doc(db, "publicProfiles", userId));
+        //console.log("User documents deleted.");
+
+        // 4. Delete the user from Firebase Authentication
+        await deleteUser(state.currentUser);
+
+        alert("Your account and all associated data have been permanently deleted.");
+        document.getElementById('profileModal').style.display = 'none';
+
+    } catch (error) {
+        //console.error("Error deleting account:", error);
+        if (error.code === 'auth/requires-recent-login') {
+            alert("This is a sensitive operation. Please log out and log back in to delete your account.");
+        } else {
+            alert("An error occurred while deleting your account.");
         }
     }
 }
 
 export async function handlePasswordReset() {
-    const email = elements.emailInput.value.trim();
-    if (!email) return alert("Enter email to reset password.");
+    const email = document.getElementById('emailInput').value.trim();
+    
+    if (!email) {
+        alert("Please enter your email address first.");
+        return;
+    }
+
     try {
         await sendPasswordResetEmail(auth, email);
-        alert("Reset link transmitted to your inbox.");
-    } catch (e) { alert("Uplink failed."); }
-}
-
-export async function handleAccountDeletion() {
-    if (!state.currentUser) return;
-    const confirmed = confirm("🚨 DANGER: This will permanently delete your Trooper account and all mission records. Proceed?");
-    if (confirmed) {
-        try {
-            // Delete Dossier first
-            await setDoc(doc(db, "publicProfiles", state.currentUser.uid), { status: "DELETED", deletedAt: serverTimestamp() }, { merge: true });
-            await deleteUser(state.currentUser);
-            alert("Account Terminated.");
-            location.reload();
-        } catch (error) {
-            alert("Security Error: Please re-log in before deleting your account.");
+        alert("Reset link sent! Check your inbox (and spam folder).");
+    } catch (error) {
+        console.error("Reset Error:", error.code);
+        if (error.code === 'auth/user-not-found') {
+            alert("No account found with this email.");
+        } else {
+            alert("Error sending reset link. Please try again.");
         }
     }
 }
