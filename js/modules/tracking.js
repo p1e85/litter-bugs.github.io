@@ -220,72 +220,31 @@ function showCleanupSummary() {
     state.trackingStartTime = null; // Reset for next session
 }
 
-/**
- * Shares the cleanup results using the Web Share API or copies to clipboard.
- */
+// --- SHARE FUNCTION (Text Only) ---
 export async function shareCleanupResults() {
-    // --- 1. Get summary data and prepare the base text ---
-    const distance = document.getElementById('summaryDistance').textContent;
-    const pins = document.getElementById('summaryPins').textContent;
-    const shareText = `I just cleaned up ${distance} and pinned ${pins} items with the Litter Bugs app! Join the movement and help clean our planet. #LitterBugs #Cleanup`;
-
-    // --- 2. Prepare the share data object ---
+    // 1. Gather the stats from the current session
+    const pinCount = state.pins.length + state.photoPins.length; // Total items
+    const dist = (state.totalDistance || 0).toFixed(2);
+    
+    // 2. Create the message
     const shareData = {
-        title: 'My Litter Bugs Cleanup!',
-        text: shareText,
-        url: 'https://www.litter-bugs.com/' // Replace with your actual app URL
+        title: 'Litter Troopers Cleanup',
+        text: `I just cleaned up ${pinCount} pieces of litter over ${dist} miles with Litter Troopers! 🌍💪 #LitterTroopers`,
+        url: window.location.href // Optional: Links back to your app
     };
 
-    // --- 3. Add the photo file to the share data if it exists ---
-    if (state.cleanupPhoto) {
-        shareData.files = [state.cleanupPhoto];
-    }
-
-    /**
-     * Resets the photo state and UI elements.
-     * This is called after a successful share or copy.
-     */
-    const resetPhotoUI = () => {
-        if (state.cleanupPhoto) {
-            state.cleanupPhoto = null; // Clear from state
-            document.getElementById('cleanupPhotoPreview').src = '#'; // Reset image source
-            document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none'; // Hide container
-        }
-    };
-
-    // --- 4. Attempt to use the Web Share API ---
-    // We check if the browser can share the specific data (including files)
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-
-        // --- 🔴 DEBUGGING LOGS ARE HERE 🔴 ---
-        console.log("--- DEBUG: Sharing Data ---");
-        console.log("1. The text being sent:", shareText);
-        console.log("2. The complete shareData object:", shareData);
-        // --- End of logs ---
-        
-        try {
+    // 3. Trigger the Native Share Sheet
+    try {
+        if (navigator.share) {
             await navigator.share(shareData);
-            console.log('Cleanup shared successfully!');
-            resetPhotoUI(); // Reset the photo UI on success
-        } catch (err) {
-            // We don't reset here, as the user might have canceled and want to try again.
-            console.error('Share was canceled or failed:', err);
+            console.log('Content shared successfully');
+        } else {
+            // Fallback for desktop or unsupported browsers
+            await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+            alert('Share text copied to clipboard!');
         }
-    } else {
-        // --- 5. Fallback for browsers that don't support sharing files ---
-        try {
-            let fallbackText = shareText + " " + shareData.url;
-            if (state.cleanupPhoto) {
-                 // Let the user know the photo couldn't be copied
-                fallbackText += "\n\n(A photo was also taken, but it can't be copied to the clipboard.)";
-            }
-            await navigator.clipboard.writeText(fallbackText);
-            alert('Cleanup stats copied to clipboard!');
-            resetPhotoUI(); // Reset the photo UI on success
-        } catch (err) {
-            console.error('Failed to copy to clipboard: ', err);
-            alert('Sharing is not supported on this browser.');
-        }
+    } catch (err) {
+        console.error('Error sharing:', err);
     }
 }
 
