@@ -1,6 +1,6 @@
 {
   "name": "Litter Troopers",
-  "short_name": "Troopers",
+  "short_name": "Litter Troopers",
   "start_url": "./maptest.html",
   "display": "standalone",
   "background_color": "#ffffff",
