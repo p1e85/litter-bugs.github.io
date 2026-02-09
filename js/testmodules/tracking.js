@@ -210,47 +210,31 @@ function showCleanupSummary() {
     state.trackingStartTime = null; 
 }
 
-/**
- * Shares the cleanup results using the Web Share API.
- */
+// --- SHARE FUNCTION (Text Only) ---
 export async function shareCleanupResults() {
-    const distance = document.getElementById('summaryDistance').textContent;
-    const pins = document.getElementById('summaryPins').textContent;
-    const shareText = `I just cleaned up ${distance} and pinned ${pins} items with the Litter Troopers app! Join the movement and help clean our planet. #LitterTroopers #Cleanup`;
-
+    // 1. Gather the stats from the current session
+    const pinCount = state.pins.length + state.photoPins.length; // Total items
+    const dist = (state.totalDistance || 0).toFixed(2);
+    
+    // 2. Create the message
     const shareData = {
-        title: 'My Litter Troopers Cleanup!',
-        text: shareText,
-        url: 'https://www.littertroopers.com/' 
+        title: 'Litter Troopers Cleanup',
+        text: `I just cleaned up ${pinCount} pieces of litter over ${dist} miles with Litter Troopers! 🌍💪 #LitterTroopers`,
+        url: 'http://www.littertroopers.com/mapbeta.html' // Optional: Links back to your app
     };
 
-    if (state.cleanupPhoto) {
-        const file = new File([state.cleanupPhoto], "cleanup_stats.jpg", {
-            type: state.cleanupPhoto.type,
-            lastModified: new Date().getTime()
-        });
-        shareData.files = [file];
-    }
-
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-        try {
+    // 3. Trigger the Native Share Sheet
+    try {
+        if (navigator.share) {
             await navigator.share(shareData);
-            console.log('Cleanup shared successfully!');
-        } catch (err) {
-            console.error('Share was canceled or failed:', err);
+            console.log('Content shared successfully');
+        } else {
+            // Fallback for desktop or unsupported browsers
+            await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+            alert('Share text copied to clipboard!');
         }
-    } else {
-        try {
-            let fallbackText = shareText + " " + shareData.url;
-            if (state.cleanupPhoto) {
-                fallbackText += "\n\n(A photo was also taken, but it can't be copied to the clipboard.)";
-            }
-            await navigator.clipboard.writeText(fallbackText);
-            alert('Cleanup stats copied to clipboard!');
-        } catch (err) {
-            console.error('Failed to copy to clipboard: ', err);
-            alert('Sharing is not supported on this browser.');
-        }
+    } catch (err) {
+        console.error('Error sharing:', err);
     }
 }
 
