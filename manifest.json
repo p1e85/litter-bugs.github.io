@@ -1,7 +1,7 @@
 {
   "name": "Litter Troopers",
   "short_name": "Litter Troopers",
-  "start_url": "./maptest.html",
+  "start_url": "./mapbeta.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4A7C59",
