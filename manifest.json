@@ -8,7 +8,7 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "img/ltlogo2png",
+      "src": "img/ltlogo2.png",
       "sizes": "192x192",
       "type": "image/png"
     },
