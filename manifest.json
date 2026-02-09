@@ -1,0 +1,21 @@
+{
+  "name": "Litter Troopers",
+  "short_name": "Troopers",
+  "start_url": "./maptest.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4A7C59",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3209/3209265.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3209/3209265.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
