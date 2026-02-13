@@ -234,7 +234,7 @@ export async function shareCleanupResults() {
     const shareData = {
         title: 'Litter Troopers Cleanup',
         text: `I just cleaned up ${pinCount} pieces of litter over ${dist} miles with Litter Troopers! 🌍💪 #LitterTroopers`,
-        url: window.location.href // Optional: Links back to your app
+        url: 'https://www.littertroopers.com'
     };
 
     // 3. Trigger the Native Share Sheet
