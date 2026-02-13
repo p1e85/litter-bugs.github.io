@@ -210,17 +210,21 @@ function showCleanupSummary() {
     state.trackingStartTime = null; 
 }
 
-// --- SHARE FUNCTION (Text Only) ---
+// --- SHARE FUNCTION (Fixed for Test File) ---
 export async function shareCleanupResults() {
     // 1. Gather the stats from the current session
-    const pinCount = state.pins.length + state.photoPins.length; // Total items
+    // SAFETY FIX: Check if arrays exist before counting length
+    const countA = state.pins ? state.pins.length : 0;
+    const countB = state.photoPins ? state.photoPins.length : 0;
+    
+    const pinCount = countA + countB; // Total items
     const dist = (state.totalDistance || 0).toFixed(2);
     
     // 2. Create the message
     const shareData = {
         title: 'Litter Troopers Cleanup',
         text: `I just cleaned up ${pinCount} pieces of litter over ${dist} miles with Litter Troopers! 🌍💪 #LitterTroopers`,
-        url: 'http://www.littertroopers.com/mapbeta.html' // Optional: Links back to your app
+        url: 'http://www.littertroopers.com/mapbeta.html' 
     };
 
     // 3. Trigger the Native Share Sheet
