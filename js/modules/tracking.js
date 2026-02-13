@@ -223,7 +223,11 @@ function showCleanupSummary() {
 // --- SHARE FUNCTION (Text Only) ---
 export async function shareCleanupResults() {
     // 1. Gather the stats from the current session
-    const pinCount = state.pins.length + state.photoPins.length; // Total items
+    // SAFETY FIX: We use ( || 0 ) to make sure we don't crash if one of these lists is missing
+    const countA = state.pins ? state.pins.length : 0;
+    const countB = state.photoPins ? state.photoPins.length : 0;
+    
+    const pinCount = countA + countB; // Total items
     const dist = (state.totalDistance || 0).toFixed(2);
     
     // 2. Create the message
