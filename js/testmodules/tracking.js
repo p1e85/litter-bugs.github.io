@@ -223,8 +223,8 @@ export async function shareCleanupResults() {
     // 2. Create the message
     const shareData = {
         title: 'Litter Troopers Cleanup',
-        text: `I just cleaned up ${pinCount} pieces of litter over ${dist} miles with Litter Troopers! 🌍💪 #LitterTroopers`,
-        url: 'http://www.littertroopers.com/mapbeta.html' 
+        text: `I just cleaned up ${pinCount} pieces of litter over ${dist} miles with Litter Troopers! 🌍💪 #LitterTroopers\n\nCheck it out: https://www.littertroopers.com`
+        
     };
 
     // 3. Trigger the Native Share Sheet
