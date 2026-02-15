@@ -612,7 +612,7 @@ export async function handleMeetupSubmit() {
     }
 }
 
-// --- EVENTS / MEETUPS SYSTEM (Fixed: Uses 'eventDate') ---
+// --- EVENTS / MEETUPS SYSTEM (With Admin/Owner Delete) ---
 export async function fetchAndDisplayAllEvents() {
     const list = document.getElementById('eventsList');
     if (!list) return;
@@ -620,14 +620,25 @@ export async function fetchAndDisplayAllEvents() {
     list.innerHTML = '<p style="text-align:center;">Scanning for local signals...</p>';
 
     try {
-        // 1. Query using the correct field "eventDate"
+        // 1. Check Admin Status
+        let isAdmin = false;
+        if (state.currentUser) {
+            try {
+                const profileDoc = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
+                if (profileDoc.exists() && profileDoc.data().role === 'admin') {
+                    isAdmin = true;
+                }
+            } catch (e) { console.log("Not admin"); }
+        }
+
+        // 2. Query Events
         const q = query(
             collection(db, "meetups"),
-            orderBy("eventDate", "asc") // Sort by date
+            orderBy("eventDate", "asc") 
         );
 
         const querySnapshot = await getDocs(q);
-        list.innerHTML = ""; // Clear loader
+        list.innerHTML = ""; 
 
         if (querySnapshot.empty) {
             list.innerHTML = `
@@ -639,10 +650,15 @@ export async function fetchAndDisplayAllEvents() {
             return;
         }
 
-        // 2. Loop and Create Cards
+        // 3. Loop and Create Cards
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
+            const eventId = docSnap.id;
             
+            // PERMISSIONS: Admin OR Organizer
+            const isOrganizer = state.currentUser && (data.organizerId === state.currentUser.uid);
+            const canDelete = isAdmin || isOrganizer;
+
             // --- DATE & TIME FORMATTING ---
             let dateStr = "Date TBD";
             let timeStr = "";
@@ -650,26 +666,20 @@ export async function fetchAndDisplayAllEvents() {
 
             if (data.eventDate && data.eventDate.seconds) {
                 const dateObj = new Date(data.eventDate.seconds * 1000);
-                
-                // Check if the event is in the past
-                if (dateObj < new Date()) {
-                    isPast = true; 
-                }
+                if (dateObj < new Date()) isPast = true; 
 
-                // Format the Date (e.g., "Jan 25, 2026")
                 dateStr = dateObj.toLocaleDateString(undefined, { 
                     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
                 });
-
-                // Format the Time (e.g., "8:00 PM")
                 timeStr = dateObj.toLocaleTimeString(undefined, { 
                     hour: 'numeric', minute: '2-digit' 
                 });
             }
 
-            // Visual style for Past vs Upcoming
+            // Visual style
             const cardOpacity = isPast ? '0.6' : '1';
             const statusLabel = isPast ? '<span style="color:red; font-size:0.8em;">(ENDED)</span>' : '';
+            const borderStyle = isPast ? '4px solid #ccc' : '4px solid #4682B4';
 
             const card = document.createElement('div');
             card.className = 'hub-card'; 
@@ -677,7 +687,7 @@ export async function fetchAndDisplayAllEvents() {
             card.style.flexDirection = 'column';
             card.style.gap = '5px';
             card.style.textAlign = 'left';
-            card.style.borderLeft = isPast ? '4px solid #ccc' : '4px solid #4682B4';
+            card.style.borderLeft = borderStyle;
             card.style.opacity = cardOpacity;
 
             card.innerHTML = `
@@ -690,7 +700,10 @@ export async function fetchAndDisplayAllEvents() {
                             📅 <strong>${dateStr}</strong> @ ${timeStr}
                         </div>
                     </div>
-                    <span style="font-size:1.5em;">${isPast ? '🏁' : '📍'}</span>
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <span style="font-size:1.5em;">${isPast ? '🏁' : '📍'}</span>
+                        ${canDelete ? `<button class="delete-event-btn" style="background:none; border:none; cursor:pointer; font-size:1.2em; margin-top:5px;" title="Delete Event">🗑️</button>` : ''}
+                    </div>
                 </div>
                 
                 <p style="font-size:0.9em; margin:5px 0; color:#444;">
@@ -698,7 +711,8 @@ export async function fetchAndDisplayAllEvents() {
                 </p>
 
                 <div style="font-size:0.85em; color:#888;">
-                    <strong>Location:</strong> ${data.poiName || data.location || 'Unknown'}
+                    <strong>Location:</strong> ${data.poiName || data.location || 'Unknown'} <br>
+                    <small>Organizer: ${data.organizerName || 'Anonymous'}</small>
                 </div>
 
                 ${!isPast ? `
@@ -707,6 +721,28 @@ export async function fetchAndDisplayAllEvents() {
                     👋 I'll be there
                 </button>` : ''}
             `;
+
+            // ATTACH DELETE LISTENER
+            if (canDelete) {
+                const delBtn = card.querySelector('.delete-event-btn');
+                delBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const warning = isAdmin && !isOrganizer 
+                        ? "⚠️ ADMIN: Delete this user's event?" 
+                        : "Delete your scheduled event?";
+                        
+                    if (confirm(warning)) {
+                        try {
+                            // Ensure deleteDoc is imported from firebase.js
+                            await deleteDoc(doc(db, "meetups", eventId));
+                            fetchAndDisplayAllEvents(); // Refresh list
+                        } catch (err) {
+                            console.error("Error deleting event:", err);
+                            alert("Failed to delete event.");
+                        }
+                    }
+                });
+            }
 
             list.appendChild(card);
         });
