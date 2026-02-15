@@ -1,5 +1,5 @@
 
-import { db, collection, query, orderBy, limit, getDocs, doc, getDoc } from './firebase.js'; 
+import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc } from './firebase.js'; 
 import { state, allTitles, allBadges } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute, setupSectorVisuals } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
