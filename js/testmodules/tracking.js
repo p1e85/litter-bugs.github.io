@@ -211,30 +211,29 @@ function showCleanupSummary() {
 }
 
 // --- SHARE FUNCTION (Fixed for Test File) ---
+// --- SHARE FUNCTION (Fixed for Test File) ---
 export async function shareCleanupResults() {
-    // 1. Gather the stats from the current session
-    // SAFETY FIX: Check if arrays exist before counting length
+    // 1. Gather the stats
     const countA = state.pins ? state.pins.length : 0;
     const countB = state.photoPins ? state.photoPins.length : 0;
     
-    const pinCount = countA + countB; // Total items
+    const pinCount = countA + countB; 
     const dist = (state.totalDistance || 0).toFixed(2);
     
     // 2. Create the message
     const shareData = {
         title: 'Litter Troopers Cleanup',
         text: `I just cleaned up ${pinCount} pieces of litter over ${dist} miles with Litter Troopers! 🌍💪 #LitterTroopers\n\nCheck it out: https://www.littertroopers.com`
-        
     };
 
-    // 3. Trigger the Native Share Sheet
+    // 3. Trigger Share
     try {
         if (navigator.share) {
             await navigator.share(shareData);
             console.log('Content shared successfully');
         } else {
-            // Fallback for desktop or unsupported browsers
-            await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+            // Fallback: REMOVED ${shareData.url} because it was undefined
+            await navigator.clipboard.writeText(shareData.text);
             alert('Share text copied to clipboard!');
         }
     } catch (err) {
