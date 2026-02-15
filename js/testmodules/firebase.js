@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
     getFirestore, doc, getDoc, setDoc, updateDoc, collection,
-    addDoc, getDocs, query, orderBy, where, deleteDoc, limit, onSnapshot, serverTimestamp, Timestamp, arrayUnion, arrayRemove, runTransaction
+    addDoc, getDocs, query, orderBy, where, deleteDoc, limit, onSnapshot, serverTimestamp, Timestamp, arrayUnion, arrayRemove, runTransaction, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { 
     getStorage, ref, uploadBytes, getDownloadURL 
@@ -66,5 +66,6 @@ export {
     arrayUnion,
     arrayRemove,
     runTransaction,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    deleteField
 };
