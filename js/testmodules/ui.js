@@ -739,24 +739,30 @@ function validateSignUpForm() {
 
 // --- ACTIVITY FEED (User View + Admin Controls) ---
 async function loadActivityFeed() {
-    const container = elements.feedContainer;
+    const container = elements.feedContainer; // Ensure this exists in your DOM elements
+    if (!container) return;
+
     container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
 
     try {
-        // 1. Check Admin Status of the CURRENT User
+        // 1. STRICT ADMIN CHECK
         let isAdmin = false;
         if (state.currentUser) {
             try {
-                // We need to fetch the profile to see the 'role' field
                 const profileRef = doc(db, "publicProfiles", state.currentUser.uid);
                 const profileSnap = await getDoc(profileRef);
-                if (profileSnap.exists() && profileSnap.data().role === 'admin') {
-                    isAdmin = true;
+                if (profileSnap.exists()) {
+                    const role = profileSnap.data().role;
+                    if (role === 'admin') {
+                        isAdmin = true;
+                    }
                 }
             } catch (e) {
-                console.log("Admin check failed or user is not admin.");
+                console.warn("Admin check failed:", e);
             }
         }
+
+        console.log("Current User Admin Status:", isAdmin); // <--- CHECK THIS IN CONSOLE
 
         const q = query(
             collection(db, "publishedRoutes"), 
@@ -774,8 +780,9 @@ async function loadActivityFeed() {
 
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const routeId = docSnap.id; // We need the ID to delete it
+            const routeId = docSnap.id; 
 
+            // Skip broken data
             if (typeof data.distance === 'undefined' && typeof data.distanceMiles === 'undefined') return; 
 
             const date = data.timestamp?.toDate().toLocaleDateString() || "Recently";
@@ -785,14 +792,15 @@ async function loadActivityFeed() {
             const isLiked = state.currentUser && likedBy.includes(state.currentUser.uid);
             const likeBtnClass = isLiked ? 'like-btn active' : 'like-btn';
             
-            // 2. CHECK PERMISSIONS
+            // 2. PERMISSION LOGIC
             const isOwner = state.currentUser && (data.userId === state.currentUser.uid);
+            
+            // SHOW BUTTON IF: You are Admin OR You are Owner
             const canDelete = isAdmin || isOwner;
 
             const card = document.createElement('div');
             card.className = 'feed-card';
             
-            // 3. RENDER CARD (With Delete Button)
             card.innerHTML = `
                 <div class="feed-header">
                     <div class="feed-avatar">${data.username?.charAt(0).toUpperCase() || 'T'}</div>
@@ -800,7 +808,7 @@ async function loadActivityFeed() {
                         <h4>${data.username || 'Anonymous Trooper'}</h4>
                         <span>${date}</span>
                     </div>
-                    ${canDelete ? `<button class="delete-post-btn" style="margin-left:auto; background:none; border:none; cursor:pointer;" title="Delete Post">🗑️</button>` : ''}
+                    ${canDelete ? `<button class="delete-post-btn" style="margin-left:auto; background:none; border:none; cursor:pointer; font-size:1.2em;" title="Delete Post">🗑️</button>` : ''}
                 </div>
                 <img src="${photoUrl}" class="feed-photo" loading="lazy">
                 <div class="feed-body">
@@ -824,7 +832,7 @@ async function loadActivityFeed() {
             const likeBtn = card.querySelector('.like-btn');
             likeBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                // Ensure toggleRouteLike is imported from community.js or defined
+                // Ensure toggleRouteLike is imported!
                 const result = await toggleRouteLike(routeId); 
                 if (result) {
                     likeBtn.querySelector('.like-count').textContent = result.likeCount;
@@ -837,15 +845,17 @@ async function loadActivityFeed() {
                 const delBtn = card.querySelector('.delete-post-btn');
                 delBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    if (confirm("Are you sure you want to delete this post? This cannot be undone.")) {
+                    const warning = isAdmin && !isOwner 
+                        ? "⚠️ ADMIN ACTION: Delete this user's post?" 
+                        : "Are you sure you want to delete your post?";
+
+                    if (confirm(warning)) {
                         try {
-                            // Ensure deleteDoc and db are imported
                             await deleteDoc(doc(db, "publishedRoutes", routeId));
-                            card.remove(); // Remove from UI immediately
-                            alert("Post deleted.");
+                            card.remove(); 
                         } catch (err) {
                             console.error("Error deleting post:", err);
-                            alert("Failed to delete post.");
+                            alert("Failed to delete post. Check permissions.");
                         }
                     }
                 });
