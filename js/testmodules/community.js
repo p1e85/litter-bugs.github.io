@@ -1,6 +1,6 @@
 
 import { 
-    db, serverTimestamp, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL, runTransaction 
+    db, serverTimestamp, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL, runTransaction, deleteField 
 } from './firebase.js';
 import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
@@ -894,12 +894,24 @@ export async function openEventBadgesModal() {
 
 // --- Public Challenges UI ---
 // Replacing "openCurrentChallenges" with "loadPublicChallenges" to match your desired UI flow
+// --- Public Challenges UI (Updated with Admin Delete) ---
 export async function openCurrentChallenges() {
-    const listContainer = document.getElementById('activeChallengesList'); // Ensure this ID matches your HTML
+    const listContainer = document.getElementById('activeChallengesList');
     if (!listContainer) return;
     listContainer.innerHTML = "<p>Loading quests...</p>";
 
     try {
+        // 1. Check Admin Status
+        let isAdmin = false;
+        if (state.currentUser) {
+            try {
+                const profileDoc = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
+                if (profileDoc.exists() && profileDoc.data().role === 'admin') {
+                    isAdmin = true;
+                }
+            } catch (e) { console.log("Not admin"); }
+        }
+
         const challenges = await getAdminChallenges();
         let myQuests = {};
         if (state.currentUser) {
@@ -934,6 +946,10 @@ export async function openCurrentChallenges() {
             const isJoined = !!questData;
             const isCompleted = questData && questData.status === 'completed';
             const userProgress = isJoined ? questData.progress : 0;
+            
+            // Allow deletion if Admin OR if the current user created it (if you store creatorId)
+            const isCreator = state.currentUser && chal.creatorId === state.currentUser.uid;
+            const canDelete = isAdmin || isCreator;
 
             let buttonHtml = "";
             let statusBadge = "";
@@ -948,9 +964,13 @@ export async function openCurrentChallenges() {
                 buttonHtml = `<button class="modal-button primary start-btn">Start</button>`;
             }
 
+            // HTML Structure
             card.innerHTML = `
                 <div style="flex-grow:1;">
-                    <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                         <h4 style="margin: 0; color: #4A7C59;">${chal.title}</h4>
+                         ${canDelete ? `<button class="delete-chal-btn" style="background:none; border:none; cursor:pointer;" title="Delete Challenge">🗑️</button>` : ''}
+                    </div>
                     <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${chal.description}</p>
                     <div style="font-size: 0.85em; margin-top:5px;">
                         🎯 Goal: ${goalText} ${statusBadge}
@@ -959,6 +979,7 @@ export async function openCurrentChallenges() {
                 <div>${buttonHtml}</div>
             `;
             
+            // Start Listener
             if (!isJoined && !isCompleted) {
                 const btn = card.querySelector('.start-btn');
                 btn.addEventListener('click', async () => {
@@ -968,6 +989,19 @@ export async function openCurrentChallenges() {
                     openCurrentChallenges(); // Refresh
                 });
             }
+
+            // Delete Listener (Admin)
+            if (canDelete) {
+                const delBtn = card.querySelector('.delete-chal-btn');
+                delBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if(confirm(`⚠️ ADMIN: Delete "${chal.title}" for EVERYONE?`)) {
+                        await deleteChallenge(chal.id);
+                        openCurrentChallenges(); // Refresh UI
+                    }
+                });
+            }
+
             listContainer.appendChild(card);
         });
     } catch (e) {
@@ -976,7 +1010,7 @@ export async function openCurrentChallenges() {
     }
 }
 
-// Replacing openPastChallenges with real logic
+// --- Past Challenges (User History with Delete) ---
 export async function openPastChallenges(type) {
     const content = document.getElementById('pastChallengesContent');
     content.innerHTML = `<p>Loading ${type} history...</p>`;
@@ -1000,17 +1034,48 @@ export async function openPastChallenges(type) {
 
         for (const [chalId, data] of Object.entries(myQuests)) {
             const isCompleted = data.status === 'completed';
+            
+            // Filter: Show based on which tab was clicked (Completed vs Uncompleted)
             const showIt = (type === 'completed' && isCompleted) || (type === 'uncompleted' && !isCompleted);
 
             if (showIt) {
                 count++;
                 const div = document.createElement('div');
                 div.className = "hub-card";
+                
+                // Card HTML with Delete Button
                 div.innerHTML = `
-                    <strong>${data.title}</strong><br>
-                    Status: ${data.status.toUpperCase()}<br>
-                    Progress: ${data.progress}
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong>${data.title}</strong><br>
+                            <span style="font-size:0.8em; color:#666;">
+                                Status: ${data.status.toUpperCase()} • Progress: ${data.progress}
+                            </span>
+                        </div>
+                        <button class="forget-quest-btn" style="color: #999; background: none; border: 1px solid #ddd; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                             ✕ Remove
+                        </button>
+                    </div>
                 `;
+
+                // Wire up the "Forget" button
+                const forgetBtn = div.querySelector('.forget-quest-btn');
+                forgetBtn.addEventListener('click', async () => {
+                    if(confirm("Remove this from your history? (This cannot be undone)")) {
+                        try {
+                            const userRef = doc(db, "users", state.currentUser.uid);
+                            // Use deleteField() to remove this specific Key from the Map
+                            await updateDoc(userRef, {
+                                [`active_quests.${chalId}`]: deleteField()
+                            });
+                            div.remove(); // Remove from screen
+                        } catch(err) {
+                            console.error("Error removing quest:", err);
+                            alert("Failed to remove.");
+                        }
+                    }
+                });
+
                 content.appendChild(div);
             }
         }
