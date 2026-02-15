@@ -1280,3 +1280,16 @@ window.viewSquadIntel = (squadId) => {
         fetchSquadDetails(squadId);
     }
 };
+
+// --- ADMIN PERMISSIONS ---
+// ⚠️ MAKE SURE "export" IS HERE!
+export function checkAdminPermissions(userProfile) {
+    // Note: elements.btnAdminPanel might need to be defined in your DOM elements list
+    const btnAdminPanel = document.getElementById('btnAdminPanel'); 
+    
+    if (userProfile && userProfile.role === 'admin') {
+        if (btnAdminPanel) btnAdminPanel.style.display = 'flex';
+    } else {
+        if (btnAdminPanel) btnAdminPanel.style.display = 'none';
+    }
+}
