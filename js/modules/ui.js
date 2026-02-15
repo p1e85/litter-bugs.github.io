@@ -17,6 +17,7 @@ import {
 } from './community.js';
 
 // --- DOM Element Selection ---
+// Note: Some of these might be NULL in the Beta/MVP HTML.
 const elements = {
     // Modals
     termsModal: document.getElementById('termsModal'),
@@ -35,11 +36,11 @@ const elements = {
     meetupModal: document.getElementById('meetupModal'),
     viewMeetupsModal: document.getElementById('viewMeetupsModal'),
     menuModal: document.getElementById('menuModal'),
-communityChallengeBtn: document.getElementById('communityChallengeBtn'),
-challengeModal: document.getElementById('challengeModal'),
-addChallengeBtn: document.getElementById('addChallengeBtn'),
-currentChallengesTab: document.getElementById('currentChallengesTab'),
-pastChallengesTab: document.getElementById('pastChallengesTab'),       
+    communityChallengeBtn: document.getElementById('communityChallengeBtn'),
+    challengeModal: document.getElementById('challengeModal'),
+    addChallengeBtn: document.getElementById('addChallengeBtn'),
+    currentChallengesTab: document.getElementById('currentChallengesTab'),
+    pastChallengesTab: document.getElementById('pastChallengesTab'),
 
     // Buttons
     agreeBtn: document.getElementById('agreeBtn'),
@@ -86,9 +87,6 @@ pastChallengesTab: document.getElementById('pastChallengesTab'),
     viewTermsLink: document.getElementById('viewTermsLink'),
     leaderboardTabs: document.querySelectorAll('.leaderboard-tab'),
     leaderboardList: document.getElementById('leaderboardList'),
-
-    summaryModal: document.getElementById('summaryModal'),
-    summaryOkBtn: document.getElementById('summaryOkBtn'),
 };
 
 // --- Initializer ---
@@ -121,230 +119,254 @@ export function initializeUI() {
  */
 function attachEventListeners() {
     // --- Auth Flow & Terms ---
-    elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
-    elements.agreeBtn.addEventListener('click', () => {
+    if (elements.termsCheckbox) elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
+    if (elements.agreeBtn) elements.agreeBtn.addEventListener('click', () => {
         elements.termsModal.style.display = 'none';
         sessionStorage.setItem('termsAccepted', 'true');
         document.getElementById('userStatus').style.display = 'flex';
         if (!state.currentUser) elements.authModal.style.display = 'flex';
     });
-    elements.loginSignupBtn.addEventListener('click', () => elements.authModal.style.display = 'flex');
-    elements.skipBtn.addEventListener('click', () => elements.authModal.style.display = 'none');
-    elements.authModal.addEventListener('click', (e) => {
-        if (e.target.id === 'switchAuthModeLink') {
+    if (elements.loginSignupBtn) elements.loginSignupBtn.addEventListener('click', () => elements.authModal.style.display = 'flex');
+    if (elements.skipBtn) elements.skipBtn.addEventListener('click', () => elements.authModal.style.display = 'none');
+    
+    if (elements.authModal) {
+        elements.authModal.addEventListener('click', (e) => {
+            if (e.target.id === 'switchAuthModeLink') {
+                e.preventDefault();
+                state.isSignUpMode = !state.isSignUpMode;
+                updateAuthModalUI();
+            }
+        });
+    }
+
+    if (elements.authActionBtn) {
+        elements.authActionBtn.addEventListener('click', async (event) => { 
+            event.preventDefault();
+            if (state.isSignUpMode) await handleSignUp();
+            else await handleLogIn();
+        });
+    }
+
+    if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', handleLogOut);
+    if (elements.emailInput) elements.emailInput.addEventListener('input', validateSignUpForm);
+    if (elements.passwordInput) elements.passwordInput.addEventListener('input', validateSignUpForm);
+    if (elements.usernameInput) elements.usernameInput.addEventListener('input', validateSignUpForm);
+    if (elements.ageCheckbox) elements.ageCheckbox.addEventListener('change', validateSignUpForm);
+    if (elements.deleteAccountBtn) elements.deleteAccountBtn.addEventListener('click', handleAccountDeletion);
+
+    // --- Community Challenge Modal Listeners ---
+    if (elements.addChallengeBtn) {
+        elements.addChallengeBtn.addEventListener('click', () => {
+            alert('Add New Challenge modal will go here.'); document.getElementById('addChallengeModal').style.display = 'flex';
+        });
+    }
+
+    if (elements.communityChallengeBtn) {
+        elements.communityChallengeBtn.addEventListener('click', () => {
+            elements.challengeModal.style.display = 'flex';
+            elements.menuModal.style.display = 'none';
+        });
+    }
+
+    if (elements.currentChallengesTab) {
+        elements.currentChallengesTab.addEventListener('click', () => {
+            document.getElementById('currentChallengesContent').style.display = 'block';
+            document.getElementById('pastChallengesContent').style.display = 'none';
+            elements.currentChallengesTab.classList.add('active');
+            elements.pastChallengesTab.classList.remove('active');
+        });
+    }
+
+    if (elements.pastChallengesTab) {
+        elements.pastChallengesTab.addEventListener('click', () => {
+            document.getElementById('currentChallengesContent').style.display = 'none';
+            document.getElementById('pastChallengesContent').style.display = 'block';
+            elements.currentChallengesTab.classList.remove('active');
+            elements.pastChallengesTab.classList.add('active');
+        });
+    }
+
+    // --- Main Controls ---
+    if (elements.findMeBtn) elements.findMeBtn.addEventListener('click', findMe);
+    if (elements.trackBtn) elements.trackBtn.addEventListener('click', toggleTracking);
+    if (elements.pictureBtn) elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
+    if (elements.cameraInput) elements.cameraInput.addEventListener('change', handlePhoto);
+    if (elements.changeStyleBtn) elements.changeStyleBtn.addEventListener('click', changeMapStyle);
+    if (elements.communityBtn) elements.communityBtn.addEventListener('click', toggleCommunityView);
+    if (elements.menuBtn) elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
+    if (elements.infoBtn) elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
+    
+    if (elements.viewTermsLink) {
+        elements.viewTermsLink.addEventListener('click', (e) => {
             e.preventDefault();
-            state.isSignUpMode = !state.isSignUpMode;
-            updateAuthModalUI();
-        }
-    });
-elements.authActionBtn.addEventListener('click', async (event) => { 
-    event.preventDefault();
-   if (state.isSignUpMode) await handleSignUp();
-    else await handleLogIn();
-});
-    elements.logoutBtn.addEventListener('click', handleLogOut);
-    elements.emailInput.addEventListener('input', validateSignUpForm);
-    elements.passwordInput.addEventListener('input', validateSignUpForm);
-    elements.usernameInput.addEventListener('input', validateSignUpForm);
-    elements.ageCheckbox.addEventListener('change', validateSignUpForm);
-    elements.deleteAccountBtn.addEventListener('click', handleAccountDeletion);
+            elements.infoModal.style.display = 'none';
+            elements.termsModal.style.display = 'flex';
+        });
+    }
 
-    // --- Main Map & Menu Controls ---
+    if (elements.safetyModalOkBtn) {
+        elements.safetyModalOkBtn.addEventListener('click', () => {
+            elements.safetyModal.style.display = 'none';
+            startTracking();
+        });
+    }
 
+    if (elements.summaryOkBtn) {
+        elements.summaryOkBtn.addEventListener('click', () => { 
+            elements.summaryModal.style.display = 'none';
+            const preview = document.getElementById('cleanupPhotoPreviewContainer');
+            if(preview) preview.style.display = 'none';
+            const img = document.getElementById('cleanupPhotoPreview');
+            if(img) img.src = '#';
+        });
+    }
 
-// --- Community Challenge Modal Listeners ---
-if (elements.addChallengeBtn) {
-    elements.addChallengeBtn.addEventListener('click', () => {
-        // This button will open a new modal for creating challenges.
-        alert('Add New Challenge modal will go here.'); document.getElementById('addChallengeModal').style.display = 'flex';
-    });
-}
-
-if (elements.communityChallengeBtn) {
-    elements.communityChallengeBtn.addEventListener('click', () => {
-        elements.challengeModal.style.display = 'flex';
-        elements.menuModal.style.display = 'none';
-        // We will call a function here to load the challenges
-        // fetchAndDisplayChallenges(); // <-- We'll create this next
-    });
-}
-
-if (elements.currentChallengesTab) {
-    elements.currentChallengesTab.addEventListener('click', () => {
-        document.getElementById('currentChallengesContent').style.display = 'block';
-        document.getElementById('pastChallengesContent').style.display = 'none';
-        elements.currentChallengesTab.classList.add('active');
-        elements.pastChallengesTab.classList.remove('active');
-    });
-}
-
-if (elements.pastChallengesTab) {
-    elements.pastChallengesTab.addEventListener('click', () => {
-        document.getElementById('currentChallengesContent').style.display = 'none';
-        document.getElementById('pastChallengesContent').style.display = 'block';
-        elements.currentChallengesTab.classList.remove('active');
-        elements.pastChallengesTab.classList.add('active');
-    });
-}
-// --- End of Challenge Modal Listeners ---
-    elements.findMeBtn.addEventListener('click', findMe);
-    elements.trackBtn.addEventListener('click', toggleTracking);
-    elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
-    elements.cameraInput.addEventListener('change', handlePhoto);
-    elements.changeStyleBtn.addEventListener('click', changeMapStyle);
-    elements.communityBtn.addEventListener('click', toggleCommunityView);
-    elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
-    elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
-    elements.viewTermsLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        elements.infoModal.style.display = 'none';
-        elements.termsModal.style.display = 'flex';
-    });
-    elements.safetyModalOkBtn.addEventListener('click', () => {
-        elements.safetyModal.style.display = 'none';
-        startTracking();
-    });
-
-    // --- [FIXED] This is the corrected block ---
-    elements.summaryOkBtn.addEventListener('click', () => { 
-        elements.summaryModal.style.display = 'none';
-        document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none';
-        document.getElementById('cleanupPhotoPreview').src = '#';
-    });
-    // --- End of fix ---
-
-    // --- Data Management (Save, Load, Export) ---
-    elements.dataBtn.addEventListener('click', () => {
-        const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
-        elements.menuModal.style.display = 'none';
-        elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
-        elements.dataModal.style.display = 'flex';
-    });
-    elements.saveBtn.addEventListener('click', saveSession);
-    elements.loadBtn.addEventListener('click', () => {
+    // --- Data Management ---
+    if (elements.dataBtn) {
+        elements.dataBtn.addEventListener('click', () => {
+            const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
+            elements.menuModal.style.display = 'none';
+            if (elements.centerOnRouteBtn) elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
+            elements.dataModal.style.display = 'flex';
+        });
+    }
+    if (elements.saveBtn) elements.saveBtn.addEventListener('click', saveSession);
+    if (elements.loadBtn) elements.loadBtn.addEventListener('click', () => {
         elements.dataModal.style.display = 'none';
         loadSession();
     });
-    elements.exportBtn.addEventListener('click', exportGeoJSON);
-    elements.centerOnRouteBtn.addEventListener('click', () => {
-        if (elements.centerOnRouteBtn.classList.contains('disabled')) {
-            alert("Please load a route first to use this feature.");
-        } else {
-            centerOnRoute();
-            elements.dataModal.style.display = 'none';
-        }
-    });
-    elements.publishBtn.addEventListener('click', publishRoute);
-
-    // --- Profile & Publications ---
-    elements.managePublicationsBtn.addEventListener('click', () => {
-        if (!state.currentUser) { alert("You must be logged in to manage your publications."); return; }
-        elements.dataModal.style.display = 'none';
-        populatePublishedRoutesList();
-        elements.publishedRoutesModal.style.display = 'flex';
-    });
-    elements.editProfileBtn.addEventListener('click', () => {
-        if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
-        elements.menuModal.style.display = 'none'; // Close menu
-        loadProfileForEditing();
-        elements.profileModal.style.display = 'flex';
-    });
-    elements.saveProfileBtn.addEventListener('click', saveProfile);
-
-    // --- Leaderboard & Stats ---
-    elements.leaderboardBtn.addEventListener('click', () => {
-        elements.leaderboardModal.style.display = 'flex';
-        document.getElementById('leaderboardList').style.display = 'block';
-        document.getElementById('myStatsContainer').style.display = 'none';
-        elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
-        document.querySelector('.leaderboard-tab[data-metric="totalPins"]').classList.add('active');
-        fetchAndDisplayLeaderboard('totalPins');
-    });
-    elements.leaderboardTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const isMyStats = tab.id === 'myStatsBtn';
-            document.getElementById('leaderboardList').style.display = isMyStats ? 'none' : 'block';
-            document.getElementById('myStatsContainer').style.display = isMyStats ? 'block' : 'none';
-            if (isMyStats) { fetchAndDisplayMyStats(); }
-            else { fetchAndDisplayLeaderboard(tab.dataset.metric); }
-        });
-    });
-    elements.leaderboardList.addEventListener('click', (e) => {
-        if (e.target && e.target.classList.contains('leaderboard-profile-link')) {
-            e.preventDefault();
-            const userId = e.target.closest('li').dataset.userid;
-            if (userId) {
-                elements.leaderboardModal.style.display = 'none';
-                showPublicProfile(userId);
+    if (elements.exportBtn) elements.exportBtn.addEventListener('click', exportGeoJSON);
+    
+    if (elements.centerOnRouteBtn) {
+        elements.centerOnRouteBtn.addEventListener('click', () => {
+            if (elements.centerOnRouteBtn.classList.contains('disabled')) {
+                alert("Please load a route first to use this feature.");
+            } else {
+                centerOnRoute();
+                elements.dataModal.style.display = 'none';
             }
-        }
-    });
+        });
+    }
+    
+    if (elements.publishBtn) elements.publishBtn.addEventListener('click', publishRoute);
 
-    // --- LOGIC FOR CLEANUP PHOTO ---
-    // (This includes the modifications from our previous conversation)
+    // --- Profile ---
+    if (elements.managePublicationsBtn) {
+        elements.managePublicationsBtn.addEventListener('click', () => {
+            if (!state.currentUser) { alert("You must be logged in to manage your publications."); return; }
+            elements.dataModal.style.display = 'none';
+            populatePublishedRoutesList();
+            elements.publishedRoutesModal.style.display = 'flex';
+        });
+    }
+    if (elements.editProfileBtn) {
+        elements.editProfileBtn.addEventListener('click', () => {
+            if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
+            elements.menuModal.style.display = 'none'; 
+            loadProfileForEditing();
+            elements.profileModal.style.display = 'flex';
+        });
+    }
+    if (elements.saveProfileBtn) elements.saveProfileBtn.addEventListener('click', saveProfile);
+
+    // --- Leaderboard & Stats (SAFETY CHECK ADDED) ---
+    if (elements.leaderboardBtn) {
+        elements.leaderboardBtn.addEventListener('click', () => {
+            elements.leaderboardModal.style.display = 'flex';
+            document.getElementById('leaderboardList').style.display = 'block';
+            document.getElementById('myStatsContainer').style.display = 'none';
+            elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
+            const tab = document.querySelector('.leaderboard-tab[data-metric="totalPins"]');
+            if(tab) tab.classList.add('active');
+            fetchAndDisplayLeaderboard('totalPins');
+        });
+    }
+
+    if (elements.leaderboardTabs) {
+        elements.leaderboardTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const isMyStats = tab.id === 'myStatsBtn';
+                const list = document.getElementById('leaderboardList');
+                const stats = document.getElementById('myStatsContainer');
+                if (list) list.style.display = isMyStats ? 'none' : 'block';
+                if (stats) stats.style.display = isMyStats ? 'block' : 'none';
+                
+                if (isMyStats) { fetchAndDisplayMyStats(); }
+                else { fetchAndDisplayLeaderboard(tab.dataset.metric); }
+            });
+        });
+    }
+
+    if (elements.leaderboardList) {
+        elements.leaderboardList.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('leaderboard-profile-link')) {
+                e.preventDefault();
+                const userId = e.target.closest('li').dataset.userid;
+                if (userId) {
+                    elements.leaderboardModal.style.display = 'none';
+                    showPublicProfile(userId);
+                }
+            }
+        });
+    }
+
+    // --- Cleanup Photo ---
     const addCleanupPhotoBtn = document.getElementById('addCleanupPhotoBtn');
     const cleanupCameraInput = document.getElementById('cleanupCameraInput');
     const photoPreviewContainer = document.getElementById('cleanupPhotoPreviewContainer');
     const photoPreview = document.getElementById('cleanupPhotoPreview');
 
-    if (addCleanupPhotoBtn) { // Safety check
+    if (addCleanupPhotoBtn) { 
         addCleanupPhotoBtn.addEventListener('click', () => {
-            cleanupCameraInput.click(); // Trigger the hidden camera input
+            cleanupCameraInput.click();
         });
     }
 
-if (cleanupCameraInput) { // Safety check
-    // --- ADD 'async' HERE ---
-    cleanupCameraInput.addEventListener('change', async (event) => {
-        const file = event.target.files[0];
-        
-        if (file) {
-            // --- Add the compression logic ---
-            const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280 };
-            let compressedFile;
-            try {
-                // 'await' now works because the function is 'async'
-                compressedFile = await imageCompression(file, options);
-            } catch (error) {
-                console.error("Compression error:", error);
-                compressedFile = file; // Fallback to original
+    if (cleanupCameraInput) { 
+        cleanupCameraInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                // NOTE: imageCompression is loaded globally via CDN in HTML
+                const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280 };
+                let compressedFile;
+                try {
+                    // Check if imageCompression exists (it might not in test env)
+                    if (typeof imageCompression !== 'undefined') {
+                        compressedFile = await imageCompression(file, options);
+                    } else {
+                        compressedFile = file;
+                    }
+                } catch (error) {
+                    console.error("Compression error:", error);
+                    compressedFile = file;
+                }
+                
+                state.cleanupPhoto = compressedFile; 
+                const objectURL = URL.createObjectURL(compressedFile);
+                if (photoPreview) photoPreview.src = objectURL;
+                if (photoPreviewContainer) photoPreviewContainer.style.display = 'flex';
+                event.target.value = '';
+            } else {
+                state.cleanupPhoto = null;
+                if (photoPreview) photoPreview.src = '#';
+                if (photoPreviewContainer) photoPreviewContainer.style.display = 'none';
             }
-            
-            // --- Store the COMPRESSED file in our global state ---
-            state.cleanupPhoto = compressedFile; 
-            
-            // --- Show a thumbnail preview of the COMPRESSED file ---
-            const objectURL = URL.createObjectURL(compressedFile); // <-- FIX 2
-            photoPreview.src = objectURL;
-            
-            // Use 'flex' to allow for CSS centering
-            photoPreviewContainer.style.display = 'flex';
-            
-            // Clear the input value so the same file can be selected again
-            event.target.value = '';
-            
-        } else {
-            // User canceled the file picker
-            state.cleanupPhoto = null;
-            photoPreview.src = '#';
-            photoPreviewContainer.style.display = 'none';
-        }
         });
     }
 
-    // --- Meetups ---
-    elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
-    elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
-    elements.meetupDescriptionInput.addEventListener('input', validateMeetupForm);
-    elements.createMeetupBtn.addEventListener('click', handleMeetupSubmit);
+    // --- Meetups (SAFETY CHECK ADDED - THIS WAS THE CRASH) ---
+    if (elements.safetyCheckbox) elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
+    if (elements.meetupTitleInput) elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
+    if (elements.meetupDescriptionInput) elements.meetupDescriptionInput.addEventListener('input', validateMeetupForm);
+    if (elements.createMeetupBtn) elements.createMeetupBtn.addEventListener('click', handleMeetupSubmit);
 
-    // --- General/Global Listeners ---
-    elements.shareBtn.addEventListener('click', shareCleanupResults);
+    // --- General ---
+    if (elements.shareBtn) elements.shareBtn.addEventListener('click', shareCleanupResults);
+    
     addAllModalCloseListeners();
-}  //end of event listerner! ***************
-
+}  // end of event listener!
 
 /**
  * Adds listeners to close modals when clicking the close button or outside the modal content.
