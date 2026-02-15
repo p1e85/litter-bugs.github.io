@@ -240,6 +240,7 @@ export async function publishRoute() {
         const distanceVal = calculateRouteDistance(state.routeCoordinates);
         const distanceStr = `${distanceVal.toFixed(2)} mi`;
 
+        // 1. Try to upload the specific "Summary Photo"
         let cleanupPhotoURL = null;
         if (state.cleanupPhoto) {
             try {
@@ -251,6 +252,16 @@ export async function publishRoute() {
             }
         }
 
+        // 2. FALLBACK: If no summary photo, use the first Pin Photo!
+        if (!cleanupPhotoURL && state.photoPins.length > 0) {
+            const firstPin = state.photoPins[0];
+            // Only use it if it's already a valid Firebase URL (from logged-in tracking)
+            if (firstPin.imageURL && firstPin.imageURL.startsWith('http')) {
+                cleanupPhotoURL = firstPin.imageURL;
+            }
+        }
+
+        // 3. Save to Firestore
         await addDoc(collection(db, "publishedRoutes"), {
             userId: state.currentUser.uid,
             username: username,
@@ -259,7 +270,7 @@ export async function publishRoute() {
             pins: convertPinsForFirestore(state.photoPins),
             distance: distanceVal,
             distanceMiles: distanceStr,
-            cleanupPhotoURL: cleanupPhotoURL,
+            cleanupPhotoURL: cleanupPhotoURL, // Now this is much less likely to be null
             likeCount: 0,
             likedBy: []
         });
