@@ -18,7 +18,7 @@ import {
     sendPasswordResetEmail
 } from './firebase.js';
 import { state } from './config.js';
-import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
+import { checkAdminPermissions, updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
 import * as ui from './ui.js';
 import { grantTitle } from './community.js';
 
