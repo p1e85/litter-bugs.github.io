@@ -1048,6 +1048,7 @@ export async function openCurrentChallenges() {
 
 // --- Past Challenges (User History with Delete) ---
 export async function openPastChallenges(type) {
+    // type is either 'completed' or 'uncompleted'
     const content = document.getElementById('pastChallengesContent');
     content.innerHTML = `<p>Loading ${type} history...</p>`;
     
@@ -1071,7 +1072,7 @@ export async function openPastChallenges(type) {
         for (const [chalId, data] of Object.entries(myQuests)) {
             const isCompleted = data.status === 'completed';
             
-            // Filter: Show based on which tab was clicked (Completed vs Uncompleted)
+            // 1. FILTER: Show based on tab selected
             const showIt = (type === 'completed' && isCompleted) || (type === 'uncompleted' && !isCompleted);
 
             if (showIt) {
@@ -1079,7 +1080,7 @@ export async function openPastChallenges(type) {
                 const div = document.createElement('div');
                 div.className = "hub-card";
                 
-                // Card HTML with Delete Button
+                // 2. CREATE CARD (With Delete Button for ALL items)
                 div.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -1088,13 +1089,13 @@ export async function openPastChallenges(type) {
                                 Status: ${data.status.toUpperCase()} • Progress: ${data.progress}
                             </span>
                         </div>
-                        <button class="forget-quest-btn" style="color: #999; background: none; border: 1px solid #ddd; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
-                             ✕ Remove
+                        <button class="forget-quest-btn" style="color: #d32f2f; background: none; border: 1px solid #ddd; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                             🗑️ Remove
                         </button>
                     </div>
                 `;
 
-                // Wire up the "Forget" button
+                // 3. ATTACH DELETE LISTENER
                 const forgetBtn = div.querySelector('.forget-quest-btn');
                 forgetBtn.addEventListener('click', async () => {
                     if(confirm("Remove this from your history? (This cannot be undone)")) {
@@ -1104,7 +1105,7 @@ export async function openPastChallenges(type) {
                             await updateDoc(userRef, {
                                 [`active_quests.${chalId}`]: deleteField()
                             });
-                            div.remove(); // Remove from screen
+                            div.remove(); // Remove from screen immediately
                         } catch(err) {
                             console.error("Error removing quest:", err);
                             alert("Failed to remove.");
