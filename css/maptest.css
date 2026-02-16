@@ -405,3 +405,20 @@ button.close-btn:hover { color: var(--color-text-dark); }
     background: #e0e0e0;       /* Darker gray background */
     cursor: not-allowed;       /* Shows 'disabled' cursor on hover */
 }
+
+/* Fix for Squished Lists */
+#activeChallengesList, 
+#pastChallengesContent,
+#eventsList {
+    min-height: 250px; /* Forces the box to be tall enough */
+    padding-bottom: 20px;
+}
+
+/* Optional: Make the empty message look better */
+#activeChallengesList p,
+#pastChallengesContent p {
+    text-align: center;
+    color: #666;
+    margin-top: 40px;
+    font-size: 1.1em;
+}
