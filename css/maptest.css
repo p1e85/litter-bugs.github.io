@@ -422,3 +422,21 @@ button.close-btn:hover { color: var(--color-text-dark); }
     margin-top: 40px;
     font-size: 1.1em;
 }
+
+/* Fix for Squished Modals */
+#challengeModal .modal-content, 
+#activeChallengesList, 
+#pastChallengesContent {
+    min-height: 400px; /* Make it tall! */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Center the "No Challenges" text */
+#activeChallengesList p, 
+#pastChallengesContent p {
+    text-align: center;
+    margin-top: 100px; /* Push text down so it's not at the very top */
+    font-size: 1.2em;
+    color: #666;
+}
