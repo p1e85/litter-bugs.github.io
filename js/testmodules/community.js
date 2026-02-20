@@ -1076,6 +1076,11 @@ export async function openPastChallenges(type) {
 
             if (showIt) {
                 count++;
+                
+                // --- THE FIX: Force the correct status label ---
+                // If it's not completed, don't show "In Progress". Show "Expired".
+                let displayStatus = isCompleted ? "COMPLETED" : "EXPIRED / UNCOMPLETED";
+
                 const div = document.createElement('div');
                 div.className = "hub-card";
                 
@@ -1085,7 +1090,7 @@ export async function openPastChallenges(type) {
                         <div>
                             <strong>${data.title}</strong><br>
                             <span style="font-size:0.8em; color:#666;">
-                                Status: ${data.status.toUpperCase()} • Progress: ${data.progress}
+                                Status: <strong>${displayStatus}</strong> • Progress: ${data.progress}
                             </span>
                         </div>
                         <button class="forget-quest-btn" style="color: #d32f2f; background: none; border: 1px solid #ffcdd2; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 1.1em;" title="Remove from list">
