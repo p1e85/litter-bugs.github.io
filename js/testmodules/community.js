@@ -932,6 +932,7 @@ export async function openEventBadgesModal() {
 // Replacing "openCurrentChallenges" with "loadPublicChallenges" to match your desired UI flow
 // --- Public Challenges UI (Updated with Admin Delete) ---
 export async function openCurrentChallenges() {
+    console.log("🔥 THE NEW FUNCTION IS RUNNING!"); // <--- Add this line
     const listContainer = document.getElementById('activeChallengesList');
     if (!listContainer) return;
     listContainer.innerHTML = "<p>Loading quests...</p>";
