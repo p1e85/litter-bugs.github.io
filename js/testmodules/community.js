@@ -1049,8 +1049,6 @@ export async function openCurrentChallenges() {
 // --- Past Challenges (User History with Delete) ---
 export async function openPastChallenges(type) {
     const content = document.getElementById('pastChallengesContent');
-    // FIX: Add min-height here so "No challenges" is readable
-    content.style.minHeight = "200px"; 
     content.innerHTML = `<p>Loading ${type} history...</p>`;
     
     if (!state.currentUser) {
@@ -1063,7 +1061,7 @@ export async function openPastChallenges(type) {
         const questIds = Object.keys(myQuests);
         
         if (questIds.length === 0) {
-            content.innerHTML = "<p style='padding: 20px; text-align: center;'>No challenge history found.</p>";
+            content.innerHTML = `<p>No challenge history found.</p>`;
             return;
         }
 
@@ -1073,9 +1071,7 @@ export async function openPastChallenges(type) {
         for (const [chalId, data] of Object.entries(myQuests)) {
             const isCompleted = data.status === 'completed';
             
-            // Logic: Show if type matches status
-            // 'completed' tab shows completed items
-            // 'uncompleted' tab shows active/expired items
+            // Keeps your existing tab logic working perfectly
             const showIt = (type === 'completed' && isCompleted) || (type === 'uncompleted' && !isCompleted);
 
             if (showIt) {
@@ -1083,44 +1079,47 @@ export async function openPastChallenges(type) {
                 const div = document.createElement('div');
                 div.className = "hub-card";
                 
-                // Force the layout to simple flexbox
-                div.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);";
-
+                // Creates the card WITH the delete button for both tabs
                 div.innerHTML = `
-                    <div>
-                        <strong>${data.title}</strong>
-                        <div style="font-size:0.8em; color:#666; margin-top: 4px;">
-                            ${data.status.toUpperCase()} • ${data.progress}
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong>${data.title}</strong><br>
+                            <span style="font-size:0.8em; color:#666;">
+                                Status: ${data.status.toUpperCase()} • Progress: ${data.progress}
+                            </span>
                         </div>
+                        <button class="forget-quest-btn" style="color: #d32f2f; background: none; border: 1px solid #ffcdd2; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 1.1em;" title="Remove from list">
+                             🗑️
+                        </button>
                     </div>
-                    <button class="forget-quest-btn" style="
-                        background: #ffebee; 
-                        color: #d32f2f; 
-                        border: 1px solid #ffcdd2; 
-                        border-radius: 4px; 
-                        padding: 8px 12px; 
-                        cursor: pointer; 
-                        font-weight: bold;">
-                        🗑️
-                    </button>
                 `;
 
-                // Wire up the button
-                const btn = div.querySelector('.forget-quest-btn');
-                btn.onclick = async () => {
-                    if(confirm("Permanently remove this from your history?")) {
-                        const userRef = doc(db, "users", state.currentUser.uid);
-                        await updateDoc(userRef, {
-                            [`active_quests.${chalId}`]: deleteField()
-                        });
-                        div.remove();
+                // Wires up the delete button so it actually works
+                const forgetBtn = div.querySelector('.forget-quest-btn');
+                forgetBtn.addEventListener('click', async () => {
+                    if(confirm("Permanently remove this from your list?")) {
+                        try {
+                            const userRef = doc(db, "users", state.currentUser.uid);
+                            await updateDoc(userRef, {
+                                [`active_quests.${chalId}`]: deleteField()
+                            });
+                            div.remove(); // Removes it from the screen
+                            count--;
+                            if (count === 0) {
+                                content.innerHTML = `<p>No ${type} challenges found.</p>`;
+                            }
+                        } catch(err) {
+                            console.error("Error removing quest:", err);
+                            alert("Failed to remove.");
+                        }
                     }
-                };
+                });
 
                 content.appendChild(div);
             }
         }
-        if (count === 0) content.innerHTML = `<p style='padding:20px; text-align:center;'>No ${type} challenges found.</p>`;
+        
+        if (count === 0) content.innerHTML = `<p>No ${type} challenges found.</p>`;
 
     } catch(e) {
         console.error(e);
