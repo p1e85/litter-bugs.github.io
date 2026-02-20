@@ -1169,9 +1169,21 @@ export async function deleteChallenge(challengeId) {
 }
 
 export async function getAdminChallenges() {
-    const q = query(collection(db, "challenges"), orderBy("created_at", "desc"));
+    // 1. Grab everything without the strict Firestore filter
+    const q = query(collection(db, "challenges")); 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    let challenges = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // 2. Sort them newest to oldest in JavaScript instead
+    challenges.sort((a, b) => {
+        // Fallback to 0 if the timestamp is completely missing
+        const timeA = a.created_at?.toMillis ? a.created_at.toMillis() : (a.created_at || 0);
+        const timeB = b.created_at?.toMillis ? b.created_at.toMillis() : (b.created_at || 0);
+        return timeB - timeA; 
+    });
+
+    return challenges;
 }
 
 // --- NEW: Open Admin Modal with Clone Support ---
