@@ -366,7 +366,13 @@ export async function fetchAndDisplayLeaderboard(metric) {
     leaderboardList.innerHTML = '<li>Loading...</li>';
     try {
         const profilesRef = collection(db, "publicProfiles");
-        const q = query(profilesRef, orderBy(metric, "desc"), limit(10));
+        const q = query(
+          profilesRef, 
+          where(metric, ">", 0), // <--- THIS KEEPS THE ZEROES OFF THE BOARD
+          orderBy(metric, "desc"), 
+          limit(10)
+        );
+        
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
