@@ -18,6 +18,9 @@ export const state = {
     currentStyleIndex: 0,
     findMeState: 0, // 0: off, 1: centered, 2: centered and heading-oriented
     cleanupPhoto: null,
+    sessionStartTime: null,   // Remembers when they clicked Start
+    sessionDurationMs: 0,     // The raw math (milliseconds)
+    sessionDurationStr: "",   // The pretty text (e.g., "45m 30s")
 };
 
 // --- CONSTANTS ---
