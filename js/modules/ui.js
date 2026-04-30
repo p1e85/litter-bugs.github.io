@@ -41,6 +41,9 @@ const elements = {
     addChallengeBtn: document.getElementById('addChallengeBtn'),
     currentChallengesTab: document.getElementById('currentChallengesTab'),
     pastChallengesTab: document.getElementById('pastChallengesTab'),
+    // General Modals
+    welcomeModal: document.getElementById('welcomeModal'),
+    closeWelcomeBtn: document.getElementById('closeWelcomeBtn'),
 
     // Buttons
     agreeBtn: document.getElementById('agreeBtn'),
@@ -120,11 +123,31 @@ export function initializeUI() {
 function attachEventListeners() {
     // --- Auth Flow & Terms ---
     if (elements.termsCheckbox) elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
-    if (elements.agreeBtn) elements.agreeBtn.addEventListener('click', () => {
+elements.agreeBtn.addEventListener('click', () => {
         elements.termsModal.style.display = 'none';
         sessionStorage.setItem('termsAccepted', 'true');
         document.getElementById('userStatus').style.display = 'flex';
-        if (!state.currentUser) elements.authModal.style.display = 'flex';
+        
+        // --- THE NEW ONBOARDING LOGIC ---
+        // Check if they have ever seen the welcome screen
+        if (!localStorage.getItem('lt_has_seen_welcome')) {
+            // Show the welcome tutorial
+            elements.welcomeModal.style.display = 'flex';
+            // Mark it so they never see it again
+            localStorage.setItem('lt_has_seen_welcome', 'true');
+        } else if (!state.currentUser) {
+            // If they HAVE seen it before, but aren't logged in, prompt login
+            elements.authModal.style.display = 'flex';
+        }
+    });
+
+    elements.closeWelcomeBtn.addEventListener('click', () => {
+        elements.welcomeModal.style.display = 'none';
+        
+        // After reading the tutorial, prompt them to log in if they are a guest!
+        if (!state.currentUser) {
+            elements.authModal.style.display = 'flex';
+        }
     });
     if (elements.loginSignupBtn) elements.loginSignupBtn.addEventListener('click', () => elements.authModal.style.display = 'flex');
     if (elements.skipBtn) elements.skipBtn.addEventListener('click', () => elements.authModal.style.display = 'none');
