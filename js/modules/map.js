@@ -216,7 +216,9 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                     pin.brand = document.getElementById(`brand-${pinInfo.id}`).value;
                 }
                 popup.remove();
-                alert("Pin updated! Remember to save your session.");
+                // NOTE: This only updates in-memory state. Use Save Session (or Publish)
+                // to persist edits to the cloud. Auto-save for loaded sessions is in testmodules.
+                alert("Pin updated. Save or re-publish the session to keep these changes.");
             });
 
             // "Delete" button listener
