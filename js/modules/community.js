@@ -37,6 +37,21 @@ export async function fetchAndDisplayCommunityRoutes() {
       const mapboxPins = convertPinsFromFirestore(routeData.pins);
       if (mapboxPins) {
         mapboxPins.forEach(pin => {
+          // Validate coords. A single feature with coordinates: undefined poisons
+          // the whole community-pins GeoJSON source (Mapbox worker throws and no
+          // pins render at all). Skip bad ones; log so they can be cleaned later.
+          if (!pin || !pin.coords) {
+            console.warn('Skipping community pin with missing coords', { routeId, pin });
+            return;
+          }
+          const c = pin.coords;
+          const lngLat = Array.isArray(c)
+            ? (c.length === 2 && Number.isFinite(c[0]) && Number.isFinite(c[1]) ? c : null)
+            : (Number.isFinite(c.lng) && Number.isFinite(c.lat) ? [c.lng, c.lat] : null);
+          if (!lngLat) {
+            console.warn('Skipping community pin with invalid coords', { routeId, pin });
+            return;
+          }
           allPinFeatures.push({
             'type': 'Feature',
             'properties': {
@@ -47,7 +62,7 @@ export async function fetchAndDisplayCommunityRoutes() {
               username: routeData.username,
               userId: routeData.userId
             },
-            'geometry': { 'type': 'Point', 'coordinates': pin.coords }
+            'geometry': { 'type': 'Point', 'coordinates': lngLat }
           });
         });
       }
