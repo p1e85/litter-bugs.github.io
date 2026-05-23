@@ -6,11 +6,8 @@ import { clearCurrentSession } from './data.js';
 
 let locationWatcher = null;
 
-// NOTE: This imports the image-compression library from a CDN.
-// For a production app, you might want to host this file yourself.
-// This is a stable link from the unpkg CDN
-//import imageCompression from  'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.esm.js';
-//import imageCompression from 'https://cdn.jsdelivr.net/npm/browser-image-compression@latest/dist/browser-image-compression.js';
+// NOTE: imageCompression is loaded as a global from a CDN <script> tag in the HTML,
+// not as an ES module import. Reference it directly as `imageCompression(...)`.
 
 /**
  * Finds the user's current location and places a one-time marker on the map.
@@ -48,11 +45,10 @@ export function findMe() {
         findMeBtn.innerHTML = '🧭'; // Change to a compass icon
         state.findMeState = 2;
     }
-    // State 2: Third click -> Revert to North-up view
+    // State 2: Third click -> Fully turn off Find Me
     else if (state.findMeState === 2) {
         state.map.easeTo({ pitch: 0, bearing: 0 });
-        findMeBtn.innerHTML = '📍'; // Change back to pin icon
-        state.findMeState = 1;
+        resetFindMeState();
     }
 }
 
@@ -130,11 +126,6 @@ export async function handlePhoto(event) {
     }
     const file = event.target.files[0];
 
-    // --- ADD THESE TWO LINES ---
-    console.log('1. File object being sent to compressor:', file);
-    console.log('2. The imported imageCompression library is:', imageCompression);
-    // -------------------------
-    
     pictureBtn.innerHTML = '...';
     pictureBtn.disabled = true;
 
@@ -222,14 +213,11 @@ function showCleanupSummary() {
 
 // --- SHARE FUNCTION (Text Only) ---
 export async function shareCleanupResults() {
-    // 1. Gather the stats from the current session
-    // SAFETY FIX: We use ( || 0 ) to make sure we don't crash if one of these lists is missing
-    const countA = state.pins ? state.pins.length : 0;
-    const countB = state.photoPins ? state.photoPins.length : 0;
-    
-    const pinCount = countA + countB; // Total items
-    const dist = (state.totalDistance || 0).toFixed(2);
-    
+    // 1. Gather the real stats from current session state
+    const pinCount = state.photoPins ? state.photoPins.length : 0;
+    const distanceMeters = state.routeCoordinates ? calculateRouteDistance(state.routeCoordinates) : 0;
+    const dist = (distanceMeters * 0.000621371).toFixed(2); // meters -> miles
+
     // 2. Create the message
     const shareData = {
         title: 'Litter Troopers Cleanup',
@@ -241,25 +229,16 @@ export async function shareCleanupResults() {
     try {
         if (navigator.share) {
             await navigator.share(shareData);
-            console.log('Content shared successfully');
         } else {
             // Fallback for desktop or unsupported browsers
             await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
             alert('Share text copied to clipboard!');
         }
     } catch (err) {
-        console.error('Error sharing:', err);
-    }
-}
-
-// Helper function for clipboard fallback
-async function copyShareTextFallback(textToCopy) {
-    try {
-        await navigator.clipboard.writeText(textToCopy);
-        alert('Cleanup stats copied to clipboard!');
-    } catch (err) {
-        console.error('Failed to copy to clipboard: ', err);
-        alert('Sharing failed, and copying to clipboard also failed.');
+        // AbortError fires when user cancels native share sheet - ignore it
+        if (err.name !== 'AbortError') {
+            console.error('Error sharing:', err);
+        }
     }
 }
 
