@@ -199,18 +199,28 @@ export async function publishRoute() {
             pins: convertPinsForFirestore(state.photoPins)
         });
 
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        const afterSnap = await getDoc(publicProfileRef);
-        const badgesAfter = afterSnap.exists() ? Object.keys(afterSnap.data().badges || {}) : [];
-        const newBadges = badgesAfter.filter(badge => !badgesBefore.includes(badge));
-
-        if (newBadges.length > 0) {
-            showAchievementPopup(newBadges[0]);
-        } else {
-            alert("Success! Your route has been published.");
-        }
+        // Confirm success immediately - no waiting on a Cloud Function before responding.
+        alert("Success! Your route has been published.");
         clearCurrentSession();
+
+        // Listen in the background for new badges. If/when the badge-awarding Cloud
+        // Function updates the profile doc, show the achievement popup. Auto-cleanup
+        // after 15s so we don't leak the listener.
+        let unsubscribe = null;
+        const timeoutId = setTimeout(() => {
+            if (unsubscribe) unsubscribe();
+        }, 15000);
+
+        unsubscribe = onSnapshot(publicProfileRef, (snap) => {
+            if (!snap.exists()) return;
+            const badgesAfter = Object.keys(snap.data().badges || {});
+            const newBadges = badgesAfter.filter(b => !badgesBefore.includes(b));
+            if (newBadges.length > 0) {
+                clearTimeout(timeoutId);
+                if (unsubscribe) unsubscribe();
+                showAchievementPopup(newBadges[0]);
+            }
+        });
     } catch (error) {
         console.error("Error publishing route:", error);
         alert("There was an error publishing your route.");
@@ -533,6 +543,14 @@ function openMeetupModal(poiName) {
     validateMeetupForm();
 }
 
+// Build a single word-boundary regex once. Substring matching (the old code) would
+// flag innocent words like "class" or "assignment" because they contain banned substrings.
+// Escapes any regex special chars in the source list, then wraps in \b...\b.
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const profanityRegex = profanityList.length
+    ? new RegExp('\\b(' + profanityList.map(escapeRegex).join('|') + ')\\b', 'i')
+    : null;
+
 export function validateMeetupForm() {
     const title = document.getElementById('meetupTitleInput').value.trim();
     const description = document.getElementById('meetupDescriptionInput').value.trim();
@@ -540,7 +558,9 @@ export function validateMeetupForm() {
     const createBtn = document.getElementById('createMeetupBtn');
     const profanityWarning = document.getElementById('profanityWarning');
 
-    const hasProfanity = profanityList.some(word => title.toLowerCase().includes(word) || description.toLowerCase().includes(word));
+    const hasProfanity = profanityRegex
+        ? (profanityRegex.test(title) || profanityRegex.test(description))
+        : false;
     profanityWarning.style.display = hasProfanity ? 'block' : 'none';
     createBtn.disabled = !(title && description && safetyChecked && !hasProfanity);
 }
