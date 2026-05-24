@@ -20,19 +20,8 @@ import { closeReportPinModal, submitPendingReport } from './reports.js';
 // --- DOM Element Selection ---
 const elements = {
     // Admin Elements
-    btnAdminPanel: document.getElementById('btnAdminPanel'),
-    adminChallengeModal: document.getElementById('adminChallengeModal'),
-    btnSaveChallenge: document.getElementById('btnSaveChallenge'),
-    
-    // Admin Inputs
-    adminChalTitle: document.getElementById('adminChalTitle'),
-    adminChalDesc: document.getElementById('adminChalDesc'),
-    adminChalGoal: document.getElementById('adminChalGoal'),
-    adminChalBadge: document.getElementById('adminChalBadge'),
-    adminChalExpire: document.getElementById('adminChalExpire'),
-    adminChallengeList: document.getElementById('adminChallengeList'),
-    adminChalType: document.getElementById('adminChalType'),
-    adminChalTime: document.getElementById('adminChalTime'),
+    // NOTE: Old btnAdminPanel + adminChallengeModal + form fields removed.
+    // Challenge creation is now in the Challenges tab of the unified Admin Panel.
     
     // General Modals
     termsModal: document.getElementById('termsModal'),
@@ -509,39 +498,10 @@ export function attachEventListeners() {
     });
 
     // 6. Admin Panel
-    if (elements.btnAdminPanel) {
-        elements.btnAdminPanel.addEventListener('click', async () => {
-            elements.challengeMenuModal.style.display = 'none';
-            elements.adminChallengeModal.style.display = 'flex';
-            await loadAdminChallengeList(); 
-        });
-    }
+    // NOTE: The old "Admin: Create Challenge" button (btnAdminPanel) and its modal
+    // (adminChallengeModal) were removed. Challenge creation now lives in the
+    // Challenges tab of the unified Admin Panel (see admin.js renderChallengesTab).
 
-    if (elements.btnSaveChallenge) {
-        elements.btnSaveChallenge.addEventListener('click', async () => {
-            const title = elements.adminChalTitle.value;
-            const desc = elements.adminChalDesc.value;
-            const type = elements.adminChalType.value; // NEW
-            const goal = elements.adminChalGoal.value;
-            const timeLimit = elements.adminChalTime.value; // NEW
-            const badge = elements.adminChalBadge.value;
-            const expire = elements.adminChalExpire.value;
-
-            if(!title || !goal || !expire) {
-                alert("Please fill in Title, Goal, and Expiration Date.");
-                return;
-            }
-
-            // Pass all arguments to the function
-            await createNewChallenge(title, desc, type, goal, timeLimit, badge, expire);            
-            alert("Challenge Created!");
-            // Clear inputs (Optional)
-            elements.adminChalTitle.value = '';
-            elements.adminChalGoal.value = '';
-            
-            loadAdminChallengeList(); 
-        });
-    }
 
     // --- NEW ADMIN PANEL (Phase 1) ---
     // Opens the multi-tab admin panel (stats / pending events / pending squads).
@@ -908,43 +868,9 @@ async function loadActivityFeed() {
 }
 
 async function loadAdminChallengeList() {
-    if (!elements.adminChallengeList) return;
-    elements.adminChallengeList.innerHTML = "<p>Loading...</p>";
-    
-    const challenges = await getAdminChallenges();
-
-    elements.adminChallengeList.innerHTML = ""; 
-
-    if (challenges.length === 0) {
-        elements.adminChallengeList.innerHTML = "<p>No active challenges found.</p>";
-        return;
-    }
-
-    challenges.forEach(chal => {
-        const item = document.createElement('div');
-        item.style.borderBottom = "1px solid #eee";
-        item.style.padding = "10px";
-        item.style.display = "flex";
-        item.style.justifyContent = "space-between";
-        item.style.alignItems = "center";
-
-        item.innerHTML = `
-            <div>
-                <strong>${chal.title}</strong><br>
-                <small>${chal.goal_miles} Miles • Exp: ${new Date(chal.expires_at.seconds * 1000).toLocaleDateString()}</small>
-            </div>
-            <button class="delete-btn" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">🗑️</button>
-        `;
-
-        const delBtn = item.querySelector('.delete-btn');
-        delBtn.addEventListener('click', async () => {
-            if(confirm("Delete this challenge?")) {
-                await deleteChallenge(chal.id);
-                loadAdminChallengeList(); 
-            }
-        });
-        elements.adminChallengeList.appendChild(item);
-    });
+    // Deprecated: kept as a no-op for now in case anything else still calls it.
+    // The challenges admin UI moved into the Challenges tab of the unified
+    // Admin Panel (admin.js renderChallengesTab / loadChallengeListInPanel).
 }
 
 
@@ -1244,11 +1170,10 @@ export function checkAdminPermissions(userProfile) {
     // Cache for the admin module so it doesn't need to re-read on every call.
     state.isAdmin = isAdmin;
 
-    // Original "Create Challenge" admin button — left wired to its existing flow.
-    const btnAdminPanel = document.getElementById('btnAdminPanel');
-    if (btnAdminPanel) btnAdminPanel.style.display = isAdmin ? 'flex' : 'none';
+    // The old btnAdminPanel (in Challenge Central) was removed - challenge admin
+    // lives in the Admin Panel's Challenges tab now.
 
-    // NEW: Full admin panel button (added to the main menu modal).
+    // Full admin panel button (in the main menu modal).
     const btnAdminPanelFull = document.getElementById('btnAdminPanelFull');
     if (btnAdminPanelFull) btnAdminPanelFull.style.display = isAdmin ? 'flex' : 'none';
 }
