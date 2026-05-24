@@ -549,7 +549,11 @@ export function attachEventListeners() {
     // to admins via checkAdminPermissions().
     const btnAdminPanelFull = document.getElementById('btnAdminPanelFull');
     if (btnAdminPanelFull) {
-        btnAdminPanelFull.addEventListener('click', async () => {
+        btnAdminPanelFull.addEventListener('click', async (e) => {
+            // Stop the click bubbling to the window-level handler that closes any
+            // .modal-overlay clicked. Without this, the click opens the admin
+            // panel and then immediately closes it on the same bubbling click.
+            e.stopPropagation();
             elements.menuModal.style.display = 'none';
             await openAdminPanel();
         });
