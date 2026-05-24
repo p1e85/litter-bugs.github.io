@@ -82,7 +82,7 @@
                 <p>Publish your completed route for the community to see.</p>
                 <button id="publishBtn" class="modal-button btn-primary">🚀 Publish to Community</button>
                 <!-- Admin-only: hidden by default, shown via checkAdminPermissions() -->
-                <button id="btnAdminPanelFull" class="modal-button" style="display:none; background-color:#dc3545; color:white; border-color:#dc3545; margin-top:8px;">🛠️ Admin Panel</button>
+                <button id="btnAdminPanelFull" class="modal-button" style="display:none; background-color:#dc3545; color:white; border-color:#dc3545; margin-top:8px; text-align:center; justify-content:center;">🛠️ Admin Panel</button>
             </div>
         </div>
     </div>
@@ -630,6 +630,7 @@
                 <button class="admin-tab-btn active" data-tab="stats">📊 Stats</button>
                 <button class="admin-tab-btn" data-tab="pendingEvents">📅 Events</button>
                 <button class="admin-tab-btn" data-tab="pendingSquads">🛡️ Squads</button>
+                <button class="admin-tab-btn" data-tab="reports">🚩 Reports</button>
             </div>
 
             <!-- Tab bodies -->
@@ -643,6 +644,40 @@
             <div class="admin-tab-body" data-tab="pendingSquads" style="display:none;">
                 <p style="color:#666; font-size:0.9em;">Squads awaiting your approval. Approving creates the squad in the live <code>squads</code> collection with the requester as leader.</p>
                 <div id="adminPendingSquadsContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="reports" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">User-submitted reports for pins, events, or squads. <strong>Resolve</strong> = action taken (note added). <strong>Dismiss</strong> = no violation. Content removal is manual — use the existing delete tools on the map or in event/squad lists.</p>
+                <div id="adminReportsContent"><p>Loading…</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT PIN MODAL — opened from the 🚩 button on community pin popups -->
+    <div id="reportPinModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 480px;">
+            <button class="close-btn" id="reportPinCloseBtn">&times;</button>
+            <h2>🚩 Report This Pin</h2>
+            <p style="color:#666; font-size:0.9em; margin-top:0;">Reports are reviewed by admins. False reports may affect your account.</p>
+
+            <div id="reportTargetPreview" style="background:#f7f7f5; border:1px solid #e0e0d8; border-radius:6px; padding:10px; margin:10px 0;"></div>
+
+            <label for="reportReasonSelect" style="display:block; margin-top:10px; font-weight:600;">Reason</label>
+            <select id="reportReasonSelect" style="width:100%; padding:8px; margin-top:4px;">
+                <option value="inappropriate">Inappropriate content</option>
+                <option value="contains-person">Photo of a person (TOS violation)</option>
+                <option value="spam">Spam or promotional</option>
+                <option value="not-litter">Not actually litter / misleading</option>
+                <option value="offensive">Offensive title or category</option>
+                <option value="other">Other</option>
+            </select>
+
+            <label for="reportDetailsInput" style="display:block; margin-top:10px; font-weight:600;">Additional details (optional)</label>
+            <textarea id="reportDetailsInput" rows="3" maxlength="500" placeholder="Anything else the admin should know…"
+                style="width:100%; padding:8px; margin-top:4px; box-sizing:border-box; resize:vertical;"></textarea>
+
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
+                <button id="reportCancelBtn" class="modal-button btn-secondary" style="width:auto; padding:8px 16px;">Cancel</button>
+                <button id="reportSubmitBtn" class="modal-button btn-danger" style="width:auto; padding:8px 16px;">Submit Report</button>
             </div>
         </div>
     </div>
