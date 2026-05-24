@@ -136,14 +136,31 @@ function toggleMarkerVisibility() {
  * @returns {mapboxgl.Marker} The created marker instance.
  */
 export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
+    // Guard: reject pins with missing or malformed coords. Without this, a single bad
+    // pin throws inside Mapbox's setLngLat() and breaks the forEach loop in
+    // displaySessionData/fetchAndDisplayCommunityRoutes -- so every subsequent pin in
+    // the same session also fails to render.
+    if (!pinInfo || !pinInfo.coords) {
+        console.warn('Skipping pin with missing coords:', pinInfo);
+        return null;
+    }
+    const coords = pinInfo.coords;
+    const isValidArray = Array.isArray(coords) && coords.length === 2 &&
+        Number.isFinite(coords[0]) && Number.isFinite(coords[1]);
+    const isValidObject = typeof coords === 'object' && !Array.isArray(coords) &&
+        Number.isFinite(coords.lng) && Number.isFinite(coords.lat);
+    if (!isValidArray && !isValidObject) {
+        console.warn('Skipping pin with invalid coords:', pinInfo);
+        return null;
+    }
+    const lngLat = isValidArray ? coords : [coords.lng, coords.lat];
+
     const el = document.createElement('div');
     el.className = 'photo-marker';
-    //el.style.backgroundImage = `url(${pinInfo.imageURL || pinInfo.image})`;
     el.style.backgroundImage = `url(${pinInfo.thumbnailURL || pinInfo.imageURL || pinInfo.image})`;
-    //el.style.display = state.map.getZoom() >= ZOOM_THRESHOLD ? 'block' : 'none';
 
     const popup = createPinPopup(pinInfo, type, routeInfo);
-    const marker = new mapboxgl.Marker(el).setLngLat(pinInfo.coords).setPopup(popup).addTo(state.map);
+    const marker = new mapboxgl.Marker(el).setLngLat(lngLat).setPopup(popup).addTo(state.map);
 
     if (type === 'user') {
         state.userMarkers.push(marker);
