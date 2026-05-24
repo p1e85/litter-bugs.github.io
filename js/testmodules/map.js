@@ -2,6 +2,7 @@ import { state, mapStyles, ZOOM_THRESHOLD } from './config.js';
 import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners, updateSwarmPulse } from './community.js';
 import { pinCategories, RP_SECTORS } from './config.js';
 import { showPublicProfile } from './ui.js';
+import { openReportPinModal } from './reports.js';
 
 /**
  * Initializes the Mapbox map, geocoder, and initial event listeners.
@@ -222,7 +223,13 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                     Category: ${pinInfo.category || 'N/A'} ${pinInfo.subCategory ? `(${pinInfo.subCategory})` : ''}
                 </p>
                 ${pinInfo.brand ? `<p style="margin: 5px 0 0; font-style: italic; color: #555;">Brand: ${pinInfo.brand}</p>` : ''}
-                <small>By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
+                <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <small>By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
+                    <button class="report-pin-btn" title="Report this pin"
+                        style="background:none; border:none; cursor:pointer; font-size:1.1em; padding:2px 6px;">
+                        🚩 Report
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -289,6 +296,12 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
             popup.getElement().querySelector(`.profile-link[data-userid="${routeInfo.userId}"]`)?.addEventListener('click', (e) => {
                 e.preventDefault();
                 showPublicProfile(routeInfo.userId);
+            });
+            // Add click listener for the 🚩 Report button
+            popup.getElement().querySelector('.report-pin-btn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openReportPinModal(pinInfo, routeInfo);
             });
         }
     });
