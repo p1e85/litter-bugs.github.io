@@ -43,11 +43,10 @@ export function findMe() {
         findMeBtn.innerHTML = '🧭'; // Change to a compass icon
         state.findMeState = 2;
     }
-    // State 2: Third click -> Revert to North-up view
+    // State 2: Third click -> Fully turn off Find Me
     else if (state.findMeState === 2) {
         state.map.easeTo({ pitch: 0, bearing: 0 });
-        findMeBtn.innerHTML = '📍'; // Change back to pin icon
-        state.findMeState = 1;
+        resetFindMeState();
     }
 }
 
@@ -210,34 +209,33 @@ function showCleanupSummary() {
     state.trackingStartTime = null; 
 }
 
-// --- SHARE FUNCTION (Fixed for Test File) ---
-// --- SHARE FUNCTION (Fixed for Test File) ---
+// --- SHARE FUNCTION ---
 export async function shareCleanupResults() {
-    // 1. Gather the stats
-    const countA = state.pins ? state.pins.length : 0;
-    const countB = state.photoPins ? state.photoPins.length : 0;
-    
-    const pinCount = countA + countB; 
-    const dist = (state.totalDistance || 0).toFixed(2);
-    
+    // 1. Gather the real stats from current session state
+    const pinCount = state.photoPins ? state.photoPins.length : 0;
+    const distanceMeters = state.routeCoordinates ? calculateRouteDistance(state.routeCoordinates) : 0;
+    const dist = (distanceMeters * 0.000621371).toFixed(2); // meters -> miles
+
     // 2. Create the message
     const shareData = {
         title: 'Litter Troopers Cleanup',
-        text: `I just cleaned up ${pinCount} pieces of litter over ${dist} miles with Litter Troopers! 🌍💪 #LitterTroopers\n\nCheck it out: https://www.littertroopers.com`
+        text: `I just cleaned up ${pinCount} pieces of litter over ${dist} miles with Litter Troopers! 🌍💪 #LitterTroopers`,
+        url: 'https://www.littertroopers.com'
     };
 
     // 3. Trigger Share
     try {
         if (navigator.share) {
             await navigator.share(shareData);
-            console.log('Content shared successfully');
         } else {
-            // Fallback: REMOVED ${shareData.url} because it was undefined
-            await navigator.clipboard.writeText(shareData.text);
+            await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
             alert('Share text copied to clipboard!');
         }
     } catch (err) {
-        console.error('Error sharing:', err);
+        // AbortError fires when user cancels native share sheet - ignore it
+        if (err.name !== 'AbortError') {
+            console.error('Error sharing:', err);
+        }
     }
 }
 
