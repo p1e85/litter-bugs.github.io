@@ -28,7 +28,16 @@ export const state = {
 
 export const ZOOM_THRESHOLD = 14;
 
-export const profanityList = ["word1", "word2", "word3"];
+// Basic profanity starter list. The check in community.js uses word-boundary matching
+// (\b...\b) so substrings like "ass" inside "class" won't false-positive.
+// IMPORTANT: This is a client-side filter only and can be bypassed. For real moderation,
+// add server-side validation (e.g., a Cloud Function) and consider an npm library like
+// `bad-words` or `obscenity` for a more comprehensive wordlist.
+export const profanityList = [
+    "fuck", "shit", "bitch", "asshole", "bastard", "cunt", "dick", "piss",
+    "fag", "faggot", "nigger", "nigga", "retard", "retarded",
+    "whore", "slut", "tranny"
+];
 
 export const mapStyles = [
     { name: 'Streets', url: 'mapbox://styles/mapbox/streets-v12' },
