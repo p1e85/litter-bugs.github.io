@@ -81,6 +81,8 @@
                 <hr>
                 <p>Publish your completed route for the community to see.</p>
                 <button id="publishBtn" class="modal-button btn-primary">🚀 Publish to Community</button>
+                <!-- Admin-only: hidden by default, shown via checkAdminPermissions() -->
+                <button id="btnAdminPanelFull" class="modal-button" style="display:none; background-color:#dc3545; color:white; border-color:#dc3545; margin-top:8px;">🛠️ Admin Panel</button>
             </div>
         </div>
     </div>
@@ -612,8 +614,119 @@
         <button id="confirmTrashBtn" class="modal-button btn-primary">Confirm Log</button>
     </div>
 </div>
-            
-    
+
+    <!-- ============================================================
+         ADMIN PANEL (Phase 1: stats + pending events + pending squads)
+         Only visible to users with role === "admin". Firestore rules
+         enforce this at the data layer too — the UI is a convenience.
+         ============================================================ -->
+    <div id="adminPanelModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 720px; width: 95%;">
+            <button class="close-btn">&times;</button>
+            <h2>🛠️ Admin Panel</h2>
+
+            <!-- Tab buttons -->
+            <div class="admin-tab-bar">
+                <button class="admin-tab-btn active" data-tab="stats">📊 Stats</button>
+                <button class="admin-tab-btn" data-tab="pendingEvents">📅 Events</button>
+                <button class="admin-tab-btn" data-tab="pendingSquads">🛡️ Squads</button>
+            </div>
+
+            <!-- Tab bodies -->
+            <div class="admin-tab-body" data-tab="stats" style="display:block;">
+                <div id="adminStatsContent"><p>Loading stats…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="pendingEvents" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Events submitted by regular users awaiting your review. Approving copies the event into the live <code>meetups</code> collection.</p>
+                <div id="adminPendingEventsContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="pendingSquads" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Squads awaiting your approval. Approving creates the squad in the live <code>squads</code> collection with the requester as leader.</p>
+                <div id="adminPendingSquadsContent"><p>Loading…</p></div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Admin Panel styles — scoped so they don't leak into the rest of the app */
+        .admin-tab-bar {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .admin-tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 1em;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.15s ease;
+        }
+        .admin-tab-btn:hover { color: #4A7C59; }
+        .admin-tab-btn.active {
+            color: #4A7C59;
+            font-weight: 600;
+            border-bottom-color: #4A7C59;
+        }
+        .admin-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+        }
+        .admin-stat-card {
+            background: #f7f7f5;
+            border: 1px solid #e0e0d8;
+            border-radius: 6px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+        .admin-stat-card.admin-stat-attention {
+            background: #fff8e1;
+            border-color: #ffd54f;
+        }
+        .admin-stat-label {
+            font-size: 0.75em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        .admin-stat-value {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #4A7C59;
+        }
+        .admin-stat-attention .admin-stat-value { color: #b8860b; }
+        .admin-queue-card {
+            background: #fff;
+            border: 1px solid #e0e0d8;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .admin-queue-card h4 { margin: 0 0 4px 0; color: #4A7C59; }
+        .admin-queue-meta { margin: 0 0 6px 0; font-size: 0.85em; color: #666; }
+        .admin-queue-desc { margin: 0; font-size: 0.9em; color: #444; white-space: pre-wrap; }
+        .admin-queue-card-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .admin-queue-card-actions button {
+            width: auto !important;
+            padding: 6px 14px !important;
+            font-size: 0.9em !important;
+        }
+    </style>
+
     <script src="js/maintest.js" type="module"></script>
 
 </body>
