@@ -664,6 +664,7 @@ async function loadChallengeListInPanel() {
  * Read-only for now; role-management buttons come in Phase 3.
  */
 async function renderUsersTab() {
+async function renderUsersTab() {
     const container = document.getElementById('adminUsersContent');
     if (!container) return;
     container.innerHTML = '<p>Loading users…</p>';
@@ -690,13 +691,14 @@ async function renderUsersTab() {
         return ua.localeCompare(ub);
     });
 
-    const searchHTML = `
+    const currentUid = state.currentUser ? state.currentUser.uid : null;
+
+    container.innerHTML = `
         <input type="text" id="adminUserSearch" placeholder="🔍 Search by username..."
             style="width:100%; padding:8px; margin-bottom:10px; box-sizing:border-box;">
         <p style="color:#666; font-size:0.85em; margin:4px 0;">${users.length} user${users.length === 1 ? '' : 's'} total</p>
         <div id="adminUserList"></div>
     `;
-    container.innerHTML = searchHTML;
 
     const renderList = (filter = '') => {
         const list = document.getElementById('adminUserList');
@@ -712,14 +714,24 @@ async function renderUsersTab() {
 
         list.innerHTML = filtered.map(u => {
             const badgeCount = u.badges ? Object.keys(u.badges).length : 0;
-            const isAdmin = u.role === 'admin';
+            const isAdminUser = u.role === 'admin';
             const isOrganizer = u.isApprovedEventOrganizer === true;
+            const isSelf = u.id === currentUid;
+
+            // Self-row note: admin can't modify their own role from this UI
+            // to prevent lockouts (you could demote yourself and lose access).
+            // Event-organizer toggling on self is allowed (low-risk; reversible
+            // from any other admin or the user themselves doesn't matter — only
+            // admins can set this anyway).
             return `
-                <div class="admin-user-row">
-                    <div style="flex:1; min-width:0;">
-                        <strong>${escapeHtml(u.username || '(no username)')}</strong>
-                        ${isAdmin ? '<span class="admin-badge admin-badge-admin">ADMIN</span>' : ''}
-                        ${isOrganizer ? '<span class="admin-badge admin-badge-organizer">EVENT ORG</span>' : ''}
+                <div class="admin-user-row" data-uid="${escapeHtml(u.id)}" style="flex-direction:column; align-items:stretch;">
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <div>
+                            <strong>${escapeHtml(u.username || '(no username)')}</strong>
+                            ${isAdminUser ? '<span class="admin-badge admin-badge-admin">ADMIN</span>' : ''}
+                            ${isOrganizer ? '<span class="admin-badge admin-badge-organizer">EVENT ORG</span>' : ''}
+                            ${isSelf ? '<span class="admin-badge" style="background:#666; color:white;">YOU</span>' : ''}
+                        </div>
                         <div style="font-size:0.8em; color:#666;">
                             ${badgeCount} badge${badgeCount === 1 ? '' : 's'}
                             ${u.totalDistance ? ` • ${(u.totalDistance * METERS_TO_MILES).toFixed(1)}mi` : ''}
@@ -729,15 +741,114 @@ async function renderUsersTab() {
                             uid: ${escapeHtml(u.id)}
                         </div>
                     </div>
+                    <div class="admin-user-actions" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+                        <button class="admin-user-action-btn" data-action="toggleOrganizer"
+                            style="font-size:0.8em; padding:5px 10px; cursor:pointer; border:1px solid #4A7C59; background:${isOrganizer ? '#4A7C59' : 'white'}; color:${isOrganizer ? 'white' : '#4A7C59'}; border-radius:4px;">
+                            ${isOrganizer ? '✓ Event Organizer' : 'Make Event Organizer'}
+                        </button>
+                        ${isAdminUser
+                            ? `<button class="admin-user-action-btn" data-action="demoteAdmin" ${isSelf ? 'disabled title="Cannot demote yourself"' : ''}
+                                  style="font-size:0.8em; padding:5px 10px; cursor:${isSelf ? 'not-allowed' : 'pointer'}; border:1px solid #dc3545; background:#dc3545; color:white; border-radius:4px; opacity:${isSelf ? '0.5' : '1'};">
+                                  Remove Admin
+                                </button>`
+                            : `<button class="admin-user-action-btn" data-action="promoteAdmin" ${isSelf ? 'disabled title="Cannot modify your own role"' : ''}
+                                  style="font-size:0.8em; padding:5px 10px; cursor:${isSelf ? 'not-allowed' : 'pointer'}; border:1px solid #dc3545; background:white; color:#dc3545; border-radius:4px; opacity:${isSelf ? '0.5' : '1'};">
+                                  ⚠️ Make Admin
+                                </button>`}
+                    </div>
                 </div>
             `;
         }).join('');
+
+        // Wire actions
+        list.querySelectorAll('.admin-user-action-btn').forEach(btn => {
+            if (btn.disabled) return;
+            btn.addEventListener('click', async (e) => {
+                const row = e.target.closest('.admin-user-row');
+                const uid = row.dataset.uid;
+                const action = btn.dataset.action;
+                const u = users.find(x => x.id === uid);
+                if (!u) return;
+                await handleUserAction(action, u, btn);
+            });
+        });
     };
 
     renderList();
     document.getElementById('adminUserSearch').addEventListener('input', (e) => {
         renderList(e.target.value);
     });
+}
+
+/**
+ * Handles one of the per-user action buttons in the Users tab.
+ * Each action confirms appropriately and updates the publicProfile.
+ */
+async function handleUserAction(action, user, btn) {
+    const username = user.username || '(no username)';
+    const profileRef = doc(db, 'publicProfiles', user.id);
+    let updatePayload = null;
+    let successMessage = '';
+
+    if (action === 'toggleOrganizer') {
+        const newVal = !(user.isApprovedEventOrganizer === true);
+        const verb = newVal ? 'GRANT' : 'REVOKE';
+        if (!confirm(`${verb} event-organizer status for "${username}"?\n\nThis lets them create events directly without admin approval.`)) {
+            return;
+        }
+        updatePayload = { isApprovedEventOrganizer: newVal };
+        successMessage = newVal
+            ? `${username} can now create events without approval.`
+            : `Event-organizer status removed from ${username}.`;
+    } else if (action === 'promoteAdmin') {
+        // Two-step confirm because admin powers are unrestricted.
+        if (!confirm(`⚠️ MAKE "${username}" AN ADMIN?\n\nAdmins can approve/reject events and squads, delete any content, manage users, create challenges, and resolve reports. This is a powerful role.\n\nClick OK to continue to confirmation.`)) {
+            return;
+        }
+        const typed = prompt(`To confirm, type the word PROMOTE (all caps) and press OK:`);
+        if (typed !== 'PROMOTE') {
+            alert('Promotion cancelled.');
+            return;
+        }
+        updatePayload = { role: 'admin' };
+        successMessage = `${username} is now an admin.`;
+    } else if (action === 'demoteAdmin') {
+        if (!confirm(`Remove admin status from "${username}"?\n\nThey will lose all admin powers immediately.`)) {
+            return;
+        }
+        const typed = prompt(`To confirm, type the word DEMOTE (all caps) and press OK:`);
+        if (typed !== 'DEMOTE') {
+            alert('Demotion cancelled.');
+            return;
+        }
+        // We can't store `role: null` and rely on the rule. The rule checks
+        // `role == 'admin'`, so anything other than "admin" effectively demotes.
+        // Setting to "user" makes the data clean and grep-able.
+        updatePayload = { role: 'user' };
+        successMessage = `${username} is no longer an admin.`;
+    } else {
+        console.warn('Unknown user action:', action);
+        return;
+    }
+
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = 'Saving…';
+    try {
+        await updateDoc(profileRef, updatePayload);
+        alert(successMessage);
+        await renderUsersTab();
+    } catch (err) {
+        console.error('User action failed:', err);
+        // Most common failure: Firestore rule rejected the update because the
+        // current user isn't admin. Surface that clearly.
+        const msg = err.code === 'permission-denied'
+            ? 'Permission denied. Check that your account has role=admin in publicProfiles.'
+            : err.message;
+        alert(`Action failed: ${msg}`);
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
 // --- ACTIVE EVENTS TAB ------------------------------------------------------
