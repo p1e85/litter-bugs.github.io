@@ -14,6 +14,7 @@ import {
     // Logic Helpers
     getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents , initializeSquad, fetchLocalSquads, fetchSquadDetails
 } from './community.js';
+import { openAdminPanel, showAdminTab } from './admin.js';
 
 // --- DOM Element Selection ---
 const elements = {
@@ -538,6 +539,29 @@ export function attachEventListeners() {
             elements.adminChalGoal.value = '';
             
             loadAdminChallengeList(); 
+        });
+    }
+
+    // --- NEW ADMIN PANEL (Phase 1) ---
+    // Opens the multi-tab admin panel (stats / pending events / pending squads).
+    // The button is added to maptest.html in the menuModal and only displayed
+    // to admins via checkAdminPermissions().
+    const btnAdminPanelFull = document.getElementById('btnAdminPanelFull');
+    if (btnAdminPanelFull) {
+        btnAdminPanelFull.addEventListener('click', async () => {
+            elements.menuModal.style.display = 'none';
+            await openAdminPanel();
+        });
+    }
+    // Tab switching inside the admin panel
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => showAdminTab(btn.dataset.tab));
+    });
+    // Close button for admin panel
+    const adminPanelCloseBtn = document.querySelector('#adminPanelModal .close-btn');
+    if (adminPanelCloseBtn) {
+        adminPanelCloseBtn.addEventListener('click', () => {
+            document.getElementById('adminPanelModal').style.display = 'none';
         });
     }
 
@@ -1197,14 +1221,20 @@ window.viewSquadIntel = (squadId) => {
 };
 
 // --- ADMIN PERMISSIONS ---
-// ⚠️ MAKE SURE "export" IS HERE!
+// Toggles visibility of admin-only buttons based on the user's profile.
+// Called from auth.js whenever the auth state changes.
 export function checkAdminPermissions(userProfile) {
-    // Note: elements.btnAdminPanel might need to be defined in your DOM elements list
-    const btnAdminPanel = document.getElementById('btnAdminPanel'); 
-    
-    if (userProfile && userProfile.role === 'admin') {
-        if (btnAdminPanel) btnAdminPanel.style.display = 'flex';
-    } else {
-        if (btnAdminPanel) btnAdminPanel.style.display = 'none';
-    }
+    const isAdmin = !!(userProfile && userProfile.role === 'admin');
+
+    // Cache for the admin module so it doesn't need to re-read on every call.
+    state.isAdmin = isAdmin;
+
+    // Original "Create Challenge" admin button — left wired to its existing flow.
+    const btnAdminPanel = document.getElementById('btnAdminPanel');
+    if (btnAdminPanel) btnAdminPanel.style.display = isAdmin ? 'flex' : 'none';
+
+    // NEW: Full admin panel button (added to the main menu modal).
+    const btnAdminPanelFull = document.getElementById('btnAdminPanelFull');
+    if (btnAdminPanelFull) btnAdminPanelFull.style.display = isAdmin ? 'flex' : 'none';
 }
+
