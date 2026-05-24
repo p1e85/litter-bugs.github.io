@@ -34,11 +34,26 @@ export async function fetchAndDisplayCommunityRoutes() {
       const routeData = doc.data();
       const routeId = doc.id;
       const mapboxCoords = convertRouteFromFirestore(routeData.route);
-      
-      if (mapboxCoords && mapboxCoords.length > 0) {
+
+      // Filter to only well-formed [lng, lat] pairs. A single bad coord pair
+      // (e.g. [undefined, undefined] from a malformed Android upload) makes
+      // Mapbox's GeoJSON worker throw "undefined is not iterable" on the whole
+      // source, hiding every route AND pin on the community map.
+      const validCoords = Array.isArray(mapboxCoords)
+        ? mapboxCoords.filter(c => Array.isArray(c) && c.length === 2 &&
+            Number.isFinite(c[0]) && Number.isFinite(c[1]))
+        : [];
+
+      if (validCoords.length !== (mapboxCoords ? mapboxCoords.length : 0)) {
+        console.warn('Filtered invalid coords from route', {
+          routeId, before: mapboxCoords ? mapboxCoords.length : 0, after: validCoords.length
+        });
+      }
+
+      if (validCoords.length > 1) {
         state.map.addSource(`community-route-${routeId}`, {
           'type': 'geojson',
-          'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': mapboxCoords } }
+          'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': validCoords } }
         });
         state.map.addLayer({
           'id': `community-route-${routeId}`,
@@ -47,6 +62,10 @@ export async function fetchAndDisplayCommunityRoutes() {
           'paint': { 'line-color': '#4A7C59', 'line-width': 4, 'line-opacity': 0.7 }
         });
         state.communityLayers.push({ id: `community-route-${routeId}`, type: 'layer' });
+      } else if (validCoords.length === 1) {
+        // Only one valid coord - can't draw a LineString, just skip the route line.
+        // Pins will still render below.
+        console.warn('Route has fewer than 2 valid coords, skipping line', { routeId });
       }
       
       const mapboxPins = convertPinsFromFirestore(routeData.pins);
