@@ -15,6 +15,7 @@ import {
     getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents , initializeSquad, fetchLocalSquads, fetchSquadDetails
 } from './community.js';
 import { openAdminPanel, showAdminTab } from './admin.js';
+import { closeReportPinModal, submitPendingReport } from './reports.js';
 
 // --- DOM Element Selection ---
 const elements = {
@@ -564,6 +565,16 @@ export function attachEventListeners() {
             document.getElementById('adminPanelModal').style.display = 'none';
         });
     }
+
+    // --- REPORT PIN MODAL (Phase 2) ---
+    // The modal itself is opened from map.js via openReportPinModal() when the
+    // user clicks 🚩 on a community pin. Here we just wire the close/submit buttons.
+    const reportCloseBtn = document.getElementById('reportPinCloseBtn');
+    if (reportCloseBtn) reportCloseBtn.addEventListener('click', closeReportPinModal);
+    const reportCancelBtn = document.getElementById('reportCancelBtn');
+    if (reportCancelBtn) reportCancelBtn.addEventListener('click', closeReportPinModal);
+    const reportSubmitBtn = document.getElementById('reportSubmitBtn');
+    if (reportSubmitBtn) reportSubmitBtn.addEventListener('click', submitPendingReport);
 
     // --- LOCAL EVENTS BACK BUTTON ---
     const btnEventsBack = document.getElementById('btnEventsBack');
