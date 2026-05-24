@@ -3,26 +3,12 @@ import {
     db, serverTimestamp, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL, runTransaction, deleteField 
 } from './firebase.js';
 import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config.js';
-import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore } from './utils.js';
+import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore, calculateRouteDistance } from './utils.js';
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
 
-// --- Helper Function: Calculate Distance ---
-function calculateRouteDistance(coords) {
-    if (!coords || coords.length < 2) return 0;
-    const R = 3958.8;
-    let totalDistance = 0;
-    for (let i = 0; i < coords.length - 1; i++) {
-        const [lon1, lat1] = coords[i];
-        const [lon2, lat2] = coords[i + 1];
-        const dLat = (lat2 - lat1) * (Math.PI / 180);
-        const dLon = (lon2 - lon1) * (Math.PI / 180);
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        totalDistance += R * c;
-    }
-    return totalDistance;
-}
+// utils.calculateRouteDistance returns METERS; convert to miles when needed.
+const METERS_TO_MILES = 0.000621371;
 
 // --- Helper: Get Distance for Events ---
 function getDistanceInMiles(lat1, lon1, lat2, lon2) {
@@ -66,6 +52,21 @@ export async function fetchAndDisplayCommunityRoutes() {
       const mapboxPins = convertPinsFromFirestore(routeData.pins);
       if (mapboxPins) {
         mapboxPins.forEach(pin => {
+          // Validate coords. A single feature with coordinates: undefined poisons
+          // the whole community-pins GeoJSON source (Mapbox worker throws and no
+          // pins render at all). Skip bad ones; log so they can be cleaned later.
+          if (!pin || !pin.coords) {
+            console.warn('Skipping community pin with missing coords', { routeId, pin });
+            return;
+          }
+          const c = pin.coords;
+          const lngLat = Array.isArray(c)
+            ? (c.length === 2 && Number.isFinite(c[0]) && Number.isFinite(c[1]) ? c : null)
+            : (Number.isFinite(c.lng) && Number.isFinite(c.lat) ? [c.lng, c.lat] : null);
+          if (!lngLat) {
+            console.warn('Skipping community pin with invalid coords', { routeId, pin });
+            return;
+          }
           allPinFeatures.push({
             'type': 'Feature',
             'properties': {
@@ -77,7 +78,7 @@ export async function fetchAndDisplayCommunityRoutes() {
               userId: routeData.userId,
               routeId: routeId // Saved for God Mode Deletion
             },
-            'geometry': { 'type': 'Point', 'coordinates': pin.coords }
+            'geometry': { 'type': 'Point', 'coordinates': lngLat }
           });
         });
       }
@@ -237,8 +238,10 @@ export async function publishRoute() {
         const badgesBefore = beforeSnap.exists() ? Object.keys(beforeSnap.data().badges || {}) : [];
         const username = beforeSnap.exists() ? beforeSnap.data().username : "Anonymous";
 
-        const distanceVal = calculateRouteDistance(state.routeCoordinates);
-        const distanceStr = `${distanceVal.toFixed(2)} mi`;
+        // calculateRouteDistance returns METERS; store both for safety.
+        const distanceMeters = calculateRouteDistance(state.routeCoordinates);
+        const distanceMiles = distanceMeters * METERS_TO_MILES;
+        const distanceStr = `${distanceMiles.toFixed(2)} mi`;
 
         // 1. Try to upload the specific "Summary Photo"
         let cleanupPhotoURL = null;
@@ -268,28 +271,37 @@ export async function publishRoute() {
             timestamp: new Date(),
             route: convertRouteForFirestore(state.routeCoordinates),
             pins: convertPinsForFirestore(state.photoPins),
-            distance: distanceVal,
+            distance: distanceMiles, // miles, matches what UI displays
             distanceMiles: distanceStr,
-            cleanupPhotoURL: cleanupPhotoURL, // Now this is much less likely to be null
+            cleanupPhotoURL: cleanupPhotoURL,
             likeCount: 0,
             likedBy: []
         });
 
-        // Trigger the milestone check
+        // Trigger the milestone check (server-side adds to publicProfiles)
         await checkForTitleMilestones(state.currentUser.uid, state.routeCoordinates);
-        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        const afterSnap = await getDoc(publicProfileRef);
-        const badgesAfter = afterSnap.exists() ? Object.keys(afterSnap.data().badges || {}) : [];
-        const newBadges = badgesAfter.filter(badge => !badgesBefore.includes(badge));
-
-        if (newBadges.length > 0) {
-            showPopup(newBadges[0]);
-        } else {
-            await checkForTitleMilestones(state.currentUser.uid, state.routeCoordinates);
-            alert("Success! Your route has been published.");
-        }
+        // Confirm publish immediately - no blocking 2s wait on the Cloud Function.
+        alert("Success! Your route has been published.");
         clearCurrentSession();
+
+        // Listen in the background for new badges. If/when the badge-awarding Cloud
+        // Function updates the profile doc, show the achievement popup.
+        let unsubscribe = null;
+        const timeoutId = setTimeout(() => {
+            if (unsubscribe) unsubscribe();
+        }, 15000);
+
+        unsubscribe = onSnapshot(publicProfileRef, (snap) => {
+            if (!snap.exists()) return;
+            const badgesAfter = Object.keys(snap.data().badges || {});
+            const newBadges = badgesAfter.filter(b => !badgesBefore.includes(b));
+            if (newBadges.length > 0) {
+                clearTimeout(timeoutId);
+                if (unsubscribe) unsubscribe();
+                showPopup(newBadges[0]);
+            }
+        });
     } catch (error) {
         console.error("Error publishing route:", error);
         alert("There was an error publishing your route.");
@@ -558,15 +570,27 @@ function openMeetupModal(poiName, lat, lng) {
     validateMeetupForm();
 }
 
+// Build a single word-boundary regex once. Substring matching would flag innocent
+// words like "class" or "assignment" because they contain banned substrings.
+const _escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const _profanityRegex = profanityList && profanityList.length
+    ? new RegExp('\\b(' + profanityList.map(_escapeRegex).join('|') + ')\\b', 'i')
+    : null;
+
 export function validateMeetupForm() {
     const title = document.getElementById('meetupTitleInput').value.trim();
     const description = document.getElementById('meetupDescriptionInput').value.trim();
     const dateVal = document.getElementById('meetupDateInput').value;
     const safetyChecked = document.getElementById('safetyCheckbox').checked;
     const createBtn = document.getElementById('createMeetupBtn');
-    
-    // Profanity check removed for brevity, assume utility exists or skip
-    createBtn.disabled = !(title && description && dateVal && safetyChecked);
+    const profanityWarning = document.getElementById('profanityWarning');
+
+    const hasProfanity = _profanityRegex
+        ? (_profanityRegex.test(title) || _profanityRegex.test(description))
+        : false;
+    if (profanityWarning) profanityWarning.style.display = hasProfanity ? 'block' : 'none';
+
+    createBtn.disabled = !(title && description && dateVal && safetyChecked && !hasProfanity);
 }
 
 export async function handleMeetupSubmit() {
@@ -1464,14 +1488,14 @@ export async function updateSwarmPulse() {
         // FIX: Ensure we are iterating the snapshot correctly
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            
-            // Check if route exists and has at least one coordinate pair
-            if (data.route && Array.isArray(data.route) && data.route.length > 0) {
-                // Mapbox/GeoJSON usually stores as [lng, lat]
-                const firstPoint = data.route[0];
-                const lon = firstPoint[0];
-                const lat = firstPoint[1];
-
+            // Normalize the route through the same converter the map uses, so we
+            // handle web ({lng,lat}), legacy ([lng,lat]), and Android shapes uniformly.
+            // The old code assumed [lng,lat] arrays only, which silently produced
+            // undefined coords for all web-published routes — activity counts were 0.
+            const route = convertRouteFromFirestore(data.route);
+            if (route && route.length > 0) {
+                const [lon, lat] = route[0];
+                if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
                 const sectorId = getSectorFromCoords(lon, lat); 
                 if (sectorId && activityLog.hasOwnProperty(sectorId)) {
                     activityLog[sectorId]++;
