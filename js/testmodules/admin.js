@@ -16,6 +16,7 @@ import {
 } from './firebase.js';
 import { state } from './config.js';
 import { renderReportsTab } from './reports.js';
+import { getAdminChallenges, createNewChallenge, deleteChallenge } from './community.js';
 
 // ---------------------------------------------------------------------------
 // PERMISSION HELPERS
@@ -346,6 +347,7 @@ export async function switchAdminTab(tabName) {
         case 'pendingEvents': await renderPendingEventsTab(); break;
         case 'pendingSquads': await renderPendingSquadsTab(); break;
         case 'reports': await renderReportsTab(); break;
+        case 'challenges': await renderChallengesTab(); break;
         default: console.warn('Unknown admin tab:', tabName);
     }
 }
@@ -488,6 +490,153 @@ async function renderPendingSquadsTab() {
             if (ok) renderPendingSquadsTab();
             else { btn.disabled = false; btn.textContent = 'Reject'; }
         });
+    });
+}
+
+// --- CHALLENGES TAB ---------------------------------------------------------
+
+/**
+ * Renders the Challenges tab: creation form on top, active challenges list
+ * below. Replaces the old adminChallengeModal that used to be its own modal
+ * opened from Challenge Central.
+ */
+async function renderChallengesTab() {
+    const container = document.getElementById('adminChallengesContent');
+    if (!container) return;
+
+    // Today's date as the min for the expiry input
+    const today = new Date().toISOString().split('T')[0];
+
+    container.innerHTML = `
+        <div class="admin-form-container" style="text-align:left;">
+            <div class="form-group">
+                <label>Quest Title</label>
+                <input type="text" id="newChalTitle" placeholder="e.g. The Weekend Warrior" style="width:100%; padding:8px;">
+            </div>
+            <div class="form-group">
+                <label>Brief Briefing</label>
+                <textarea id="newChalDesc" rows="3" placeholder="Explain the mission objectives..." style="width:100%; padding:8px;"></textarea>
+            </div>
+            <div class="form-row" style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;">
+                    <label>Type</label>
+                    <select id="newChalType" style="width:100%; padding:8px;">
+                        <option value="distance">📏 Distance (Miles)</option>
+                        <option value="count">🗑 Item Count</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Target Goal</label>
+                    <input type="number" id="newChalGoal" placeholder="e.g. 50" style="width:100%; padding:8px;">
+                </div>
+            </div>
+            <div class="form-row" style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;">
+                    <label>Time Limit (Mins, optional)</label>
+                    <input type="number" id="newChalTime" placeholder="Optional" style="width:100%; padding:8px;">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Badge Icon</label>
+                    <input type="text" id="newChalBadge" value="🏅" style="width:100%; padding:8px; text-align:center; font-size:1.2em;">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Quest Expires On</label>
+                <input type="date" id="newChalExpire" min="${today}" style="width:100%; padding:8px;">
+            </div>
+            <button id="newChalSubmitBtn" class="modal-button btn-primary" style="width:100%; margin-top:8px;">
+                🚀 LAUNCH CHALLENGE
+            </button>
+        </div>
+
+        <hr style="margin:20px 0;">
+
+        <h4 style="margin-bottom:8px;">Manage Active Challenges</h4>
+        <div id="adminChallengeListInPanel" style="max-height:300px; overflow-y:auto;">
+            <p>Loading…</p>
+        </div>
+    `;
+
+    // Wire create button
+    document.getElementById('newChalSubmitBtn').addEventListener('click', async () => {
+        const title = document.getElementById('newChalTitle').value.trim();
+        const desc = document.getElementById('newChalDesc').value.trim();
+        const type = document.getElementById('newChalType').value;
+        const goal = document.getElementById('newChalGoal').value;
+        const timeLimit = document.getElementById('newChalTime').value;
+        const badge = document.getElementById('newChalBadge').value || '🏅';
+        const expire = document.getElementById('newChalExpire').value;
+
+        if (!title || !goal || !expire) {
+            alert('Please fill in Title, Goal, and Expiration Date.');
+            return;
+        }
+        const submitBtn = document.getElementById('newChalSubmitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Launching…';
+        try {
+            await createNewChallenge(title, desc, type, goal, timeLimit, badge, expire);
+            alert('Challenge created!');
+            // Refresh list and clear inputs
+            await renderChallengesTab();
+        } catch (err) {
+            console.error('Failed to create challenge:', err);
+            alert('Could not create challenge: ' + err.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 LAUNCH CHALLENGE';
+        }
+    });
+
+    // Load the active challenges list
+    await loadChallengeListInPanel();
+}
+
+async function loadChallengeListInPanel() {
+    const listEl = document.getElementById('adminChallengeListInPanel');
+    if (!listEl) return;
+    listEl.innerHTML = '<p>Loading…</p>';
+
+    let challenges;
+    try {
+        challenges = await getAdminChallenges();
+    } catch (err) {
+        console.error('Failed to load challenges:', err);
+        listEl.innerHTML = '<p style="color:#b00;">Failed to load challenges.</p>';
+        return;
+    }
+
+    if (!challenges || challenges.length === 0) {
+        listEl.innerHTML = '<p style="color:#666;">No active challenges.</p>';
+        return;
+    }
+
+    listEl.innerHTML = '';
+    challenges.forEach(chal => {
+        const item = document.createElement('div');
+        item.style.cssText = 'border-bottom:1px solid #eee; padding:10px; display:flex; justify-content:space-between; align-items:center; gap:10px;';
+        const expiresDisplay = chal.expires_at && chal.expires_at.seconds
+            ? new Date(chal.expires_at.seconds * 1000).toLocaleDateString()
+            : 'N/A';
+        // Goal field name varies by older docs - try a couple
+        const goalDisplay = chal.goal_miles || chal.goal_count || chal.goal || '—';
+        item.innerHTML = `
+            <div style="flex:1; min-width:0;">
+                <strong>${escapeHtml(chal.title || '(no title)')}</strong><br>
+                <small style="color:#666;">Goal: ${escapeHtml(String(goalDisplay))} • Exp: ${expiresDisplay}</small>
+            </div>
+            <button class="admin-chal-delete-btn" style="background:#dc3545; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">🗑️</button>
+        `;
+        item.querySelector('.admin-chal-delete-btn').addEventListener('click', async () => {
+            if (!confirm(`Delete the challenge "${chal.title}"? This can't be undone.`)) return;
+            try {
+                await deleteChallenge(chal.id);
+                await loadChallengeListInPanel();
+            } catch (err) {
+                console.error('Failed to delete challenge:', err);
+                alert('Could not delete challenge: ' + err.message);
+            }
+        });
+        listEl.appendChild(item);
     });
 }
 
