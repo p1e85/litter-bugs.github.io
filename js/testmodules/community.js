@@ -627,23 +627,46 @@ export async function handleMeetupSubmit() {
         const docSnap = await getDoc(publicProfileRef);
         if (!docSnap.exists()) throw new Error("Could not find your public profile.");
 
-        const username = docSnap.data().username;
-        
-        await addDoc(collection(db, "meetups"), {
-            organizerId: state.currentUser.uid,
-            organizerName: username,
-            poiName: poiName,
-            title: title,
-            description: description,
-            eventDate: new Date(dateVal),
-            createdAt: new Date(),
-            coordinates: (latStr && lngStr) ? {
-                lat: parseFloat(latStr),
-                lng: parseFloat(lngStr)
-            } : null
-        });
+        const profile = docSnap.data();
+        const username = profile.username;
+        const canCreateDirectly = profile.role === 'admin' || profile.isApprovedEventOrganizer === true;
 
-        alert("Meetup scheduled successfully!");
+        const coordinates = (latStr && lngStr) ? {
+            lat: parseFloat(latStr),
+            lng: parseFloat(lngStr)
+        } : null;
+
+        if (canCreateDirectly) {
+            // Approved organizer / admin path — write straight to meetups, no review.
+            await addDoc(collection(db, "meetups"), {
+                organizerId: state.currentUser.uid,
+                organizerName: username,
+                poiName: poiName,
+                title: title,
+                description: description,
+                eventDate: new Date(dateVal),
+                createdAt: new Date(),
+                coordinates: coordinates
+            });
+            alert("Meetup scheduled successfully!");
+        } else {
+            // Default user path — submit to eventRequests for admin approval.
+            // termsAccepted is required by the security rules.
+            await addDoc(collection(db, "eventRequests"), {
+                organizerId: state.currentUser.uid,
+                organizerName: username,
+                poiName: poiName || null,
+                title: title,
+                description: description,
+                eventDate: new Date(dateVal),
+                createdAt: new Date(),
+                coordinates: coordinates,
+                status: "pending",
+                termsAccepted: true
+            });
+            alert("Your event has been submitted for admin review. You'll see it on the map once approved.");
+        }
+
         document.getElementById('meetupModal').style.display = 'none';
         document.getElementById('meetupTitleInput').value = '';
         document.getElementById('meetupDescriptionInput').value = '';
@@ -1552,35 +1575,57 @@ export async function initializeSquad() {
         alert("Initialization Failed: Please provide a Squad Name and a 3-4 character Callsign.");
         return;
     }
+    if (!state.currentUser) {
+        alert("You must be logged in to register a squad.");
+        return;
+    }
 
     try {
-        // 3. Construct the squad document
-        const squadData = {
-            squadName: name,
-            callsign: callsign,
-            homeSector: sector,
-            bio: bio,
-            createdAt: new Date(),
-            memberCount: 1, // The creator starts as the first member
-            totalPins: 0,
-            status: "active"
-        };
+        // 3. Check if user is admin — admins create directly, everyone else submits for review.
+        const profileSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
+        const isAdmin = profileSnap.exists() && profileSnap.data().role === 'admin';
+        const creatorName = profileSnap.exists() ? profileSnap.data().username : "Anonymous";
 
-        // 4. Save to the database
-        // Replace this console.log with your actual Firebase addDoc call
-        console.log("Registering new unit with command...", squadData);
-        
-        await addDoc(collection(db, "squads"), squadData);
+        if (isAdmin) {
+            // Direct-create path. Now sets leaderId/members/coLeaderIds properly,
+            // fixing the bug where new squads had no leader and showed 0 members.
+            const squadData = {
+                squadName: name,
+                callsign: callsign,
+                homeSector: sector,
+                bio: bio,
+                createdAt: new Date(),
+                leaderId: state.currentUser.uid,
+                coLeaderIds: [],
+                members: [state.currentUser.uid],
+                memberCount: 1,
+                totalPins: 0,
+                status: "active"
+            };
+            await addDoc(collection(db, "squads"), squadData);
+            alert(`Unit [${callsign}] ${name} has been officially initialized.`);
+        } else {
+            // Submit for admin approval. Admin's approveSquad() reads these fields
+            // when copying into the squads collection on approve.
+            await addDoc(collection(db, "squadRequests"), {
+                squadName: name,
+                callsign: callsign,
+                homeSector: sector,
+                bio: bio,
+                creatorId: state.currentUser.uid,
+                creatorName: creatorName,
+                createdAt: new Date(),
+                status: "pending"
+            });
+            alert(`Squad request submitted! An admin will review [${callsign}] ${name} shortly.`);
+        }
 
-        alert(`Unit [${callsign}] ${name} has been officially initialized.`);
-
-        // 5. Reset UI: Return to the registry list
+        // 4. Reset UI: Return to the registry list
         if (typeof window.showSquadRegistry === 'function') {
             window.showSquadRegistry();
         }
 
-        // 2. TRIGGER THE REFRESH (This is the key)
-        // This forces the app to scan Firebase again so the new squad shows up
+        // 5. Refresh listings (only shows approved squads regardless)
         fetchLocalSquads();
         
     } catch (error) {
