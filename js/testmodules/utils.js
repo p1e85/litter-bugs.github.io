@@ -14,11 +14,26 @@ export function convertRouteForFirestore(coordsArray) {
 
 export function convertRouteFromFirestore(coordsData) {
     if (!coordsData || coordsData.length === 0) return [];
-    // Handles older data format for backward compatibility
-    if (Array.isArray(coordsData[0])) {
+    const first = coordsData[0];
+
+    // Legacy: already [[lng, lat], ...] — pass through
+    if (Array.isArray(first)) {
         return coordsData;
     }
-    return coordsData.map(coord => [coord.lng, coord.lat]);
+    // Web: [{lng, lat}, ...]
+    if (first && Number.isFinite(first.lng) && Number.isFinite(first.lat)) {
+        return coordsData.map(c => [c.lng, c.lat]);
+    }
+    // Android-style alternates: [{latitude, longitude}, ...] or {_latitude, _longitude}
+    if (first && Number.isFinite(first.longitude) && Number.isFinite(first.latitude)) {
+        return coordsData.map(c => [c.longitude, c.latitude]);
+    }
+    if (first && Number.isFinite(first._longitude) && Number.isFinite(first._latitude)) {
+        return coordsData.map(c => [c._longitude, c._latitude]);
+    }
+    // Unknown shape - return empty so renderers don't crash on bad geometry
+    console.warn('convertRouteFromFirestore: unknown coord shape', first);
+    return [];
 }
 
 export function convertPinsForFirestore(pinsArray) {
@@ -32,13 +47,53 @@ export function convertPinsForFirestore(pinsArray) {
     });
 }
 
+/**
+ * Normalize pins read from Firestore to the web app's internal format:
+ * `pin.coords = [lng, lat]` (Mapbox order).
+ *
+ * Supported input schemas (because the Android app and older web versions wrote
+ * different shapes, all of which now coexist in production data):
+ *   1. coords: [lng, lat]                           — legacy web array
+ *   2. coords: { lng, lat }                         — current web object
+ *   3. lat, lng (top-level)                         — Android app
+ *   4. coords: { _latitude, _longitude }            — raw Firestore GeoPoint
+ *
+ * Anything we can't recognize is left as-is; downstream renderers
+ * (createAndAddMarker, fetchAndDisplayCommunityRoutes) will skip and log it.
+ */
 export function convertPinsFromFirestore(pinsData) {
     if (!pinsData || pinsData.length === 0) return [];
     return pinsData.map(pin => {
         const newPin = { ...pin };
-        if (newPin.coords && typeof newPin.coords === 'object' && !Array.isArray(newPin.coords)) {
-            newPin.coords = [newPin.coords.lng, newPin.coords.lat];
+        const c = newPin.coords;
+
+        // 1. Already [lng, lat] array
+        if (Array.isArray(c) && c.length === 2 &&
+            Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+            return newPin;
         }
+
+        // 2. {lng, lat} object
+        if (c && typeof c === 'object' &&
+            Number.isFinite(c.lng) && Number.isFinite(c.lat)) {
+            newPin.coords = [c.lng, c.lat];
+            return newPin;
+        }
+
+        // 3. Android: top-level lat/lng (no coords field at all)
+        if (Number.isFinite(newPin.lat) && Number.isFinite(newPin.lng)) {
+            newPin.coords = [newPin.lng, newPin.lat];
+            return newPin;
+        }
+
+        // 4. Firestore GeoPoint serialization: {_latitude, _longitude}
+        if (c && typeof c === 'object' &&
+            Number.isFinite(c._longitude) && Number.isFinite(c._latitude)) {
+            newPin.coords = [c._longitude, c._latitude];
+            return newPin;
+        }
+
+        // Unknown shape - leave alone, will be skipped by the renderers' guards
         return newPin;
     });
 }
