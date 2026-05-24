@@ -15,6 +15,7 @@ import {
     query, where, getCountFromServer
 } from './firebase.js';
 import { state } from './config.js';
+import { renderReportsTab } from './reports.js';
 
 // ---------------------------------------------------------------------------
 // PERMISSION HELPERS
@@ -344,6 +345,7 @@ export async function switchAdminTab(tabName) {
         case 'stats': await renderStatsTab(); break;
         case 'pendingEvents': await renderPendingEventsTab(); break;
         case 'pendingSquads': await renderPendingSquadsTab(); break;
+        case 'reports': await renderReportsTab(); break;
         default: console.warn('Unknown admin tab:', tabName);
     }
 }
