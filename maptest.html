@@ -496,8 +496,6 @@
             <p>Complete challenges to earn badges and climb the leaderboard!</p>
             
             <div class="menu-buttons-vertical">
-                <button id="btnAdminPanel" class="modal-button" style="display: none; background-color: #dc3545; color: white; border-color: #dc3545;">🛠️ Admin: Create Challenge</button>
-                
                 <button id="btnCurrentChallenges" class="modal-button primary">⚡ Current Challenges</button>
                 <button id="btnPastChallenges" class="modal-button secondary btn-secondary">📜 Past Challenges</button>
                 
@@ -543,77 +541,18 @@
         </div>
     </div>
 
-    <div id="adminChallengeModal" class="modal-overlay">
+    <!-- logTrashModal was incorrectly nested inside the old admin challenge modal;
+         hoisted up to top level. The admin challenge UI itself has been moved
+         into the Challenges tab of the unified Admin Panel below. -->
+    <div id="logTrashModal" class="modal-overlay">
         <div class="modal-content">
-<button class="close-btn">&times;</button>
-
-<div class="admin-header">
-    <h3>🛠 Admin Command Center</h3>
-    <p>Design a new global quest.</p>
-</div>
-
-<div class="admin-form-container">
-    <div class="form-group">
-        <label>Quest Title</label>
-        <input type="text" id="adminChalTitle" placeholder="e.g. The Weekend Warrior">
-    </div>
-
-    <div class="form-group">
-        <label>Brief Briefing</label>
-        <textarea id="adminChalDesc" rows="3" placeholder="Explain the mission objectives..."></textarea>
-    </div>
-
-    <div class="form-row">
-        <div class="form-group half">
-            <label>Type</label>
-            <select id="adminChalType">
-                <option value="distance">📏 Distance (Miles)</option>
-                <option value="count">🗑 Item Count</option>
-            </select>
-        </div>
-        <div class="form-group half">
-            <label>Target Goal</label>
-            <input type="number" id="adminChalGoal" placeholder="e.g. 50">
+            <button class="close-btn">&times;</button>
+            <h2>Log Trash Items</h2>
+            <p>Enter the number of items you collected:</p>
+            <input type="number" id="trashCountInput" placeholder="e.g. 15" class="modal-input" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+            <button id="confirmTrashBtn" class="modal-button btn-primary">Confirm Log</button>
         </div>
     </div>
-
-    <div class="form-row">
-        <div class="form-group half">
-            <label>Time Limit (Mins)</label>
-            <input type="number" id="adminChalTime" placeholder="Optional">
-        </div>
-        <div class="form-group half">
-            <label>Badge Icon</label>
-            <input type="text" id="adminChalBadge" value="🏅" style="text-align:center; font-size:1.2em;">
-        </div>
-    </div>
-
-    <div class="form-group">
-        <label>Quest Expires On</label>
-        <input type="date" id="adminChalExpire">
-    </div>
-
-    <button id="btnSaveChallenge" class="modal-button launch-btn">
-        🚀 LAUNCH CHALLENGE
-    </button>
-    
-    <hr>
-    
-    <h3>Manage Active Challenges</h3>
-    <div id="adminChallengeList" style="max-height: 200px; overflow-y: auto; text-align: left;">
-        <p>Loading...</p>
-    </div>
-</div>
-
-<div id="logTrashModal" class="modal-overlay">
-    <div class="modal-content">
-        <button class="close-btn">&times;</button>
-        <h2>Log Trash Items</h2>
-        <p>Enter the number of items you collected:</p>
-        <input type="number" id="trashCountInput" placeholder="e.g. 15" class="modal-input" style="width: 100%; padding: 10px; margin-bottom: 15px;">
-        <button id="confirmTrashBtn" class="modal-button btn-primary">Confirm Log</button>
-    </div>
-</div>
 
     <!-- ============================================================
          ADMIN PANEL (Phase 1: stats + pending events + pending squads)
@@ -631,6 +570,7 @@
                 <button class="admin-tab-btn" data-tab="pendingEvents">📅 Events</button>
                 <button class="admin-tab-btn" data-tab="pendingSquads">🛡️ Squads</button>
                 <button class="admin-tab-btn" data-tab="reports">🚩 Reports</button>
+                <button class="admin-tab-btn" data-tab="challenges">🎯 Challenges</button>
             </div>
 
             <!-- Tab bodies -->
@@ -648,6 +588,10 @@
             <div class="admin-tab-body" data-tab="reports" style="display:none;">
                 <p style="color:#666; font-size:0.9em;">User-submitted reports for pins, events, or squads. <strong>Resolve</strong> = action taken (note added). <strong>Dismiss</strong> = no violation. Content removal is manual — use the existing delete tools on the map or in event/squad lists.</p>
                 <div id="adminReportsContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="challenges" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Create and manage global quests that all users can join.</p>
+                <div id="adminChallengesContent"><p>Loading…</p></div>
             </div>
         </div>
     </div>
