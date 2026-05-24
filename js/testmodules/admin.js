@@ -11,12 +11,16 @@
 // Firestore rules — these client-side admin checks are UX only.
 
 import {
-    db, collection, doc, getDoc, getDocs, addDoc, updateDoc,
+    db, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
     query, where, getCountFromServer
 } from './firebase.js';
 import { state } from './config.js';
 import { renderReportsTab } from './reports.js';
 import { getAdminChallenges, createNewChallenge, deleteChallenge } from './community.js';
+import { calculateRouteDistance, convertRouteFromFirestore } from './utils.js';
+
+// utils.calculateRouteDistance returns meters; we present miles.
+const METERS_TO_MILES = 0.000621371;
 
 // ---------------------------------------------------------------------------
 // PERMISSION HELPERS
@@ -110,12 +114,22 @@ export async function fetchAdminStats() {
             routesSnap.forEach(d => {
                 const data = d.data();
                 if (Array.isArray(data.pins)) pins += data.pins.length;
-                if (typeof data.distance === 'number' && Number.isFinite(data.distance)) {
-                    miles += data.distance;
-                } else if (typeof data.distanceMiles === 'string') {
-                    const n = parseFloat(data.distanceMiles);
-                    if (Number.isFinite(n)) miles += n;
+
+                // Always compute miles from the actual route coords. The stored
+                // `distance` field is unreliable: it's missing on Android publishes
+                // and on web routes published before the test version, and is
+                // sometimes in different units. Going to the source coords is the
+                // only consistent path.
+                if (Array.isArray(data.route) && data.route.length > 1) {
+                    const lngLatArr = convertRouteFromFirestore(data.route);
+                    if (lngLatArr && lngLatArr.length > 1) {
+                        const meters = calculateRouteDistance(lngLatArr);
+                        if (Number.isFinite(meters)) {
+                            miles += meters * METERS_TO_MILES;
+                        }
+                    }
                 }
+
                 const ts = data.timestamp;
                 const tsMs = ts && typeof ts.toMillis === 'function'
                     ? ts.toMillis()
@@ -346,6 +360,9 @@ export async function switchAdminTab(tabName) {
         case 'stats': await renderStatsTab(); break;
         case 'pendingEvents': await renderPendingEventsTab(); break;
         case 'pendingSquads': await renderPendingSquadsTab(); break;
+        case 'activeEvents': await renderActiveEventsTab(); break;
+        case 'activeSquads': await renderActiveSquadsTab(); break;
+        case 'users': await renderUsersTab(); break;
         case 'reports': await renderReportsTab(); break;
         case 'challenges': await renderChallengesTab(); break;
         default: console.warn('Unknown admin tab:', tabName);
@@ -637,6 +654,239 @@ async function loadChallengeListInPanel() {
             }
         });
         listEl.appendChild(item);
+    });
+}
+
+// --- USERS TAB --------------------------------------------------------------
+
+/**
+ * Lists all publicProfiles with key info (username, role flags, badge count).
+ * Read-only for now; role-management buttons come in Phase 3.
+ */
+async function renderUsersTab() {
+    const container = document.getElementById('adminUsersContent');
+    if (!container) return;
+    container.innerHTML = '<p>Loading users…</p>';
+
+    let users = [];
+    try {
+        const snap = await getDocs(collection(db, 'publicProfiles'));
+        snap.forEach(d => users.push({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.error('Failed to load users:', err);
+        container.innerHTML = '<p style="color:#b00;">Failed to load users.</p>';
+        return;
+    }
+
+    if (users.length === 0) {
+        container.innerHTML = '<p style="color:#666;">No users yet.</p>';
+        return;
+    }
+
+    // Sort alphabetically by username
+    users.sort((a, b) => {
+        const ua = (a.username || '').toLowerCase();
+        const ub = (b.username || '').toLowerCase();
+        return ua.localeCompare(ub);
+    });
+
+    const searchHTML = `
+        <input type="text" id="adminUserSearch" placeholder="🔍 Search by username..."
+            style="width:100%; padding:8px; margin-bottom:10px; box-sizing:border-box;">
+        <p style="color:#666; font-size:0.85em; margin:4px 0;">${users.length} user${users.length === 1 ? '' : 's'} total</p>
+        <div id="adminUserList"></div>
+    `;
+    container.innerHTML = searchHTML;
+
+    const renderList = (filter = '') => {
+        const list = document.getElementById('adminUserList');
+        const f = filter.toLowerCase().trim();
+        const filtered = f
+            ? users.filter(u => (u.username || '').toLowerCase().includes(f))
+            : users;
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<p style="color:#666;">No matches.</p>';
+            return;
+        }
+
+        list.innerHTML = filtered.map(u => {
+            const badgeCount = u.badges ? Object.keys(u.badges).length : 0;
+            const isAdmin = u.role === 'admin';
+            const isOrganizer = u.isApprovedEventOrganizer === true;
+            return `
+                <div class="admin-user-row">
+                    <div style="flex:1; min-width:0;">
+                        <strong>${escapeHtml(u.username || '(no username)')}</strong>
+                        ${isAdmin ? '<span class="admin-badge admin-badge-admin">ADMIN</span>' : ''}
+                        ${isOrganizer ? '<span class="admin-badge admin-badge-organizer">EVENT ORG</span>' : ''}
+                        <div style="font-size:0.8em; color:#666;">
+                            ${badgeCount} badge${badgeCount === 1 ? '' : 's'}
+                            ${u.totalDistance ? ` • ${(u.totalDistance * METERS_TO_MILES).toFixed(1)}mi` : ''}
+                            ${u.totalPins ? ` • ${u.totalPins} pins` : ''}
+                        </div>
+                        <div style="font-size:0.7em; color:#999; font-family:monospace; word-break:break-all;">
+                            uid: ${escapeHtml(u.id)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    renderList();
+    document.getElementById('adminUserSearch').addEventListener('input', (e) => {
+        renderList(e.target.value);
+    });
+}
+
+// --- ACTIVE EVENTS TAB ------------------------------------------------------
+
+/**
+ * Lists currently scheduled meetups (approved events). Admin can delete any.
+ */
+async function renderActiveEventsTab() {
+    const container = document.getElementById('adminActiveEventsContent');
+    if (!container) return;
+    container.innerHTML = '<p>Loading events…</p>';
+
+    let events = [];
+    try {
+        const snap = await getDocs(collection(db, 'meetups'));
+        snap.forEach(d => events.push({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.error('Failed to load events:', err);
+        container.innerHTML = '<p style="color:#b00;">Failed to load events.</p>';
+        return;
+    }
+
+    if (events.length === 0) {
+        container.innerHTML = '<p style="color:#666;">No active events.</p>';
+        return;
+    }
+
+    // Sort by event date asc (upcoming first); past events at the bottom
+    const now = Date.now();
+    events.sort((a, b) => {
+        const ta = (a.eventDate && a.eventDate.toMillis) ? a.eventDate.toMillis() : 0;
+        const tb = (b.eventDate && b.eventDate.toMillis) ? b.eventDate.toMillis() : 0;
+        const aPast = ta > 0 && ta < now;
+        const bPast = tb > 0 && tb < now;
+        if (aPast !== bPast) return aPast ? 1 : -1;
+        return ta - tb;
+    });
+
+    container.innerHTML = `<p style="color:#666; font-size:0.85em; margin:4px 0;">${events.length} event${events.length === 1 ? '' : 's'} total</p>` + events.map(ev => {
+        const date = ev.eventDate && ev.eventDate.toDate ? ev.eventDate.toDate() : null;
+        const dateStr = date ? date.toLocaleString() : 'no date';
+        const isPast = date && date.getTime() < now;
+        return `
+            <div class="admin-queue-card" data-id="${ev.id}">
+                <div style="flex:1; min-width:0;">
+                    <h4>
+                        ${escapeHtml(ev.title || '(untitled)')}
+                        ${isPast ? '<span class="admin-badge admin-badge-past">PAST</span>' : ''}
+                    </h4>
+                    <p class="admin-queue-meta">
+                        Organizer: <strong>${escapeHtml(ev.organizerName || 'Unknown')}</strong>
+                        ${ev.poiName ? ` • ${escapeHtml(ev.poiName)}` : ''}
+                    </p>
+                    <p class="admin-queue-meta">📅 ${escapeHtml(dateStr)}</p>
+                    ${ev.description ? `<p class="admin-queue-desc">${escapeHtml(ev.description)}</p>` : ''}
+                </div>
+                <div class="admin-queue-card-actions">
+                    <button class="modal-button btn-danger admin-event-delete-btn">Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.admin-event-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const card = e.target.closest('.admin-queue-card');
+            const id = card.dataset.id;
+            if (!confirm('Delete this event? This cannot be undone.')) return;
+            btn.disabled = true;
+            btn.textContent = 'Deleting…';
+            try {
+                await deleteDoc(doc(db, 'meetups', id));
+                renderActiveEventsTab();
+            } catch (err) {
+                console.error('Failed to delete event:', err);
+                alert('Could not delete event: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Delete';
+            }
+        });
+    });
+}
+
+// --- ACTIVE SQUADS TAB ------------------------------------------------------
+
+async function renderActiveSquadsTab() {
+    const container = document.getElementById('adminActiveSquadsContent');
+    if (!container) return;
+    container.innerHTML = '<p>Loading squads…</p>';
+
+    let squads = [];
+    try {
+        const snap = await getDocs(collection(db, 'squads'));
+        snap.forEach(d => squads.push({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.error('Failed to load squads:', err);
+        container.innerHTML = '<p style="color:#b00;">Failed to load squads.</p>';
+        return;
+    }
+
+    if (squads.length === 0) {
+        container.innerHTML = '<p style="color:#666;">No active squads.</p>';
+        return;
+    }
+
+    squads.sort((a, b) => (a.squadName || '').localeCompare(b.squadName || ''));
+
+    container.innerHTML = `<p style="color:#666; font-size:0.85em; margin:4px 0;">${squads.length} squad${squads.length === 1 ? '' : 's'} total</p>` + squads.map(sq => {
+        const memberCount = sq.memberCount || (Array.isArray(sq.members) ? sq.members.length : 0);
+        return `
+            <div class="admin-queue-card" data-id="${sq.id}">
+                <div style="flex:1; min-width:0;">
+                    <h4>[${escapeHtml(sq.callsign || '???')}] ${escapeHtml(sq.squadName || '(unnamed)')}</h4>
+                    <p class="admin-queue-meta">
+                        ${memberCount} member${memberCount === 1 ? '' : 's'}
+                        ${sq.homeSector ? ` • ${escapeHtml(sq.homeSector)}` : ''}
+                        ${sq.totalPins ? ` • ${sq.totalPins} pins` : ''}
+                    </p>
+                    ${sq.bio ? `<p class="admin-queue-desc">${escapeHtml(sq.bio)}</p>` : ''}
+                    <p class="admin-queue-meta" style="font-size:0.75em; color:#999; font-family:monospace;">
+                        leader: ${escapeHtml(sq.leaderId || '(none)')}
+                    </p>
+                </div>
+                <div class="admin-queue-card-actions">
+                    <button class="modal-button btn-danger admin-squad-delete-btn">Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.admin-squad-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const card = e.target.closest('.admin-queue-card');
+            const id = card.dataset.id;
+            const sq = squads.find(s => s.id === id);
+            const label = sq ? `[${sq.callsign}] ${sq.squadName}` : 'this squad';
+            if (!confirm(`Delete ${label}? Members will be removed. This cannot be undone.`)) return;
+            btn.disabled = true;
+            btn.textContent = 'Deleting…';
+            try {
+                await deleteDoc(doc(db, 'squads', id));
+                renderActiveSquadsTab();
+            } catch (err) {
+                console.error('Failed to delete squad:', err);
+                alert('Could not delete squad: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Delete';
+            }
+        });
     });
 }
 
