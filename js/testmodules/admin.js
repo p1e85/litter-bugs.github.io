@@ -18,6 +18,8 @@ import { state } from './config.js';
 import { renderReportsTab } from './reports.js';
 import { getAdminChallenges, createNewChallenge, deleteChallenge } from './community.js';
 import { calculateRouteDistance, convertRouteFromFirestore } from './utils.js';
+import { toast } from './toast.js';
+import { logAdminAction, fetchAuditLog, getActionLabel } from './audit.js';
 
 // utils.calculateRouteDistance returns meters; we present miles.
 const METERS_TO_MILES = 0.000621371;
@@ -187,7 +189,7 @@ export async function approveEventRequest(requestId) {
         const reqRef = doc(db, 'eventRequests', requestId);
         const reqSnap = await getDoc(reqRef);
         if (!reqSnap.exists()) {
-            alert('Request not found (already processed?).');
+            toast('Request not found (already processed?).', 'error');
             return false;
         }
         const r = reqSnap.data();
@@ -211,26 +213,41 @@ export async function approveEventRequest(requestId) {
             reviewedBy: state.currentUser ? state.currentUser.uid : null,
             reviewedAt: new Date()
         });
+        logAdminAction('approveEvent', {
+            targetId: newDoc.id,
+            targetType: 'meetup',
+            summary: r.title || 'Untitled Event',
+            requestId
+        });
         return true;
     } catch (err) {
         console.error('approveEventRequest failed:', err);
-        alert('Could not approve event: ' + err.message);
+        toast('Could not approve event: ' + err.message, 'error');
         return false;
     }
 }
 
 export async function rejectEventRequest(requestId, reason) {
     try {
+        // Capture the title before update so the audit log can reference it
+        const before = await getDoc(doc(db, 'eventRequests', requestId));
+        const summary = before.exists() ? (before.data().title || 'Untitled') : 'Unknown';
         await updateDoc(doc(db, 'eventRequests', requestId), {
             status: 'rejected',
             rejectionReason: reason || '(no reason provided)',
             reviewedBy: state.currentUser ? state.currentUser.uid : null,
             reviewedAt: new Date()
         });
+        logAdminAction('rejectEvent', {
+            targetId: requestId,
+            targetType: 'eventRequest',
+            summary,
+            reason: reason || null
+        });
         return true;
     } catch (err) {
         console.error('rejectEventRequest failed:', err);
-        alert('Could not reject event: ' + err.message);
+        toast('Could not reject event: ' + err.message, 'error');
         return false;
     }
 }
@@ -270,7 +287,7 @@ export async function approveSquadRequest(requestId) {
         const reqRef = doc(db, 'squadRequests', requestId);
         const reqSnap = await getDoc(reqRef);
         if (!reqSnap.exists()) {
-            alert('Request not found (already processed?).');
+            toast('Request not found (already processed?).', 'error');
             return false;
         }
         const r = reqSnap.data();
@@ -278,7 +295,7 @@ export async function approveSquadRequest(requestId) {
         // `creatorId`/`creatorName`; older docs/Android may use `requesterId`.
         const ownerId = r.creatorId || r.requesterId;
         if (!ownerId) {
-            alert('Request is missing the creator/requester ID; cannot approve.');
+            toast('Request is missing the creator/requester ID; cannot approve.', 'error');
             return false;
         }
         const squad = {
@@ -304,26 +321,42 @@ export async function approveSquadRequest(requestId) {
             reviewedBy: state.currentUser ? state.currentUser.uid : null,
             reviewedAt: new Date()
         });
+        logAdminAction('approveSquad', {
+            targetId: newDoc.id,
+            targetType: 'squad',
+            summary: `[${r.callsign}] ${r.squadName}`,
+            requestId
+        });
         return true;
     } catch (err) {
         console.error('approveSquadRequest failed:', err);
-        alert('Could not approve squad: ' + err.message);
+        toast('Could not approve squad: ' + err.message, 'error');
         return false;
     }
 }
 
 export async function rejectSquadRequest(requestId, reason) {
     try {
+        const before = await getDoc(doc(db, 'squadRequests', requestId));
+        const summary = before.exists()
+            ? `[${before.data().callsign || '???'}] ${before.data().squadName || ''}`
+            : 'Unknown';
         await updateDoc(doc(db, 'squadRequests', requestId), {
             status: 'rejected',
             rejectionReason: reason || '(no reason provided)',
             reviewedBy: state.currentUser ? state.currentUser.uid : null,
             reviewedAt: new Date()
         });
+        logAdminAction('rejectSquad', {
+            targetId: requestId,
+            targetType: 'squadRequest',
+            summary,
+            reason: reason || null
+        });
         return true;
     } catch (err) {
         console.error('rejectSquadRequest failed:', err);
-        alert('Could not reject squad: ' + err.message);
+        toast('Could not reject squad: ' + err.message, 'error');
         return false;
     }
 }
@@ -365,6 +398,7 @@ export async function switchAdminTab(tabName) {
         case 'users': await renderUsersTab(); break;
         case 'reports': await renderReportsTab(); break;
         case 'challenges': await renderChallengesTab(); break;
+        case 'audit': await renderAuditLogTab(); break;
         default: console.warn('Unknown admin tab:', tabName);
     }
 }
@@ -406,11 +440,91 @@ async function renderStatsTab() {
             ${card('Pending Squads', stats.pendingSquads, { attention: stats.pendingSquads > 0, extra: stats.pendingSquads > 0 ? '⚠️ Needs review' : '' })}
         </div>
         ${stats.errors.length ? `<p style="color:#b00; margin-top:10px;">Some counts failed: ${stats.errors.join(', ')}</p>` : ''}
+
+        <h4 style="margin:20px 0 8px 0; color:#444; font-size:1em;">🏆 Top 10 Users by Routes Published</h4>
+        <div id="adminTopUsersList" style="margin-bottom:14px;">
+            <p style="color:#666; font-size:0.9em;">Computing…</p>
+        </div>
+
         <p style="text-align:center; margin-top:14px;">
             <button id="adminStatsRefreshBtn" class="modal-button btn-secondary" style="width:auto; padding:6px 16px;">🔄 Refresh</button>
         </p>
     `;
     document.getElementById('adminStatsRefreshBtn')?.addEventListener('click', renderStatsTab);
+    // Fire the top-users computation asynchronously so the stats grid renders first.
+    renderTopUsers();
+}
+
+/**
+ * Computes a leaderboard of top users by published routes count. Runs as a
+ * second pass after the main stats render so the page doesn't block on it.
+ *
+ * Pulls all publishedRoutes (we already do this in fetchAdminStats but keep it
+ * separate for simplicity; cached on a future iteration if it becomes slow).
+ */
+async function renderTopUsers() {
+    const container = document.getElementById('adminTopUsersList');
+    if (!container) return;
+
+    try {
+        const [routesSnap, profilesSnap] = await Promise.all([
+            getDocs(collection(db, 'publishedRoutes')),
+            getDocs(collection(db, 'publicProfiles'))
+        ]);
+        // Build uid -> {count, miles, pins}
+        const stats = {};
+        routesSnap.forEach(d => {
+            const data = d.data();
+            const uid = data.userId;
+            if (!uid) return;
+            if (!stats[uid]) stats[uid] = { count: 0, miles: 0, pins: 0 };
+            stats[uid].count++;
+            if (Array.isArray(data.pins)) stats[uid].pins += data.pins.length;
+            if (Array.isArray(data.route) && data.route.length > 1) {
+                const lngLatArr = convertRouteFromFirestore(data.route);
+                if (lngLatArr && lngLatArr.length > 1) {
+                    const meters = calculateRouteDistance(lngLatArr);
+                    if (Number.isFinite(meters)) stats[uid].miles += meters * METERS_TO_MILES;
+                }
+            }
+        });
+        // Build uid -> username
+        const usernames = {};
+        profilesSnap.forEach(d => {
+            const u = d.data();
+            usernames[d.id] = u.username || '(no username)';
+        });
+        // Top 10 by route count, tiebreak by miles
+        const top = Object.entries(stats)
+            .map(([uid, s]) => ({ uid, ...s }))
+            .sort((a, b) => b.count - a.count || b.miles - a.miles)
+            .slice(0, 10);
+
+        if (top.length === 0) {
+            container.innerHTML = '<p style="color:#666; font-size:0.9em;">No published routes yet.</p>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div style="display:grid; grid-template-columns:auto 1fr auto auto auto; gap:6px 12px; align-items:center; font-size:0.85em;">
+                <div style="font-weight:600; color:#666; font-size:0.8em;">#</div>
+                <div style="font-weight:600; color:#666; font-size:0.8em;">USER</div>
+                <div style="font-weight:600; color:#666; font-size:0.8em; text-align:right;">ROUTES</div>
+                <div style="font-weight:600; color:#666; font-size:0.8em; text-align:right;">MILES</div>
+                <div style="font-weight:600; color:#666; font-size:0.8em; text-align:right;">PINS</div>
+                ${top.map((u, i) => `
+                    <div style="color:#888;">${i + 1}</div>
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(usernames[u.uid] || '(unknown)')}</div>
+                    <div style="text-align:right; font-weight:600; color:#4A7C59;">${u.count}</div>
+                    <div style="text-align:right; color:#666;">${u.miles.toFixed(1)}</div>
+                    <div style="text-align:right; color:#666;">${u.pins}</div>
+                `).join('')}
+            </div>
+        `;
+    } catch (err) {
+        console.warn('Failed to compute top users:', err);
+        container.innerHTML = '<p style="color:#b00; font-size:0.9em;">Failed to compute leaderboard.</p>';
+    }
 }
 
 async function renderPendingEventsTab() {
@@ -419,7 +533,7 @@ async function renderPendingEventsTab() {
     container.innerHTML = '<p>Loading pending events…</p>';
     const rows = await fetchPendingEvents();
     if (rows.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">No pending event requests. 🎉</p>';
+        container.innerHTML = emptyState('🎉', 'No pending events', 'Events submitted by regular users will appear here when they need review. Approved Event Organizers can post events directly without going through this queue.');
         return;
     }
     container.innerHTML = rows.map(r => `
@@ -468,7 +582,7 @@ async function renderPendingSquadsTab() {
     container.innerHTML = '<p>Loading pending squads…</p>';
     const rows = await fetchPendingSquads();
     if (rows.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">No pending squad requests. 🎉</p>';
+        container.innerHTML = emptyState('🎉', 'No pending squads', 'Squad creation requests from regular users will appear here. Approve to officially commission the squad with the requester as leader.');
         return;
     }
     container.innerHTML = rows.map(r => `
@@ -585,7 +699,7 @@ async function renderChallengesTab() {
         const expire = document.getElementById('newChalExpire').value;
 
         if (!title || !goal || !expire) {
-            alert('Please fill in Title, Goal, and Expiration Date.');
+            toast('Please fill in Title, Goal, and Expiration Date.', 'error');
             return;
         }
         const submitBtn = document.getElementById('newChalSubmitBtn');
@@ -593,12 +707,16 @@ async function renderChallengesTab() {
         submitBtn.textContent = 'Launching…';
         try {
             await createNewChallenge(title, desc, type, goal, timeLimit, badge, expire);
-            alert('Challenge created!');
+            logAdminAction('createChallenge', {
+                targetType: 'challenge',
+                summary: title
+            });
+            toast('Challenge created!', 'success');
             // Refresh list and clear inputs
             await renderChallengesTab();
         } catch (err) {
             console.error('Failed to create challenge:', err);
-            alert('Could not create challenge: ' + err.message);
+            toast('Could not create challenge: ' + err.message, 'error');
             submitBtn.disabled = false;
             submitBtn.textContent = '🚀 LAUNCH CHALLENGE';
         }
@@ -623,7 +741,7 @@ async function loadChallengeListInPanel() {
     }
 
     if (!challenges || challenges.length === 0) {
-        listEl.innerHTML = '<p style="color:#666;">No active challenges.</p>';
+        listEl.innerHTML = emptyState('🎯', 'No active challenges', 'Use the form above to launch a global quest. All users can join and earn the badge by completing the goal before the expiry date.');
         return;
     }
 
@@ -647,10 +765,16 @@ async function loadChallengeListInPanel() {
             if (!confirm(`Delete the challenge "${chal.title}"? This can't be undone.`)) return;
             try {
                 await deleteChallenge(chal.id);
+                logAdminAction('deleteChallenge', {
+                    targetId: chal.id,
+                    targetType: 'challenge',
+                    summary: chal.title || 'Untitled'
+                });
+                toast('Challenge deleted.', 'success');
                 await loadChallengeListInPanel();
             } catch (err) {
                 console.error('Failed to delete challenge:', err);
-                alert('Could not delete challenge: ' + err.message);
+                toast('Could not delete challenge: ' + err.message, 'error');
             }
         });
         listEl.appendChild(item);
@@ -660,10 +784,8 @@ async function loadChallengeListInPanel() {
 // --- USERS TAB --------------------------------------------------------------
 
 /**
- * Lists all publicProfiles with key info (username, role flags, badge count).
- * Read-only for now; role-management buttons come in Phase 3.
+ * Lists all publicProfiles with role/badge info and per-row action buttons.
  */
-async function renderUsersTab() {
 async function renderUsersTab() {
     const container = document.getElementById('adminUsersContent');
     if (!container) return;
@@ -680,7 +802,7 @@ async function renderUsersTab() {
     }
 
     if (users.length === 0) {
-        container.innerHTML = '<p style="color:#666;">No users yet.</p>';
+        container.innerHTML = emptyState('👥', 'No users yet', 'Once people sign up and create a username, they\'ll show up here.');
         return;
     }
 
@@ -807,7 +929,7 @@ async function handleUserAction(action, user, btn) {
         }
         const typed = prompt(`To confirm, type the word PROMOTE (all caps) and press OK:`);
         if (typed !== 'PROMOTE') {
-            alert('Promotion cancelled.');
+            toast('Promotion cancelled.', 'info');
             return;
         }
         updatePayload = { role: 'admin' };
@@ -818,7 +940,7 @@ async function handleUserAction(action, user, btn) {
         }
         const typed = prompt(`To confirm, type the word DEMOTE (all caps) and press OK:`);
         if (typed !== 'DEMOTE') {
-            alert('Demotion cancelled.');
+            toast('Demotion cancelled.', 'info');
             return;
         }
         // We can't store `role: null` and rely on the rule. The rule checks
@@ -836,7 +958,18 @@ async function handleUserAction(action, user, btn) {
     btn.textContent = 'Saving…';
     try {
         await updateDoc(profileRef, updatePayload);
-        alert(successMessage);
+        // Map UI action -> audit action code
+        const auditActionMap = {
+            toggleOrganizer: updatePayload.isApprovedEventOrganizer ? 'grantOrganizer' : 'revokeOrganizer',
+            promoteAdmin: 'promoteAdmin',
+            demoteAdmin: 'demoteAdmin'
+        };
+        logAdminAction(auditActionMap[action] || action, {
+            targetId: user.id,
+            targetType: 'user',
+            summary: username
+        });
+        toast(successMessage, 'success');
         await renderUsersTab();
     } catch (err) {
         console.error('User action failed:', err);
@@ -845,7 +978,7 @@ async function handleUserAction(action, user, btn) {
         const msg = err.code === 'permission-denied'
             ? 'Permission denied. Check that your account has role=admin in publicProfiles.'
             : err.message;
-        alert(`Action failed: ${msg}`);
+        toast(`Action failed: ${msg}`, 'error');
         btn.disabled = false;
         btn.textContent = originalText;
     }
@@ -872,64 +1005,130 @@ async function renderActiveEventsTab() {
     }
 
     if (events.length === 0) {
-        container.innerHTML = '<p style="color:#666;">No active events.</p>';
+        container.innerHTML = emptyState('📅', 'No active events', 'Once events are scheduled (either directly by approved organizers or via approval from the Pending Events tab), they\'ll appear here.');
         return;
     }
 
-    // Sort by event date asc (upcoming first); past events at the bottom
     const now = Date.now();
-    events.sort((a, b) => {
-        const ta = (a.eventDate && a.eventDate.toMillis) ? a.eventDate.toMillis() : 0;
-        const tb = (b.eventDate && b.eventDate.toMillis) ? b.eventDate.toMillis() : 0;
-        const aPast = ta > 0 && ta < now;
-        const bPast = tb > 0 && tb < now;
-        if (aPast !== bPast) return aPast ? 1 : -1;
-        return ta - tb;
-    });
+    // Default sort + filter; user-changeable below
+    let currentSort = 'upcoming';
+    let currentFilter = 'all';
 
-    container.innerHTML = `<p style="color:#666; font-size:0.85em; margin:4px 0;">${events.length} event${events.length === 1 ? '' : 's'} total</p>` + events.map(ev => {
-        const date = ev.eventDate && ev.eventDate.toDate ? ev.eventDate.toDate() : null;
-        const dateStr = date ? date.toLocaleString() : 'no date';
-        const isPast = date && date.getTime() < now;
-        return `
-            <div class="admin-queue-card" data-id="${ev.id}">
-                <div style="flex:1; min-width:0;">
-                    <h4>
-                        ${escapeHtml(ev.title || '(untitled)')}
-                        ${isPast ? '<span class="admin-badge admin-badge-past">PAST</span>' : ''}
-                    </h4>
-                    <p class="admin-queue-meta">
-                        Organizer: <strong>${escapeHtml(ev.organizerName || 'Unknown')}</strong>
-                        ${ev.poiName ? ` • ${escapeHtml(ev.poiName)}` : ''}
-                    </p>
-                    <p class="admin-queue-meta">📅 ${escapeHtml(dateStr)}</p>
-                    ${ev.description ? `<p class="admin-queue-desc">${escapeHtml(ev.description)}</p>` : ''}
-                </div>
-                <div class="admin-queue-card-actions">
-                    <button class="modal-button btn-danger admin-event-delete-btn">Delete</button>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    container.querySelectorAll('.admin-event-delete-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const card = e.target.closest('.admin-queue-card');
-            const id = card.dataset.id;
-            if (!confirm('Delete this event? This cannot be undone.')) return;
-            btn.disabled = true;
-            btn.textContent = 'Deleting…';
-            try {
-                await deleteDoc(doc(db, 'meetups', id));
-                renderActiveEventsTab();
-            } catch (err) {
-                console.error('Failed to delete event:', err);
-                alert('Could not delete event: ' + err.message);
-                btn.disabled = false;
-                btn.textContent = 'Delete';
-            }
+    // Render the controls + list. Re-callable when the controls change.
+    const renderEventsList = () => {
+        const filtered = events.filter(ev => {
+            if (currentFilter === 'all') return true;
+            const t = (ev.eventDate && ev.eventDate.toMillis) ? ev.eventDate.toMillis() : 0;
+            const isPast = t > 0 && t < now;
+            return currentFilter === 'past' ? isPast : !isPast;
         });
+        filtered.sort((a, b) => {
+            const ta = (a.eventDate && a.eventDate.toMillis) ? a.eventDate.toMillis() : 0;
+            const tb = (b.eventDate && b.eventDate.toMillis) ? b.eventDate.toMillis() : 0;
+            if (currentSort === 'upcoming') {
+                const aPast = ta > 0 && ta < now;
+                const bPast = tb > 0 && tb < now;
+                if (aPast !== bPast) return aPast ? 1 : -1;
+                return ta - tb;
+            } else if (currentSort === 'newest') {
+                const ca = (a.createdAt && a.createdAt.toMillis) ? a.createdAt.toMillis() : 0;
+                const cb = (b.createdAt && b.createdAt.toMillis) ? b.createdAt.toMillis() : 0;
+                return cb - ca;
+            } else if (currentSort === 'organizer') {
+                return (a.organizerName || '').localeCompare(b.organizerName || '');
+            }
+            return 0;
+        });
+
+        const listHTML = filtered.length === 0
+            ? '<p style="color:#666; font-size:0.9em; padding:20px 0; text-align:center;">No events match this filter.</p>'
+            : filtered.map(ev => {
+                const date = ev.eventDate && ev.eventDate.toDate ? ev.eventDate.toDate() : null;
+                const dateStr = date ? date.toLocaleString() : 'no date';
+                const isPast = date && date.getTime() < now;
+                return `
+                    <div class="admin-queue-card" data-id="${ev.id}">
+                        <div style="flex:1; min-width:0;">
+                            <h4>
+                                ${escapeHtml(ev.title || '(untitled)')}
+                                ${isPast ? '<span class="admin-badge admin-badge-past">PAST</span>' : ''}
+                            </h4>
+                            <p class="admin-queue-meta">
+                                Organizer: <strong>${escapeHtml(ev.organizerName || 'Unknown')}</strong>
+                                ${ev.poiName ? ` • ${escapeHtml(ev.poiName)}` : ''}
+                            </p>
+                            <p class="admin-queue-meta">📅 ${escapeHtml(dateStr)}</p>
+                            ${ev.description ? `<p class="admin-queue-desc">${escapeHtml(ev.description)}</p>` : ''}
+                        </div>
+                        <div class="admin-queue-card-actions">
+                            <button class="modal-button btn-danger admin-event-delete-btn">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        document.getElementById('adminEventsListBody').innerHTML =
+            `<p style="color:#666; font-size:0.85em; margin:4px 0;">${filtered.length} of ${events.length} event${events.length === 1 ? '' : 's'}</p>` + listHTML;
+
+        // Wire delete buttons for the filtered list (must rewire on each render
+        // since the DOM nodes are replaced).
+        document.querySelectorAll('#adminEventsListBody .admin-event-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const card = e.target.closest('.admin-queue-card');
+                const id = card.dataset.id;
+                const ev = events.find(x => x.id === id);
+                if (!confirm('Delete this event? This cannot be undone.')) return;
+                btn.disabled = true;
+                btn.textContent = 'Deleting…';
+                try {
+                    await deleteDoc(doc(db, 'meetups', id));
+                    logAdminAction('deleteEvent', {
+                        targetId: id,
+                        targetType: 'meetup',
+                        summary: ev ? (ev.title || 'Untitled') : 'Unknown'
+                    });
+                    toast('Event deleted.', 'success');
+                    renderActiveEventsTab();
+                } catch (err) {
+                    console.error('Failed to delete event:', err);
+                    toast('Could not delete event: ' + err.message, 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Delete';
+                }
+            });
+        });
+    };
+
+    container.innerHTML = `
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px; font-size:0.85em;">
+            <label>Show:
+                <select id="adminEventsFilter" style="padding:4px 6px;">
+                    <option value="all">All</option>
+                    <option value="upcoming">Upcoming only</option>
+                    <option value="past">Past only</option>
+                </select>
+            </label>
+            <label>Sort:
+                <select id="adminEventsSort" style="padding:4px 6px;">
+                    <option value="upcoming">Upcoming first</option>
+                    <option value="newest">Recently created</option>
+                    <option value="organizer">By organizer</option>
+                </select>
+            </label>
+        </div>
+        <div id="adminEventsListBody"></div>
+    `;
+
+    document.getElementById('adminEventsFilter').addEventListener('change', (e) => {
+        currentFilter = e.target.value;
+        renderEventsList();
     });
+    document.getElementById('adminEventsSort').addEventListener('change', (e) => {
+        currentSort = e.target.value;
+        renderEventsList();
+    });
+
+    renderEventsList();
 }
 
 // --- ACTIVE SQUADS TAB ------------------------------------------------------
@@ -950,55 +1149,152 @@ async function renderActiveSquadsTab() {
     }
 
     if (squads.length === 0) {
-        container.innerHTML = '<p style="color:#666;">No active squads.</p>';
+        container.innerHTML = emptyState('⚔️', 'No active squads', 'Once squads are approved (or created directly by admins), they\'ll show up here.');
         return;
     }
 
-    squads.sort((a, b) => (a.squadName || '').localeCompare(b.squadName || ''));
+    let currentSort = 'name';
+    const renderSquadsList = () => {
+        squads.sort((a, b) => {
+            if (currentSort === 'name') {
+                return (a.squadName || '').localeCompare(b.squadName || '');
+            } else if (currentSort === 'members') {
+                const ma = a.memberCount || (Array.isArray(a.members) ? a.members.length : 0);
+                const mb = b.memberCount || (Array.isArray(b.members) ? b.members.length : 0);
+                return mb - ma;
+            } else if (currentSort === 'newest') {
+                const ca = (a.createdAt && a.createdAt.toMillis) ? a.createdAt.toMillis() : 0;
+                const cb = (b.createdAt && b.createdAt.toMillis) ? b.createdAt.toMillis() : 0;
+                return cb - ca;
+            } else if (currentSort === 'pins') {
+                return (b.totalPins || 0) - (a.totalPins || 0);
+            }
+            return 0;
+        });
 
-    container.innerHTML = `<p style="color:#666; font-size:0.85em; margin:4px 0;">${squads.length} squad${squads.length === 1 ? '' : 's'} total</p>` + squads.map(sq => {
-        const memberCount = sq.memberCount || (Array.isArray(sq.members) ? sq.members.length : 0);
-        return `
-            <div class="admin-queue-card" data-id="${sq.id}">
-                <div style="flex:1; min-width:0;">
-                    <h4>[${escapeHtml(sq.callsign || '???')}] ${escapeHtml(sq.squadName || '(unnamed)')}</h4>
-                    <p class="admin-queue-meta">
-                        ${memberCount} member${memberCount === 1 ? '' : 's'}
-                        ${sq.homeSector ? ` • ${escapeHtml(sq.homeSector)}` : ''}
-                        ${sq.totalPins ? ` • ${sq.totalPins} pins` : ''}
-                    </p>
-                    ${sq.bio ? `<p class="admin-queue-desc">${escapeHtml(sq.bio)}</p>` : ''}
-                    <p class="admin-queue-meta" style="font-size:0.75em; color:#999; font-family:monospace;">
-                        leader: ${escapeHtml(sq.leaderId || '(none)')}
-                    </p>
+        document.getElementById('adminSquadsListBody').innerHTML = squads.map(sq => {
+            const memberCount = sq.memberCount || (Array.isArray(sq.members) ? sq.members.length : 0);
+            return `
+                <div class="admin-queue-card" data-id="${sq.id}">
+                    <div style="flex:1; min-width:0;">
+                        <h4>[${escapeHtml(sq.callsign || '???')}] ${escapeHtml(sq.squadName || '(unnamed)')}</h4>
+                        <p class="admin-queue-meta">
+                            ${memberCount} member${memberCount === 1 ? '' : 's'}
+                            ${sq.homeSector ? ` • ${escapeHtml(sq.homeSector)}` : ''}
+                            ${sq.totalPins ? ` • ${sq.totalPins} pins` : ''}
+                        </p>
+                        ${sq.bio ? `<p class="admin-queue-desc">${escapeHtml(sq.bio)}</p>` : ''}
+                        <p class="admin-queue-meta" style="font-size:0.75em; color:#999; font-family:monospace;">
+                            leader: ${escapeHtml(sq.leaderId || '(none)')}
+                        </p>
+                    </div>
+                    <div class="admin-queue-card-actions">
+                        <button class="modal-button btn-danger admin-squad-delete-btn">Delete</button>
+                    </div>
                 </div>
-                <div class="admin-queue-card-actions">
-                    <button class="modal-button btn-danger admin-squad-delete-btn">Delete</button>
+            `;
+        }).join('');
+
+        document.querySelectorAll('#adminSquadsListBody .admin-squad-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const card = e.target.closest('.admin-queue-card');
+                const id = card.dataset.id;
+                const sq = squads.find(s => s.id === id);
+                const label = sq ? `[${sq.callsign}] ${sq.squadName}` : 'this squad';
+                if (!confirm(`Delete ${label}? Members will be removed. This cannot be undone.`)) return;
+                btn.disabled = true;
+                btn.textContent = 'Deleting…';
+                try {
+                    await deleteDoc(doc(db, 'squads', id));
+                    logAdminAction('deleteSquad', {
+                        targetId: id,
+                        targetType: 'squad',
+                        summary: label
+                    });
+                    toast('Squad deleted.', 'success');
+                    renderActiveSquadsTab();
+                } catch (err) {
+                    console.error('Failed to delete squad:', err);
+                    toast('Could not delete squad: ' + err.message, 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Delete';
+                }
+            });
+        });
+    };
+
+    container.innerHTML = `
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px; font-size:0.85em;">
+            <p style="color:#666; margin:0;">${squads.length} squad${squads.length === 1 ? '' : 's'} total</p>
+            <label style="margin-left:auto;">Sort:
+                <select id="adminSquadsSort" style="padding:4px 6px;">
+                    <option value="name">By name</option>
+                    <option value="members">Most members</option>
+                    <option value="pins">Most pins</option>
+                    <option value="newest">Newest</option>
+                </select>
+            </label>
+        </div>
+        <div id="adminSquadsListBody"></div>
+    `;
+    document.getElementById('adminSquadsSort').addEventListener('change', (e) => {
+        currentSort = e.target.value;
+        renderSquadsList();
+    });
+    renderSquadsList();
+}
+
+// --- AUDIT LOG TAB ----------------------------------------------------------
+
+/**
+ * Renders the audit log: a reverse-chronological list of admin actions.
+ * Falls back to a friendly empty state if the adminActions collection is
+ * missing/empty/inaccessible.
+ */
+async function renderAuditLogTab() {
+    const container = document.getElementById('adminAuditContent');
+    if (!container) return;
+    container.innerHTML = '<p>Loading audit log…</p>';
+
+    const rows = await fetchAuditLog(100);
+    if (rows.length === 0) {
+        container.innerHTML = emptyState('🕓', 'No admin actions yet', 'Once admins approve events, manage users, or moderate reports, those actions will be logged here. Make sure the <code>adminActions</code> Firestore rule is deployed (see audit.js header).');
+        return;
+    }
+
+    container.innerHTML = `<p style="color:#666; font-size:0.85em; margin:4px 0;">Showing most recent ${rows.length} action${rows.length === 1 ? '' : 's'}</p>` + rows.map(r => {
+        const label = getActionLabel(r.actionType);
+        const ts = r.timestamp && r.timestamp.toDate ? r.timestamp.toDate() : null;
+        const tsStr = ts ? ts.toLocaleString() : '';
+        return `
+            <div style="display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #eee; align-items:flex-start;">
+                <div style="font-size:1.4em; line-height:1;">${label.emoji}</div>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:0.95em;">
+                        <strong style="color:${label.color};">${escapeHtml(r.adminUsername || r.adminId || 'Unknown admin')}</strong>
+                        ${escapeHtml(label.label)}
+                        <strong>${escapeHtml(r.summary || '(no summary)')}</strong>
+                    </div>
+                    ${r.reason ? `<div style="font-size:0.8em; color:#888; margin-top:2px;">reason: ${escapeHtml(r.reason)}</div>` : ''}
+                    <div style="font-size:0.75em; color:#999; margin-top:2px;">${escapeHtml(tsStr)}</div>
                 </div>
             </div>
         `;
     }).join('');
+}
 
-    container.querySelectorAll('.admin-squad-delete-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const card = e.target.closest('.admin-queue-card');
-            const id = card.dataset.id;
-            const sq = squads.find(s => s.id === id);
-            const label = sq ? `[${sq.callsign}] ${sq.squadName}` : 'this squad';
-            if (!confirm(`Delete ${label}? Members will be removed. This cannot be undone.`)) return;
-            btn.disabled = true;
-            btn.textContent = 'Deleting…';
-            try {
-                await deleteDoc(doc(db, 'squads', id));
-                renderActiveSquadsTab();
-            } catch (err) {
-                console.error('Failed to delete squad:', err);
-                alert('Could not delete squad: ' + err.message);
-                btn.disabled = false;
-                btn.textContent = 'Delete';
-            }
-        });
-    });
+/**
+ * Returns HTML for a friendly empty state. Used by tabs that need a nicer
+ * "nothing here" message than just a single-line paragraph.
+ */
+function emptyState(icon, title, body) {
+    return `
+        <div style="text-align:center; padding:40px 20px; color:#666;">
+            <div style="font-size:3em; margin-bottom:8px;">${icon}</div>
+            <div style="font-size:1.1em; font-weight:600; color:#444; margin-bottom:6px;">${title}</div>
+            <div style="font-size:0.9em; line-height:1.5; max-width:400px; margin:0 auto;">${body}</div>
+        </div>
+    `;
 }
 
 // --- HELPER -----------------------------------------------------------------
