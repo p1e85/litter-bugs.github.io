@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -573,6 +574,7 @@
                 <button class="admin-tab-btn" data-tab="users">👥 Users</button>
                 <button class="admin-tab-btn" data-tab="reports">🚩 Reports</button>
                 <button class="admin-tab-btn" data-tab="challenges">🎯 Challenges</button>
+                <button class="admin-tab-btn" data-tab="audit">🕓 Audit Log</button>
             </div>
 
             <!-- Tab bodies -->
@@ -606,6 +608,10 @@
             <div class="admin-tab-body" data-tab="challenges" style="display:none;">
                 <p style="color:#666; font-size:0.9em;">Create and manage global quests that all users can join.</p>
                 <div id="adminChallengesContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="audit" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Record of recent admin actions across the panel. Requires the <code>adminActions</code> Firestore rule (see audit.js header).</p>
+                <div id="adminAuditContent"><p>Loading…</p></div>
             </div>
         </div>
     </div>
