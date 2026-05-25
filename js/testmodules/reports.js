@@ -27,6 +27,8 @@ import {
     db, collection, addDoc, getDoc, getDocs, doc, updateDoc, query, where
 } from './firebase.js';
 import { state } from './config.js';
+import { toast } from './toast.js';
+import { logAdminAction } from './audit.js';
 
 // ---------------------------------------------------------------------------
 // REPORT SUBMISSION (called from community pin popup)
@@ -43,20 +45,36 @@ let pendingReport = null;
  */
 export function openReportPinModal(pinInfo, routeInfo) {
     if (!state.currentUser) {
-        alert('Please log in to report content.');
+        toast('Please log in to report content.', 'error');
         return;
     }
+    // Coords come in different shapes depending on schema; normalize to [lng, lat]
+    let lngLat = null;
+    if (pinInfo.coords) {
+        const c = pinInfo.coords;
+        if (Array.isArray(c) && c.length === 2 && Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+            lngLat = c;
+        } else if (Number.isFinite(c.lng) && Number.isFinite(c.lat)) {
+            lngLat = [c.lng, c.lat];
+        }
+    }
+    if (!lngLat && Number.isFinite(pinInfo.lng) && Number.isFinite(pinInfo.lat)) {
+        lngLat = [pinInfo.lng, pinInfo.lat];
+    }
+
     pendingReport = {
         type: 'pin',
         targetId: pinInfo.id || null,
         targetRouteId: routeInfo.routeId || null,
         targetUserId: routeInfo.userId || null,
-        // Snapshot just enough to render the queue without re-fetching the route
+        // Snapshot just enough to render the queue without re-fetching the route.
+        // Includes coords so the admin can jump to the location on the map.
         targetSnapshot: {
             title: pinInfo.title || '(untitled pin)',
             category: pinInfo.category || null,
             thumbnailURL: pinInfo.thumbnailURL || pinInfo.imageURL || null,
-            username: routeInfo.username || 'Unknown'
+            username: routeInfo.username || 'Unknown',
+            coords: lngLat // [lng, lat] or null
         }
     };
 
@@ -100,7 +118,7 @@ export async function submitPendingReport() {
         return;
     }
     if (!state.currentUser) {
-        alert('Please log in to submit a report.');
+        toast('Please log in to submit a report.', 'error');
         return;
     }
 
@@ -138,11 +156,11 @@ export async function submitPendingReport() {
             createdAt: new Date()
         });
 
-        alert('Report submitted. Thank you — an admin will review it.');
+        toast('Report submitted. Thank you — an admin will review it.', 'success');
         closeReportPinModal();
     } catch (err) {
         console.error('submitPendingReport failed:', err);
-        alert('Could not submit report: ' + err.message);
+        toast('Could not submit report: ' + err.message, 'error');
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Submit Report';
@@ -183,10 +201,15 @@ export async function resolveReport(reportId, resolutionNote) {
             reviewedBy: state.currentUser ? state.currentUser.uid : null,
             reviewedAt: new Date()
         });
+        logAdminAction('resolveReport', {
+            targetId: reportId,
+            targetType: 'report',
+            summary: resolutionNote || 'Resolved'
+        });
         return true;
     } catch (err) {
         console.error('resolveReport failed:', err);
-        alert('Could not resolve report: ' + err.message);
+        toast('Could not resolve report: ' + err.message, 'error');
         return false;
     }
 }
@@ -199,10 +222,15 @@ export async function dismissReport(reportId, reason) {
             reviewedBy: state.currentUser ? state.currentUser.uid : null,
             reviewedAt: new Date()
         });
+        logAdminAction('dismissReport', {
+            targetId: reportId,
+            targetType: 'report',
+            summary: reason || 'Dismissed'
+        });
         return true;
     } catch (err) {
         console.error('dismissReport failed:', err);
-        alert('Could not dismiss report: ' + err.message);
+        toast('Could not dismiss report: ' + err.message, 'error');
         return false;
     }
 }
@@ -222,7 +250,15 @@ export async function renderReportsTab() {
 
     const rows = await fetchOpenReports();
     if (rows.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">No open reports. 🎉</p>';
+        container.innerHTML = `
+            <div style="text-align:center; padding:40px 20px; color:#666;">
+                <div style="font-size:3em; margin-bottom:8px;">🎉</div>
+                <div style="font-size:1.1em; font-weight:600; color:#444; margin-bottom:6px;">No open reports</div>
+                <div style="font-size:0.9em; line-height:1.5; max-width:400px; margin:0 auto;">
+                    Users can report community pins via the 🚩 button. Reports needing your review will show up here.
+                </div>
+            </div>
+        `;
         return;
     }
 
@@ -231,6 +267,8 @@ export async function renderReportsTab() {
         const dateStr = r.createdAt && r.createdAt.toDate
             ? r.createdAt.toDate().toLocaleString()
             : '';
+        const hasCoords = Array.isArray(snap.coords) && snap.coords.length === 2
+            && Number.isFinite(snap.coords[0]) && Number.isFinite(snap.coords[1]);
         return `
             <div class="admin-queue-card" data-id="${r.id}">
                 <div style="display:flex; gap:12px; align-items:flex-start;">
@@ -249,12 +287,33 @@ export async function renderReportsTab() {
                     </div>
                 </div>
                 <div class="admin-queue-card-actions">
+                    ${hasCoords ? `<button class="modal-button btn-secondary admin-view-on-map-btn"
+                        data-lng="${snap.coords[0]}" data-lat="${snap.coords[1]}"
+                        title="Close panel and center map on this pin">📍 View</button>` : ''}
                     <button class="modal-button btn-primary admin-resolve-btn" title="Mark as actioned (no automatic content removal)">Resolve</button>
                     <button class="modal-button btn-secondary admin-dismiss-btn" title="Dismiss without action">Dismiss</button>
                 </div>
             </div>
         `;
     }).join('');
+
+    // View on Map: closes the admin panel and centers the Mapbox map on the
+    // pin's coords so the admin can see context. Uses the global state.map
+    // because reports.js doesn't import map.js (avoids a cycle).
+    container.querySelectorAll('.admin-view-on-map-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const lng = parseFloat(e.target.dataset.lng);
+            const lat = parseFloat(e.target.dataset.lat);
+            if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+            // Close admin panel
+            const modal = document.getElementById('adminPanelModal');
+            if (modal) modal.style.display = 'none';
+            // Center the map. state.map is set up by initializeMap().
+            if (state.map && typeof state.map.flyTo === 'function') {
+                state.map.flyTo({ center: [lng, lat], zoom: 17, duration: 800 });
+            }
+        });
+    });
 
     container.querySelectorAll('.admin-resolve-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
