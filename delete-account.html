@@ -3,62 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Litter Troopers™ - Data Deletion Request</title>
+    <title>Account Deletion | Litter Troopers™</title>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            line-height: 1.6; 
-            max-width: 600px; 
-            margin: 0 auto; 
-            padding: 2rem; 
-            color: #333; 
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border-color: #334155;
+            --input-bg: #0f172a;
+            --input-border: #475569;
         }
-        h1 { color: #2c3e50; }
-        .container { 
-            background: #f9f9f9; 
-            padding: 2rem; 
-            border-radius: 8px; 
-            border: 1px solid #ddd; 
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.5;
         }
-        .btn { 
-            display: inline-block; 
-            background: #e74c3c; 
-            color: #fff; 
-            padding: 12px 24px; 
-            text-decoration: none; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            margin-top: 1rem; 
+
+        .container-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-color);
         }
-        .btn:hover { background: #c0392b; }
-        .note { 
-            font-size: 0.9rem; 
-            color: #666; 
-            margin-top: 1.5rem; 
-            border-top: 1px solid #ddd;
-            padding-top: 1rem;
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .alert-box {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--danger);
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+            color: #fca5a5;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label.main-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        input[type="email"], select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--input-border);
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="email"]:focus, select:focus {
+            border-color: var(--danger);
+        }
+
+        .content-box {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+
+        .content-box p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .content-box ul {
+            list-style-type: none;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .content-box ul li {
+            margin-bottom: 6px;
+            padding-left: 15px;
+            position: relative;
+        }
+
+        .content-box ul li::before {
+            content: "•";
+            color: var(--danger);
+            position: absolute;
+            left: 0;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            gap: 10px;
+        }
+
+        .checkbox-group input {
+            margin-top: 4px;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--danger);
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            font-weight: normal;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-submit:hover {
+            background-color: #dc2626;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .footer a {
+            color: var(--danger);
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Account & Data Deletion</h1>
-        <p>At <strong>Litter Troopers™</strong> (operated by P1 Creations LLC), you own your data. If you would like to permanently delete your account and all associated data from the Swarm Engine, please submit a request below.</p>
-        
-        <h3>What will be scrubbed?</h3>
-        <ul>
-            <li>Your user account and Gmail association</li>
-            <li>Your lifetime item cleanup counts</li>
-            <li>All your uploaded post-cleanup photos</li>
-            <li>Your sector map pins</li>
-        </ul>
 
-        <p><strong>Note:</strong> Data deletion is permanent and cannot be undone. It may take up to 7 days for all data to be completely scrubbed from our Firebase database.</p>
+    <div class="container-card">
+        <div class="header">
+            <h1>Account Deletion</h1>
+            <p>Permanently wipe your profile and clean history from the Litter Troopers™ platform.</p>
+        </div>
 
-        <!-- Replace [YOUR_SUPPORT_EMAIL] with your actual email address -->
-        <a href="mailto:p1creationsco@gmail.com?subject=Data%20Deletion%20Request%20-%20Litter%20Troopers&body=Hello,%20please%20delete%20my%20Litter%20Troopers%20account%20and%20all%20associated%20data.%0A%0AMy%20Gmail%20associated%20with%20the%20account%20is:%20[INSERT YOUR GMAIL HERE]" class="btn">Request Data Deletion</a>
+        <div class="alert-box">
+            <strong>Warning:</strong> This action cannot be undone. Choosing to delete your account will permanently purge your credentials along with all mapped records.
+        </div>
 
-        <p class="note">If the button does not work, please email your request directly to <strong>p1creationsco@gmail.com</strong> using the email address associated with your account.</p>
+        <form id="deletionForm" onsubmit="sendDeletionRequest(event)">
+            <div class="form-group">
+                <label class="main-label" for="email">Account Email Address</label>
+                <input type="email" id="email" placeholder="your-email@example.com" required>
+            </div>
+
+            <div class="content-box">
+                <p>The following assets will be completely scrubbed within 7 days:</p>
+                <ul>
+                    <li>Your login profile and authentication tokens</li>
+                    <li>Your tracked lifetime item cleanup counts</li>
+                    <li>Your uploaded post-cleanup verification photos</li>
+                    <li>Your marked sector map pins</li>
+                </ul>
+            </div>
+
+            <div class="form-group">
+                <label class="main-label" for="reason">Reason for Leaving (Optional)</label>
+                <select id="reason">
+                    <option value="No longer using the app">No longer using the app</option>
+                    <option value="Privacy concerns">Privacy concerns</option>
+                    <option value="Beta phase technical errors">Beta phase technical errors</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="confirm" required>
+                <label for="confirm">I confirm that I want to completely delete my account and destroy all associated cleanup data from the Swarm Engine database.</label>
+            </div>
+
+            <button type="submit" class="btn-submit">Request Permanent Deletion</button>
+        </form>
+
+        <div class="footer">
+            Need manual assistance? Contact support at <br>
+            <a href="mailto:[YOUR_SUPPORT_EMAIL]">p1creationsco@gmail.com</a>
+        </div>
     </div>
+
+    <script>
+        function sendDeletionRequest(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const reason = document.getElementById('reason').value;
+            
+            const subject = encodeURIComponent("Urgent: Full Account Deletion Request - Litter Troopers");
+            const body = encodeURIComponent(`Hello,\n\nPlease process a full account deletion for my Litter Troopers profile.\n\nAccount Email: ${email}\nReason: ${reason}\n\nI authorize the immediate and permanent removal of my authentication profile, map pins, totals, and cleanup verification photos.\n\nThank you.`);
+            
+            window.location.href = `mailto:p1creationsco@gmail.com?subject=${subject}&body=${body}`;
+        }
+    </script>
+
 </body>
 </html>
