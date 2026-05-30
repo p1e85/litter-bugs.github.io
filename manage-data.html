@@ -11,8 +11,11 @@
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --accent: #10b981;
-            --accent-hover: #059669;
+            --danger: #ef4444;
             --warning: #f59e0b;
+            --border-color: #334155;
+            --input-bg: #0f172a;
+            --input-border: #475569;
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,16 +29,17 @@
             align-items: center;
             min-height: 100vh;
             padding: 20px;
+            line-height: 1.5;
         }
 
-        .deletion-card {
+        .container-card {
             background-color: var(--card-bg);
             border-radius: 12px;
             padding: 40px;
             max-width: 500px;
             width: 100%;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            border: 1px solid #334155;
+            border: 1px solid var(--border-color);
         }
 
         .header {
@@ -52,10 +56,9 @@
         .header p {
             color: var(--text-muted);
             font-size: 0.95rem;
-            line-height: 1.5;
         }
 
-        .info-box {
+        .alert-box {
             background-color: rgba(245, 158, 11, 0.1);
             border-left: 4px solid var(--warning);
             padding: 15px;
@@ -81,8 +84,8 @@
             width: 100%;
             padding: 12px;
             border-radius: 6px;
-            border: 1px solid #475569;
-            background-color: #0f172a;
+            border: 1px solid var(--input-border);
+            background-color: var(--input-bg);
             color: var(--text-main);
             font-size: 1rem;
             outline: none;
@@ -93,15 +96,15 @@
             border-color: var(--accent);
         }
 
-        .data-options {
-            background: #0f172a;
-            border: 1px solid #334155;
+        .content-box {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
             border-radius: 6px;
             padding: 15px;
             margin-bottom: 25px;
         }
 
-        .data-options p {
+        .content-box p {
             font-size: 0.85rem;
             color: var(--text-muted);
             margin-bottom: 15px;
@@ -128,6 +131,7 @@
         .checkbox-row label {
             font-size: 0.95rem;
             cursor: pointer;
+            color: #cbd5e1;
         }
 
         .btn-submit {
@@ -144,7 +148,7 @@
         }
 
         .btn-submit:hover {
-            background-color: var(--accent-hover);
+            background-color: #059669;
         }
 
         .footer {
@@ -162,43 +166,43 @@
 </head>
 <body>
 
-    <div class="deletion-card">
+    <div class="container-card">
         <div class="header">
             <h1>Manage Your Data</h1>
-            <p>Request specific data removal from the Litter Troopers™ Swarm Engine while keeping your account active.</p>
+            <p>Request specific data removal from the Litter Troopers™ Swarm Engine while keeping your login active.</p>
         </div>
 
-        <div class="info-box">
-            <strong>Note:</strong> This form will not delete your account. To fully close your account, please visit the Account Deletion page.
+        <div class="alert-box">
+            <strong>Information:</strong> This configuration form will not cancel your account membership. To entirely deactivate your profile, visit the dedicated Account Deletion console.
         </div>
 
         <form id="dataForm" onsubmit="sendPartialDeletionRequest(event)">
             <div class="form-group">
-                <label class="main-label" for="email">Google Account Email</label>
-                <input type="email" id="email" placeholder="trooper@gmail.com" required>
+                <label class="main-label" for="email">Account Email Address</label>
+                <input type="email" id="email" placeholder="your-email@example.com" required>
             </div>
 
-            <div class="data-options">
-                <p>Select the specific data you would like permanently scrubbed from our database:</p>
+            <div class="content-box">
+                <p>Select the specific categories you want permanently cleared out:</p>
                 
                 <div class="checkbox-row">
                     <input type="checkbox" id="check-pins" value="Map Pins">
-                    <label for="check-pins">Delete my Sector Map Pins (Location History)</label>
+                    <label for="check-pins">Wipe my Sector Map Pins (Location Markers)</label>
                 </div>
                 
                 <div class="checkbox-row">
                     <input type="checkbox" id="check-photos" value="Photos">
-                    <label for="check-photos">Delete my Post-Cleanup Verification Photos</label>
+                    <label for="check-photos">Purge my Post-Cleanup Verification Photos</label>
                 </div>
                 
                 <div class="checkbox-row">
                     <input type="checkbox" id="check-counts" value="Item Counts">
-                    <label for="check-counts">Reset my Total Item Counts to Zero</label>
+                    <label for="check-counts">Reset my Cumulative Item Counts to Zero</label>
                 </div>
                 
                 <div class="checkbox-row">
                     <input type="checkbox" id="check-diagnostics" value="Diagnostics">
-                    <label for="check-diagnostics">Delete App Diagnostic & Crash Logs</label>
+                    <label for="check-diagnostics">Clear Performance Logs & Crash Analytics</label>
                 </div>
             </div>
 
@@ -206,37 +210,31 @@
         </form>
 
         <div class="footer">
-            Having trouble? Email support directly at <br>
-            <!-- Replace with your actual email below -->
-            <a href="mailto:[YOUR_SUPPORT_EMAIL]">p1creationsco@gmail.com</a>
+            Need manual assistance? Contact support at <br>
+            <a href="mailto:p1creationsco@gmail.com">p1creationsco@gmail.com</a>
         </div>
     </div>
 
     <script>
         function sendPartialDeletionRequest(event) {
-            event.preventDefault(); // Prevents the page from reloading
-            
+            event.preventDefault();
             const email = document.getElementById('email').value;
             
-            // Gather selected checkboxes
             let dataToRemove = [];
             if (document.getElementById('check-pins').checked) dataToRemove.push("- Sector Map Pins (Location History)");
             if (document.getElementById('check-photos').checked) dataToRemove.push("- Post-Cleanup Verification Photos");
             if (document.getElementById('check-counts').checked) dataToRemove.push("- Total Item Counts (Reset to 0)");
-            if (document.getElementById('check-diagnostics').checked) dataToRemove.push("- App Diagnostic & Crash Logs");
+            if (document.getElementById('check-diagnostics').checked) dataToRemove.push("- App Diagnostics & Crash Logs");
             
-            // Require at least one checkbox to be selected
             if (dataToRemove.length === 0) {
                 alert("Please select at least one type of data to delete.");
                 return;
             }
             
             const formattedDataList = dataToRemove.join("\n");
-            
             const subject = encodeURIComponent("Partial Data Deletion Request - Litter Troopers");
-            const body = encodeURIComponent(`Hello,\n\nPlease delete the following specific data associated with my Litter Troopers profile. I would like my main account and login to remain active.\n\nAccount Email: ${email}\n\nData to scrub from the database:\n${formattedDataList}\n\nThank you.`);
+            const body = encodeURIComponent(`Hello,\n\nPlease scrub the following data attributes connected to my profile. I want my main account structure to remain intact.\n\nAccount Email: ${email}\n\nTarget Data Categories to Purge:\n${formattedDataList}\n\nThank you.`);
             
-            // REPLACE [YOUR_SUPPORT_EMAIL] WITH YOUR ACTUAL EMAIL
             window.location.href = `mailto:p1creationsco@gmail.com?subject=${subject}&body=${body}`;
         }
     </script>
