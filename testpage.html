@@ -3,251 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Litter Troopers™ | The Swarm Engine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "tilw8qneix");
+    </script>
+    
+    <title>Litter Troopers™ | The Swarm Engine is Live</title>
+    <meta name="description" content="Litter Troopers is a gamified urban restoration platform. Secure map sectors, log your cleanup stats, and earn community bounties.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪲</text></svg>">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* --- VINTAGE CHICAGO & RETRO ARCADE PALETTE --- */
-        :root {
-            --bg-navy: #0B1325;
-            --card-navy: #152238;
-            --accent-red: #D62828;
-            --accent-orange: #F77F00;
-            --accent-gold: #FCBF49;
-            --text-light: #EAE2B7;
-            --terminal-green: #00FF41;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            background-color: var(--bg-navy);
-            color: var(--text-light);
-            font-family: 'Chakra Petch', sans-serif;
-            line-height: 1.6;
-            border: 8px solid var(--accent-red); /* Retro thick border around the whole page */
-            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background-color: #f0e9d6;
         }
-
-        /* --- NAVIGATION --- */
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 5%;
-            background-color: var(--card-navy);
-            border-bottom: 4px solid var(--accent-orange);
+        .hero-bg {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1618472634129-6e3e4a9a4b3d?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=1920');
+            background-size: cover;
+            background-position: center;
         }
-
-        .logo {
-            font-weight: 700;
-            font-size: 2rem;
-            color: var(--accent-gold);
-            text-transform: uppercase;
-            text-shadow: 2px 2px 0px var(--accent-red);
+        .section-title {
+            font-weight: 900;
+            font-size: 2.25rem;
+            line-height: 2.5rem;
         }
-
-        /* --- HERO SECTION --- */
-        .hero {
-            text-align: center;
-            padding: 80px 20px;
-            max-width: 900px;
-            margin: 0 auto;
+        .cta-button {
+            transition: all 0.3s ease;
         }
-
-        .hero h1 {
-            font-size: 4.5rem;
-            font-weight: 700;
-            line-height: 1;
-            margin-bottom: 25px;
-            color: var(--text-light);
-            text-transform: uppercase;
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
         }
-
-        .hero h1 span {
-            color: var(--accent-orange);
+        .feature-card {
+            transition: all 0.3s ease;
         }
-
-        .hero p {
-            font-family: 'Space Mono', monospace;
-            font-size: 1.1rem;
-            color: var(--accent-gold);
-            margin-bottom: 40px;
+        .feature-card:hover {
+            transform: scale(1.05);
         }
-
-        /* --- CHUNKY RETRO BUTTONS --- */
-        .btn-container {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 15px 35px;
-            font-family: 'Chakra Petch', sans-serif;
-            font-weight: 700;
-            font-size: 1.2rem;
-            text-decoration: none;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: pointer;
-            border-radius: 0; /* Sharp retro corners */
-            transition: transform 0.1s, box-shadow 0.1s;
-        }
-
-        .btn-primary {
-            background-color: var(--accent-red);
-            color: var(--text-light);
-            border: 3px solid var(--text-light);
-            box-shadow: 6px 6px 0px var(--accent-orange);
-        }
-
-        .btn-primary:hover {
-            transform: translate(2px, 2px);
-            box-shadow: 4px 4px 0px var(--accent-orange);
-        }
-
-        .btn-secondary {
-            background-color: var(--card-navy);
-            color: var(--accent-gold);
-            border: 3px solid var(--accent-gold);
-            box-shadow: 6px 6px 0px var(--accent-orange);
-        }
-
-        .btn-secondary:hover {
-            transform: translate(2px, 2px);
-            box-shadow: 4px 4px 0px var(--accent-orange);
-        }
-
-        /* --- SWARM ENGINE TERMINAL --- */
-        .terminal-container {
-            max-width: 800px;
-            margin: 0 auto 60px auto;
-            background-color: #000;
-            border: 4px solid var(--accent-red);
-            padding: 20px;
-            box-shadow: 10px 10px 0px var(--card-navy);
-        }
-
-        .terminal-header {
-            color: var(--accent-orange);
-            font-family: 'Chakra Petch', sans-serif;
-            font-weight: 700;
-            border-bottom: 2px dashed var(--accent-red);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-        }
-
-        .terminal-text {
-            font-family: 'Space Mono', monospace;
-            color: var(--terminal-green);
-            font-size: 1rem;
-        }
-
-        .terminal-text span {
-            color: var(--accent-gold);
-        }
-
-        /* --- NEW SELLING POINTS GRID --- */
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 40px;
-            padding: 20px 5% 80px 5%;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .card {
-            background-color: var(--card-navy);
-            padding: 35px;
-            border: 3px solid var(--accent-gold);
-            border-top: 10px solid var(--accent-orange);
-            box-shadow: 8px 8px 0px rgba(0,0,0,0.5);
-        }
-
-        .card h3 {
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-            color: var(--accent-gold);
-            text-transform: uppercase;
-        }
-
-        .card p {
-            font-family: 'Space Mono', monospace;
-            font-size: 0.95rem;
-            color: var(--text-light);
-        }
-
-        /* --- FOOTER --- */
-        footer {
-            text-align: center;
-            padding: 30px;
-            background-color: var(--card-navy);
-            color: var(--accent-orange);
-            font-family: 'Space Mono', monospace;
-            border-top: 4px solid var(--accent-red);
+        .alpha-badge {
+            background-color: #ffc107;
+            color: #333;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-weight: bold;
             font-size: 0.9rem;
-        }
-
-        /* --- RESPONSIVE --- */
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 3rem; }
-            body { border-width: 4px; }
-            .btn { width: 100%; text-align: center; }
-            .terminal-container { margin: 0 20px 40px 20px; }
+            display: inline-block;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
-<body>
+<body class="text-gray-800">
 
-    <nav>
-        <div class="logo">LITTER TROOPERS™</div>
-    </nav>
-
-    <header class="hero">
-        <h1>Clear The Board.<br><span>Reclaim The Streets.</span></h1>
-        <p>> INITIALIZING SWARM ENGINE BETA... <br>> LOAD YOUR STATS. SECURE YOUR MAP PINS.</p>
-        <div class="btn-container">
-            <a href="#" class="btn btn-primary">DOWNLOAD ANDROID BETA</a>
-            <a href="#" class="btn btn-secondary">LAUNCH WEB APP</a>
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-[#2E4034] flex items-center gap-3">
+               <img src="img/ltlogo2.png" alt="Litter Troopers Logo" class="h-20 w-20 md:h-24 md:w-24 object-contain rounded-full shadow-md"> <span class="hidden md:inline">Litter Troopers™</span>
+            </h1>
+            <a href="https://www.littertroopers.com/mapbeta.html" target="_blank" class="cta-button bg-[#4B7F52] text-white font-bold py-2 px-6 rounded-full hover:bg-[#218838]">
+                Launch Web App
+            </a>
         </div>
     </header>
 
-    <div class="terminal-container">
-        <div class="terminal-header">SYS.ADMIN // SWARM_ENGINE_LIVE</div>
-        <div class="terminal-text">
-            > CONNECTING TO SERVER... [OK]<br>
-            > SCANNING LOCAL GRID... [DIRTY SECTORS DETECTED]<br>
-            > UPLOADING BOUNTIES... <span>[$540 IN ACTIVE FUNDS]</span><br>
-            > WAITING FOR TROOPER DEPLOYMENT...
+    <section class="hero-bg text-yellow-50">
+        <div class="container mx-auto px-6 py-24 md:py-32 text-center">
+            <div class="alpha-badge">SWARM ENGINE BETA</div>
+            <h2 class="text-4xl md:text-6xl font-black leading-tight mb-4">Clear the Board. Reclaim the Streets.</h2>
+            <p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto">Welcome to Litter Troopers™. The gamified urban restoration platform that turns cleanups into a real-life numbers game. Secure map sectors, log your stats, and take back your territory.</p>
+            <a href="https://www.littertroopers.com/mapbeta.html" target="_blank" class="cta-button bg-[#4B7F52] text-white font-bold text-lg py-4 px-10 rounded-full hover:bg-[#218838]">
+                Deploy to the Map
+            </a>
         </div>
-    </div>
-
-    <section class="features">
-        <div class="card">
-            <h3>🔒 Lock Down Your Block</h3>
-            <p>This isn't a charity walk. It's a territory grab. Whether you are in the heart of the city or walking a rural trail, use the map to locate a dirty sector, wipe it clean, and drop a victory pin to claim it for the Swarm.</p>
-        </div>
-        <div class="card">
-            <h3>⚡ The Quick Pick Arsenal</h3>
-            <p>No time for a massive neighborhood sweep? No problem. Spam the 'Quick Pick' feature to instantly log that rogue soda can on your commute. Fast XP. Keep your daily streak alive and boost your lifetime score.</p>
-        </div>
-        <div class="card">
-            <h3>💰 Extract Real Bounties</h3>
-            <p>Why do the heavy lifting for free? Hunt down community-funded high-priority zones on the map. Deploy to the sector, bag the trash, upload your photo verification, and extract real payouts directly to your account.</p>
+    </section>
+    
+    <section class="py-20 bg-white">
+        <div class="container mx-auto px-6 text-center">
+            <h3 class="section-title text-[#2E4034] mb-12">Swarm Engine Mechanics</h3>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="feature-card bg-gray-50 p-8 rounded-lg border">
+                    <h4 class="text-xl font-bold mb-2">Lock Down Your Block</h4>
+                    <p>Use the interactive map to locate a dirty sector, wipe it clean, and drop a victory pin to claim the territory for the Swarm.</p>
+                </div>
+                <div class="feature-card bg-gray-50 p-8 rounded-lg border">
+                    <h4 class="text-xl font-bold mb-2">The Quick Pick</h4>
+                    <p>No time for a massive sweep? Log single items on your commute instantly to keep your daily streak alive and boost your lifetime score.</p>
+                </div>
+                <div class="feature-card bg-gray-50 p-8 rounded-lg border">
+                    <h4 class="text-xl font-bold mb-2">Extract Real Bounties</h4>
+                    <p>Hunt down community-funded high-priority zones. Clear the area, verify your work, and earn real payouts for your impact.</p>
+                </div>
+                <div class="feature-card bg-gray-50 p-8 rounded-lg border">
+                    <h4 class="text-xl font-bold mb-2">Photo Verification</h4>
+                    <p>Snap and upload your final post-cleanup verification photo to lock in your stats, secure your map pin, and rank up on the leaderboard.</p>
+                </div>
+            </div>
+            <div class="max-w-5xl mx-auto mt-12">
+                    <img class="collage-img w-full rounded-lg shadow-2xl" src="img/collage3.jpg" alt="A photo collage of community cleanups showing collected trash and volunteers.">
+            </div>
         </div>
     </section>
 
-    <footer>
-        <p>&copy; 2026 P1 CREATIONS LLC. ALL SYSTEMS OPERATIONAL.</p>
+    <section class="py-20">
+        <div class="container mx-auto px-6 text-center">
+            <h3 class="section-title text-[#2E4034] mb-4">Awaiting Deployment Orders?</h3>
+            <p class="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">Join the comms link for updates on the official platform launch, new bounty drops, and leaderboard resets. Help us build the ultimate cleanup network!</p>
+            
+            <div class="max-w-xl mx-auto">
+                <form id="signupForm" class="w-full">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <input type="text" id="firstName" name="first_name" required class="w-full py-3 px-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4B7F52]" placeholder="First Name">
+                        <input type="email" id="email" name="email" required class="w-full py-3 px-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4B7F52]" placeholder="Email Address">
+                        <button type="submit" id="submitBtn" class="cta-button bg-[#4B7F52] text-white font-bold py-3 px-6 rounded-md hover:bg-[#218838] w-full sm:w-auto flex-shrink-0">
+                            Enlist Now
+                        </button>
+                    </div>
+                    <p id="formMessage" class="text-sm mt-3 h-5"></p>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 bg-[#a8bba2]">
+        <div class="container mx-auto px-6 text-center text-white">
+            <h3 class="section-title text-white mb-4">Fund the Swarm</h3>
+            <p class="text-lg mb-8 max-w-3xl mx-auto">Litter Troopers™ is currently in a live beta testing phase. The engine is fully operational, but we're just getting started. Our vision is to scale the bounty marketplace, refine the native apps, and implement advanced sector tracking tools.</p>
+            <h4 class="text-2xl font-bold mb-4">We are looking for strategic partners.</h4>
+            <p class="mb-8 max-w-3xl mx-auto">We are actively seeking investors and backers who want to help scale a gig-economy platform built for environmental restoration. If you're interested in funding the future of cleanups, we want to talk.</p>
+            <a href="mailto:p1creationsco@gmail.com?subject=Litter Troopers Investment Inquiry" class="cta-button bg-white text-[#2E4034] font-bold text-lg py-4 px-10 rounded-full hover:bg-gray-100 inline-block">
+                Contact P1 Creations
+            </a>
+        </div>
+    </section>
+    
+    <section id="beta-signup" class="py-16 bg-[#f4f7f5] border-y-2 border-dashed border-[#4B7F52]">
+        <div class="container mx-auto px-6 text-center">
+            <div class="text-5xl mb-4">📱</div>
+            <h3 class="section-title text-[#2E4034] mb-4">Android Squad</h3>
+
+<h4 class="section-title text-[#2E4034] mb-4">Native Beta is Dropping!</h4>
+
+            <p class="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
+                We are bringing the Litter Troopers™ experience natively to Android. Want to be in the first wave to test the app in the wild? Sign up with your Gmail address to get exclusive early access.
+            </p>
+            
+            <div class="max-w-md mx-auto">
+                <form id="betaSignupForm" class="w-full flex flex-col gap-4">
+                    <input type="email" id="betaEmailInput" placeholder="Enter your @gmail.com address" required 
+                           class="w-full py-4 px-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4B7F52] text-lg text-center">
+                    <button type="submit" id="betaSubmitBtn" 
+                            class="cta-button bg-[#4B7F52] text-white font-bold py-4 px-6 rounded-md hover:bg-[#218838] w-full text-lg">
+                        Join the Waitlist
+                    </button>
+                </form>
+                <p id="betaSignupMessage" class="mt-4 font-bold text-lg hidden"></p>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-24">
+        <div class="container mx-auto px-6 text-center">
+            <h3 class="text-3xl md:text-4xl font-black text-[#2E4034] mb-4">Ready to Join the Swarm?</h3>
+            <p class="text-lg text-gray-700 mb-8">Your first cleanup is just a click away. Launch the web app now to log your stats and secure your sector.</p>
+            <a href="https://www.littertroopers.com/mapbeta.html" target="_blank" class="cta-button bg-[#4B7F52] text-white font-bold text-lg py-4 px-10 rounded-full hover:bg-[#218838]">
+                Launch Litter Troopers (beta)
+            </a>
+        </div>
+    </section>
+
+    <footer class="bg-[#2E4034] text-white">
+        <div class="container mx-auto px-6 py-8 text-center">
+            <p>2026 Litter Troopers™</p>
+            <p class="text-sm text-gray-400 mt-2">A P1 Creations Project</p>
+            <p class="tos-link-container mt-4">
+                You can review the full <a href="tos.html" target="_blank" class="underline hover:text-gray-300">Terms of Service</a> and <a href="Privacy_Policy.html" target="_blank" class="underline hover:text-gray-300">Privacy Policy</a> at any time.
+            </p>
+            <p class="tos-link-container mt-2">You can use our test version here - <a href="maptest.html" target="_blank" class="underline hover:text-gray-300">FOR TESTERS</a> - remember some features may be broken. <a href="https://docs.google.com/document/d/1LhaYDw9nsv5LWMWGH-GLFKxy4wv68mTgOaTS5o3QG68/edit?usp=sharing" target="_blank" class="underline hover:text-gray-300">BUG REPORT</a> - <a href="safety.html" class="underline hover:text-gray-300"> SAFETY GUIDE</a></p>
+        </div>
     </footer>
 
+    <script src="js/emailform.js" type="module"></script>
 </body>
 </html>
