@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -479,6 +478,22 @@
         <div class="form-group">
             <label>Squad Mission</label>
             <textarea id="newSquadBio" rows="3" placeholder="Mission focus..." maxlength="150"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="newSquadMaxMembers">Max Members (2-50)</label>
+            <input type="number" id="newSquadMaxMembers" min="2" max="50" value="20"
+                style="width: 100%;">
+        </div>
+
+        <div class="form-group" style="display:flex; align-items:flex-start; gap:8px; padding:8px; background:#f7f7f5; border-radius:4px; margin-top:8px;">
+            <input type="checkbox" id="newSquadInviteOnly" style="margin-top:4px; flex-shrink:0;">
+            <label for="newSquadInviteOnly" style="margin:0; font-weight:normal; cursor:pointer;">
+                <strong>Make this squad invite-only</strong>
+                <div style="font-size:0.85em; color:#666; margin-top:2px;">
+                    If checked, users cannot request to join — only the leader can invite them. Leave unchecked to allow join requests.
+                </div>
+            </label>
         </div>
     </div>
 
