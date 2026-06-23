@@ -1,4 +1,3 @@
-
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc } from './firebase.js'; 
 import { state, allTitles, allBadges } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute, setupSectorVisuals } from './map.js';
@@ -389,9 +388,17 @@ export function attachEventListeners() {
     elements.meetupDateInput.addEventListener('change', validateMeetupForm);
 
     // --- HUB NAVIGATION (Feed/Events) ---
-    elements.hubBtn.addEventListener('click', () => {
+    elements.hubBtn.addEventListener('click', async () => {
         elements.menuModal.style.display = 'none';
         elements.hubModal.style.display = 'flex';
+        // Refresh pending squad invites strip whenever the hub opens. Lazy
+        // import avoids loading squads.js until needed.
+        try {
+            const squadsMod = await import('./squads.js');
+            await renderHubInvitesStrip(squadsMod);
+        } catch (err) {
+            console.warn('Could not load pending invites:', err);
+        }
     });
     if (elements.hubChallengesBtn) {
         elements.hubChallengesBtn.addEventListener('click', () => {
@@ -1178,3 +1185,67 @@ export function checkAdminPermissions(userProfile) {
     if (btnAdminPanelFull) btnAdminPanelFull.style.display = isAdmin ? 'flex' : 'none';
 }
 
+
+// --- HUB: PENDING SQUAD INVITES STRIP (Phase 5B) -----------------------------
+// Renders the user's outstanding squad invites at the top of the Community Hub
+// modal. Inline accept / decline. The strip auto-hides when there are no invites.
+async function renderHubInvitesStrip(squadsMod) {
+    const strip = document.getElementById('hubInvitesStrip');
+    const list = document.getElementById('hubInvitesList');
+    if (!strip || !list) return;
+
+    if (!state.currentUser) {
+        strip.style.display = 'none';
+        return;
+    }
+
+    const invites = await squadsMod.fetchMyInvites();
+    if (!invites || invites.length === 0) {
+        strip.style.display = 'none';
+        return;
+    }
+
+    list.innerHTML = invites.map(inv => `
+        <div data-squad-id="${escapeAttr(inv.squadId)}" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:4px;">
+            <div style="min-width:0;">
+                <strong>[${escapeAttr(inv.squadCallsign || '???')}] ${escapeAttr(inv.squadName || '(unknown)')}</strong>
+                <div style="font-size:0.8em; color:#666;">From: ${escapeAttr(inv.invitedByName || 'Unknown')}</div>
+            </div>
+            <div style="display:flex; gap:4px; flex-shrink:0;">
+                <button class="modal-button btn-primary hub-invite-accept-btn" style="padding:4px 10px; font-size:0.85em;">Accept</button>
+                <button class="modal-button btn-secondary hub-invite-decline-btn" style="padding:4px 10px; font-size:0.85em;">Decline</button>
+            </div>
+        </div>
+    `).join('');
+    strip.style.display = 'block';
+
+    list.querySelectorAll('.hub-invite-accept-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const row = e.target.closest('[data-squad-id]');
+            const squadId = row.dataset.squadId;
+            if (!confirm('Accept invite to this squad?')) return;
+            btn.disabled = true; btn.textContent = '…';
+            const ok = await squadsMod.acceptInvite(squadId);
+            if (ok) await renderHubInvitesStrip(squadsMod);
+            else { btn.disabled = false; btn.textContent = 'Accept'; }
+        });
+    });
+    list.querySelectorAll('.hub-invite-decline-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const row = e.target.closest('[data-squad-id]');
+            const squadId = row.dataset.squadId;
+            if (!confirm('Decline this invite?')) return;
+            btn.disabled = true; btn.textContent = '…';
+            const ok = await squadsMod.declineInvite(squadId);
+            if (ok) await renderHubInvitesStrip(squadsMod);
+            else { btn.disabled = false; btn.textContent = 'Decline'; }
+        });
+    });
+}
+
+function escapeAttr(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
