@@ -291,36 +291,89 @@ export async function approveSquadRequest(requestId) {
             return false;
         }
         const r = reqSnap.data();
-        // Field name compatibility: community.js initializeSquad writes
-        // `creatorId`/`creatorName`; older docs/Android may use `requesterId`.
-        const ownerId = r.creatorId || r.requesterId;
+
+        // Field compatibility: new initializeSquad writes leaderId/leaderName
+        // (matching Android). Older requests used creatorId/creatorName, and
+        // some older Android docs might use requesterId. Accept all three.
+        const ownerId = r.leaderId || r.creatorId || r.requesterId;
+        const ownerName = r.leaderName || r.creatorName || r.requesterName;
         if (!ownerId) {
-            toast('Request is missing the creator/requester ID; cannot approve.', 'error');
+            toast('Request is missing the leader ID; cannot approve.', 'error');
             return false;
         }
+
+        // If we don't have a name from the request (legacy data), fetch one.
+        let leaderName = ownerName;
+        if (!leaderName) {
+            try {
+                const profSnap = await getDoc(doc(db, 'publicProfiles', ownerId));
+                leaderName = profSnap.exists() ? (profSnap.data().username || 'Unknown') : 'Unknown';
+            } catch (_) {
+                leaderName = 'Unknown';
+            }
+        }
+
+        // Pull policy fields, defaulting per the Android spec.
+        const isOpen = r.isOpen !== false; // default true unless explicitly false
+        let maxMembers = parseInt(r.maxMembers, 10);
+        if (!Number.isFinite(maxMembers) || maxMembers < 2) maxMembers = 20;
+        if (maxMembers > 50) maxMembers = 50;
+
+        // Android schema: members is a MAP<uid, SquadMember>.
+        const leaderMember = {
+            uid: ownerId,
+            username: leaderName,
+            role: 'leader',
+            totalPins: 0,
+            totalRoutes: 0,
+            joinedAt: new Date()
+        };
+
         const squad = {
             squadName: r.squadName,
             callsign: r.callsign,
             homeSector: r.homeSector || null,
             bio: r.bio || '',
-            createdAt: new Date(),
+            isOpen: isOpen,
+            maxMembers: maxMembers,
+            memberCount: 1,
             leaderId: ownerId,
             coLeaderIds: [],
-            members: [ownerId],
-            memberCount: 1,
+            members: { [ownerId]: leaderMember },
             totalPins: 0,
-            status: 'active',
+            totalDistance: 0,
+            totalRoutes: 0,
+            createdAt: new Date(),
+            // Audit metadata (not in Android spec but harmless to include)
             approvedBy: state.currentUser ? state.currentUser.uid : null,
             approvedAt: new Date(),
             fromRequestId: requestId
         };
         const newDoc = await addDoc(collection(db, 'squads'), squad);
+
+        // Mark request as approved with a pointer to the live squad.
         await updateDoc(reqRef, {
             status: 'approved',
             squadId: newDoc.id,
             reviewedBy: state.currentUser ? state.currentUser.uid : null,
             reviewedAt: new Date()
         });
+
+        // Denormalize squad affiliation onto the new leader's publicProfile.
+        // This is what enforces one-squad-per-user across both apps.
+        try {
+            await updateDoc(doc(db, 'publicProfiles', ownerId), {
+                squadId: newDoc.id,
+                squadCallsign: r.callsign,
+                squadRole: 'leader'
+            });
+        } catch (profErr) {
+            // Best-effort: a stale profile shouldn't block the approval.
+            // We log and let the admin know so they can manually fix if needed.
+            console.warn('Could not update leader publicProfile:', profErr);
+            toast('Squad approved, but failed to update leader profile. Leader may need to refresh.', 'warn');
+        }
+
         logAdminAction('approveSquad', {
             targetId: newDoc.id,
             targetType: 'squad',
@@ -585,22 +638,28 @@ async function renderPendingSquadsTab() {
         container.innerHTML = emptyState('🎉', 'No pending squads', 'Squad creation requests from regular users will appear here. Approve to officially commission the squad with the requester as leader.');
         return;
     }
-    container.innerHTML = rows.map(r => `
-        <div class="admin-queue-card" data-id="${r.id}">
-            <div>
-                <h4>[${escapeHtml(r.callsign || '???')}] ${escapeHtml(r.squadName || '(unnamed)')}</h4>
-                <p class="admin-queue-meta">
-                    Requester: <strong>${escapeHtml(r.creatorName || r.requesterName || 'Unknown')}</strong>
-                    ${r.homeSector ? ` • Sector: ${escapeHtml(r.homeSector)}` : ''}
-                </p>
-                <p class="admin-queue-desc">${escapeHtml(r.bio || '')}</p>
+    container.innerHTML = rows.map(r => {
+        const policyText = r.isOpen === false ? '🔒 Invite-only' : '🟢 Open';
+        const cap = r.maxMembers || '?';
+        const requesterName = r.leaderName || r.creatorName || r.requesterName || 'Unknown';
+        return `
+            <div class="admin-queue-card" data-id="${r.id}">
+                <div>
+                    <h4>[${escapeHtml(r.callsign || '???')}] ${escapeHtml(r.squadName || '(unnamed)')}</h4>
+                    <p class="admin-queue-meta">
+                        Requester: <strong>${escapeHtml(requesterName)}</strong>
+                        ${r.homeSector ? ` • Sector: ${escapeHtml(r.homeSector)}` : ''}
+                        • ${policyText} • max ${cap}
+                    </p>
+                    <p class="admin-queue-desc">${escapeHtml(r.bio || '')}</p>
+                </div>
+                <div class="admin-queue-card-actions">
+                    <button class="modal-button btn-primary admin-approve-btn">Approve</button>
+                    <button class="modal-button btn-danger admin-reject-btn">Reject</button>
+                </div>
             </div>
-            <div class="admin-queue-card-actions">
-                <button class="modal-button btn-primary admin-approve-btn">Approve</button>
-                <button class="modal-button btn-danger admin-reject-btn">Reject</button>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     container.querySelectorAll('.admin-approve-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -1154,14 +1213,26 @@ async function renderActiveSquadsTab() {
     }
 
     let currentSort = 'name';
+
+    // Counts members regardless of stored shape:
+    //   - data.memberCount (preferred, denormalized by Android + new web code)
+    //   - data.members as map<uid, SquadMember>  (Android canonical)
+    //   - data.members as array<uid>             (legacy web)
+    const countMembers = (sq) => {
+        if (Number.isFinite(sq.memberCount)) return sq.memberCount;
+        if (sq.members && typeof sq.members === 'object' && !Array.isArray(sq.members)) {
+            return Object.keys(sq.members).length;
+        }
+        if (Array.isArray(sq.members)) return sq.members.length;
+        return 0;
+    };
+
     const renderSquadsList = () => {
         squads.sort((a, b) => {
             if (currentSort === 'name') {
                 return (a.squadName || '').localeCompare(b.squadName || '');
             } else if (currentSort === 'members') {
-                const ma = a.memberCount || (Array.isArray(a.members) ? a.members.length : 0);
-                const mb = b.memberCount || (Array.isArray(b.members) ? b.members.length : 0);
-                return mb - ma;
+                return countMembers(b) - countMembers(a);
             } else if (currentSort === 'newest') {
                 const ca = (a.createdAt && a.createdAt.toMillis) ? a.createdAt.toMillis() : 0;
                 const cb = (b.createdAt && b.createdAt.toMillis) ? b.createdAt.toMillis() : 0;
@@ -1173,13 +1244,16 @@ async function renderActiveSquadsTab() {
         });
 
         document.getElementById('adminSquadsListBody').innerHTML = squads.map(sq => {
-            const memberCount = sq.memberCount || (Array.isArray(sq.members) ? sq.members.length : 0);
+            const memberCount = countMembers(sq);
+            const maxText = sq.maxMembers ? ` / ${sq.maxMembers}` : '';
+            const policyText = sq.isOpen === false ? '🔒 Invite-only' : '🟢 Open';
             return `
                 <div class="admin-queue-card" data-id="${sq.id}">
                     <div style="flex:1; min-width:0;">
                         <h4>[${escapeHtml(sq.callsign || '???')}] ${escapeHtml(sq.squadName || '(unnamed)')}</h4>
                         <p class="admin-queue-meta">
-                            ${memberCount} member${memberCount === 1 ? '' : 's'}
+                            ${memberCount}${maxText} member${memberCount === 1 ? '' : 's'}
+                            • ${policyText}
                             ${sq.homeSector ? ` • ${escapeHtml(sq.homeSector)}` : ''}
                             ${sq.totalPins ? ` • ${sq.totalPins} pins` : ''}
                         </p>
