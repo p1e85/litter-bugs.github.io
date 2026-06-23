@@ -1,4 +1,3 @@
-
 import { 
     db, serverTimestamp, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL, runTransaction, deleteField 
 } from './firebase.js';
@@ -1568,11 +1567,16 @@ export async function initializeSquad() {
     const callsign = document.getElementById('newSquadCallsign').value.trim().toUpperCase();
     const sector = document.getElementById('newSquadHomeSector').value;
     const bio = document.getElementById('newSquadBio').value.trim();
+    const maxMembersRaw = document.getElementById('newSquadMaxMembers')?.value;
+    const inviteOnlyChecked = document.getElementById('newSquadInviteOnly')?.checked === true;
 
     // 2. Tactical Validation
-    // Ensures we don't save empty squads or invalid callsigns
-    if (!name || callsign.length < 3) {
-        alert("Initialization Failed: Please provide a Squad Name and a 3-4 character Callsign.");
+    if (!name || callsign.length < 3 || callsign.length > 4) {
+        alert("Initialization Failed: Squad Name required, Callsign must be 3-4 characters.");
+        return;
+    }
+    if (!/^[A-Z0-9]+$/.test(callsign)) {
+        alert("Callsign must contain only letters and numbers.");
         return;
     }
     if (!state.currentUser) {
@@ -1580,57 +1584,127 @@ export async function initializeSquad() {
         return;
     }
 
+    // Parse and clamp maxMembers per spec (2-50). Default 20 if missing/invalid.
+    let maxMembers = parseInt(maxMembersRaw, 10);
+    if (!Number.isFinite(maxMembers) || maxMembers < 2) maxMembers = 20;
+    if (maxMembers > 50) maxMembers = 50;
+
+    // isOpen: true = anyone can request to join. The checkbox is "invite only"
+    // so we invert. Default: open.
+    const isOpen = !inviteOnlyChecked;
+
+    const finalizeBtn = document.getElementById('btnFinalizeSquad');
+    if (finalizeBtn) {
+        finalizeBtn.disabled = true;
+        finalizeBtn.textContent = 'Checking callsign…';
+    }
+
     try {
-        // 3. Check if user is admin — admins create directly, everyone else submits for review.
+        // 3. Callsign uniqueness check — scan both active squads and any pending
+        //    squad requests so two users can't grab the same callsign in parallel.
+        //    Not airtight against true races (Firestore has no unique index),
+        //    but good enough for current scale.
+        const [activeMatch, requestMatch] = await Promise.all([
+            getDocs(query(collection(db, "squads"), where("callsign", "==", callsign), limit(1))),
+            getDocs(query(collection(db, "squadRequests"), where("callsign", "==", callsign), where("status", "==", "pending"), limit(1)))
+        ]);
+        if (!activeMatch.empty) {
+            alert(`Callsign [${callsign}] is already taken by another squad.`);
+            if (finalizeBtn) { finalizeBtn.disabled = false; finalizeBtn.textContent = '🚀 INITIALIZE SQUAD'; }
+            return;
+        }
+        if (!requestMatch.empty) {
+            alert(`Callsign [${callsign}] is already in a pending squad request. Try another.`);
+            if (finalizeBtn) { finalizeBtn.disabled = false; finalizeBtn.textContent = '🚀 INITIALIZE SQUAD'; }
+            return;
+        }
+
+        // 4. Look up profile data (admin status, username, current squad).
         const profileSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
-        const isAdmin = profileSnap.exists() && profileSnap.data().role === 'admin';
-        const creatorName = profileSnap.exists() ? profileSnap.data().username : "Anonymous";
+        const profile = profileSnap.exists() ? profileSnap.data() : {};
+        const isAdmin = profile.role === 'admin';
+        const leaderName = profile.username || "Anonymous";
+
+        // 4a. One-squad-per-user enforcement. publicProfiles.squadId is the
+        //     source of truth Android uses too.
+        if (profile.squadId && profile.squadId.length > 0) {
+            alert(`You're already in squad [${profile.squadCallsign || '???'}]. Leave it before creating a new one.`);
+            if (finalizeBtn) { finalizeBtn.disabled = false; finalizeBtn.textContent = '🚀 INITIALIZE SQUAD'; }
+            return;
+        }
+
+        if (finalizeBtn) finalizeBtn.textContent = isAdmin ? 'Initializing…' : 'Submitting for review…';
 
         if (isAdmin) {
-            // Direct-create path. Now sets leaderId/members/coLeaderIds properly,
-            // fixing the bug where new squads had no leader and showed 0 members.
+            // ADMIN DIRECT-CREATE PATH
+            // Android schema: members is a MAP<uid, SquadMember>, not an array.
+            // Also writes denormalized squad fields onto leader's publicProfile.
+            const leaderMember = {
+                uid: state.currentUser.uid,
+                username: leaderName,
+                role: "leader",
+                totalPins: 0,
+                totalRoutes: 0,
+                joinedAt: new Date()
+            };
             const squadData = {
                 squadName: name,
                 callsign: callsign,
                 homeSector: sector,
                 bio: bio,
-                createdAt: new Date(),
+                isOpen: isOpen,
+                maxMembers: maxMembers,
+                memberCount: 1,
                 leaderId: state.currentUser.uid,
                 coLeaderIds: [],
-                members: [state.currentUser.uid],
-                memberCount: 1,
+                members: { [state.currentUser.uid]: leaderMember },
                 totalPins: 0,
-                status: "active"
+                totalDistance: 0,
+                totalRoutes: 0,
+                createdAt: new Date()
             };
-            await addDoc(collection(db, "squads"), squadData);
+            const newSquadRef = await addDoc(collection(db, "squads"), squadData);
+
+            await updateDoc(doc(db, "publicProfiles", state.currentUser.uid), {
+                squadId: newSquadRef.id,
+                squadCallsign: callsign,
+                squadRole: "leader"
+            });
+
             alert(`Unit [${callsign}] ${name} has been officially initialized.`);
         } else {
-            // Submit for admin approval. Admin's approveSquad() reads these fields
-            // when copying into the squads collection on approve.
+            // REGULAR USER PATH — admin approval queue.
+            // Field names match Android spec exactly (leaderId/leaderName, not
+            // creatorId/creatorName) so the admin panel can copy across cleanly.
             await addDoc(collection(db, "squadRequests"), {
                 squadName: name,
                 callsign: callsign,
                 homeSector: sector,
                 bio: bio,
-                creatorId: state.currentUser.uid,
-                creatorName: creatorName,
-                createdAt: new Date(),
-                status: "pending"
+                isOpen: isOpen,
+                maxMembers: maxMembers,
+                leaderId: state.currentUser.uid,
+                leaderName: leaderName,
+                status: "pending",
+                adminNote: "",
+                createdAt: new Date()
             });
             alert(`Squad request submitted! An admin will review [${callsign}] ${name} shortly.`);
         }
 
-        // 4. Reset UI: Return to the registry list
+        // 5. Reset UI: Return to the registry list
         if (typeof window.showSquadRegistry === 'function') {
             window.showSquadRegistry();
         }
-
-        // 5. Refresh listings (only shows approved squads regardless)
         fetchLocalSquads();
-        
-    } catch (error) {
-        console.error("Critical Failure during initialization:", error);
-        alert("Tactical Error: Could not reach the database. Check connection.");
+    } catch (err) {
+        console.error("Squad initialization failed:", err);
+        alert("Could not create squad: " + (err.message || err));
+    } finally {
+        if (finalizeBtn) {
+            finalizeBtn.disabled = false;
+            finalizeBtn.textContent = '🚀 INITIALIZE SQUAD';
+        }
     }
 }
 
@@ -1719,35 +1793,88 @@ export async function fetchSquadDetails(squadId) {
         // 4. Populate Basic Info
         if (nameEl) nameEl.textContent = data.squadName || "Unknown Squad";
         if (callsignEl) callsignEl.textContent = `[${data.callsign || '???'}]`;
-        if (missionEl) missionEl.textContent = data.bio || "No mission established.";
+
+        // Build mission text with join-policy and capacity hints below the bio.
+        const memberCount = data.memberCount
+            || (data.members && typeof data.members === 'object' ? Object.keys(data.members).length : 0);
+        const maxMembers = data.maxMembers || '?';
+        const policyText = data.isOpen === false
+            ? '🔒 Invite-only'
+            : '🟢 Accepting requests';
+        if (missionEl) {
+            missionEl.innerHTML = `
+                ${escapeIntelHtml(data.bio || "No mission established.")}
+                <div style="margin-top:8px; font-size:0.85em; color:#666;">
+                    ${policyText} • ${memberCount}/${maxMembers} members
+                </div>
+            `;
+        }
 
         // 5. Populate Active Roster
         if (rosterEl) {
-            rosterEl.innerHTML = ""; // Clear loader
-            
-            // Check if members exist (Handle both Array and Object structures for safety)
-            let memberIDs = [];
-            if (Array.isArray(data.members)) {
-                memberIDs = data.members;
-            } else if (data.members && typeof data.members === 'object') {
-                memberIDs = Object.keys(data.members);
+            rosterEl.innerHTML = "";
+
+            // Spec: members is a map<uid, SquadMember>. Earlier code wrote an
+            // array, so we still handle that shape gracefully for any legacy data.
+            let memberEntries = []; // [{uid, member}, ...]
+            if (data.members && typeof data.members === 'object' && !Array.isArray(data.members)) {
+                // Canonical Android shape: members is a map
+                memberEntries = Object.entries(data.members).map(([uid, m]) => ({
+                    uid,
+                    member: m && typeof m === 'object' ? m : null
+                }));
+            } else if (Array.isArray(data.members)) {
+                // Legacy array shape: just uids, no embedded role/username
+                memberEntries = data.members.map(uid => ({ uid, member: null }));
             }
 
-            if (memberIDs.length === 0) {
+            if (memberEntries.length === 0) {
                 rosterEl.innerHTML = "<li>No active members.</li>";
             } else {
-                // Fetch details for each member
-                // Note: For a real app, you might want to store usernames in the squad doc to save reads.
-                // For now, we will fetch them to ensure they are up to date.
-                for (const memberId of memberIDs) {
-                    const memberDoc = await getDoc(doc(db, "publicProfiles", memberId));
-                    const memberData = memberDoc.exists() ? memberDoc.data() : { username: "Unknown Trooper" };
-                    
+                // Sort: leader first, then co-leaders, then everyone else alphabetically
+                const roleRank = { 'leader': 0, 'co-leader': 1, 'veteran': 2, 'member': 3 };
+                memberEntries.sort((a, b) => {
+                    const ra = roleRank[(a.member && a.member.role) || 'member'] ?? 99;
+                    const rb = roleRank[(b.member && b.member.role) || 'member'] ?? 99;
+                    if (ra !== rb) return ra - rb;
+                    const na = (a.member && a.member.username) || '';
+                    const nb = (b.member && b.member.username) || '';
+                    return na.localeCompare(nb);
+                });
+
+                for (const { uid, member } of memberEntries) {
+                    // Prefer embedded username (saves a read). For legacy
+                    // array-shape squads, fall back to a publicProfile fetch.
+                    let username = member && member.username;
+                    if (!username) {
+                        try {
+                            const memberDoc = await getDoc(doc(db, "publicProfiles", uid));
+                            username = memberDoc.exists() ? memberDoc.data().username : "Unknown Trooper";
+                        } catch (_) {
+                            username = "Unknown Trooper";
+                        }
+                    }
+
+                    // Role badge: prefer the embedded member.role, fall back to
+                    // the squad's leaderId/coLeaderIds for legacy data.
+                    let role = member && member.role;
+                    if (!role) {
+                        if (uid === data.leaderId) role = 'leader';
+                        else if (Array.isArray(data.coLeaderIds) && data.coLeaderIds.includes(uid)) role = 'co-leader';
+                        else role = 'member';
+                    }
+                    const roleBadge = {
+                        'leader':    '<span style="color:gold; font-size:0.8em; margin-left:5px;">(Leader)</span>',
+                        'co-leader': '<span style="color:#4A7C59; font-size:0.8em; margin-left:5px;">(Co-Leader)</span>',
+                        'veteran':   '<span style="color:#888; font-size:0.8em; margin-left:5px;">(Veteran)</span>',
+                        'member':    ''
+                    }[role] || '';
+
                     const li = document.createElement('li');
                     li.innerHTML = `
-                        <span class="trooper-rank">🛡️</span> 
-                        ${memberData.username} 
-                        ${memberId === data.leaderId ? '<span style="color:gold; font-size:0.8em; margin-left:5px;">(Leader)</span>' : ''}
+                        <span class="trooper-rank">🛡️</span>
+                        ${escapeIntelHtml(username)}
+                        ${roleBadge}
                     `;
                     rosterEl.appendChild(li);
                 }
@@ -1758,4 +1885,13 @@ export async function fetchSquadDetails(squadId) {
         console.error("Error fetching squad intel:", error);
         if (nameEl) nameEl.textContent = "Error loading data.";
     }
+}
+
+// Tiny inline escaper for squad-detail content (separate from elsewhere; avoids
+// importing a helper across modules just for this).
+function escapeIntelHtml(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
