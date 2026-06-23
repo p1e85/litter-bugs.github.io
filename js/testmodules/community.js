@@ -1737,24 +1737,60 @@ export async function fetchLocalSquads() {
         querySnapshot.forEach((doc) => {
             const squad = doc.data();
             const squadId = doc.id;
-            
-            // Create a row/card for each squad
+
+            // Member count: prefer denormalized field, fall back to map size,
+            // then legacy array length.
+            const mc = Number.isFinite(squad.memberCount)
+                ? squad.memberCount
+                : (squad.members && typeof squad.members === 'object' && !Array.isArray(squad.members)
+                    ? Object.keys(squad.members).length
+                    : (Array.isArray(squad.members) ? squad.members.length : 1));
+            const cap = squad.maxMembers ? `/${squad.maxMembers}` : '';
+            const policy = squad.isOpen === false
+                ? '<span style="color:#888; font-size:0.8em;">🔒 Invite-only</span>'
+                : '<span style="color:#4A7C59; font-size:0.8em;">🟢 Open</span>';
+
+            // Whole card is the click target now. The Intel button stays visible
+            // so the affordance is obvious, but we stop propagation on it so
+            // clicking it doesn't fire the card handler twice. The card also
+            // gets pointer cursor + hover styling inline for clarity.
             const card = document.createElement('div');
-            card.className = 'hub-card';
-            card.style.display = 'flex';
-            card.style.justifyContent = 'space-between';
-            card.style.alignItems = 'center';
-            
+            card.className = 'hub-card squad-card-clickable';
+            card.style.cssText = 'display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
+            card.setAttribute('role', 'button');
+            card.setAttribute('tabindex', '0');
+            card.dataset.squadId = squadId;
+
             card.innerHTML = `
                 <div class="hub-text-wrap">
                     <h3>[${squad.callsign}] ${squad.squadName}</h3>
-                    <p>${squad.homeSector} • ${squad.memberCount || 1} Members</p>
+                    <p>${squad.homeSector} • ${mc}${cap} Members • ${policy}</p>
                 </div>
-                <button class="modal-button btn-secondary" style="width: auto; padding: 8px 15px;" 
-                        onclick="viewSquadIntel('${squadId}')">
+                <button class="modal-button btn-secondary squad-intel-btn"
+                        style="width: auto; padding: 8px 15px; pointer-events: none;">
                     Intel
                 </button>
             `;
+
+            // Click handler on the card. We don't use onclick on the button at
+            // all — pointer-events:none on the button means clicks go to the
+            // card, no double-firing.
+            card.addEventListener('click', () => {
+                if (typeof window.viewSquadIntel === 'function') {
+                    window.viewSquadIntel(squadId);
+                }
+            });
+            // Keyboard accessibility: Enter / Space activates the card just
+            // like a real button.
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (typeof window.viewSquadIntel === 'function') {
+                        window.viewSquadIntel(squadId);
+                    }
+                }
+            });
+
             listContainer.appendChild(card);
         });
 
@@ -1881,9 +1917,314 @@ export async function fetchSquadDetails(squadId) {
             }
         }
 
+        // 6. Render action panels (join/leave/invite buttons + leader queues)
+        await renderSquadActionPanels(squadId, data);
+
     } catch (error) {
         console.error("Error fetching squad intel:", error);
         if (nameEl) nameEl.textContent = "Error loading data.";
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SQUAD ACTION PANELS — populated by fetchSquadDetails after the roster.
+// Handles all the context-aware UI: request to join, cancel, leave, disband,
+// plus leader-only join-request review and outstanding invites.
+// ---------------------------------------------------------------------------
+async function renderSquadActionPanels(squadId, squadData) {
+    const actionPanel       = document.getElementById('intelActionPanel');
+    const actionContent     = document.getElementById('intelActionContent');
+    const joinReqsSection   = document.getElementById('intelJoinRequestsSection');
+    const joinReqsList      = document.getElementById('intelJoinRequestsList');
+    const joinReqsCountEl   = document.getElementById('intelJoinRequestCount');
+    const invitesSection    = document.getElementById('intelInvitesSection');
+    const invitesList       = document.getElementById('intelInvitesList');
+    const invitesCountEl    = document.getElementById('intelInvitesCount');
+
+    // Reset visibility so reopening a different squad doesn't show stale UI
+    if (actionPanel) actionPanel.style.display = 'none';
+    if (joinReqsSection) joinReqsSection.style.display = 'none';
+    if (invitesSection) invitesSection.style.display = 'none';
+    if (actionContent) actionContent.innerHTML = '';
+    if (joinReqsList) joinReqsList.innerHTML = '';
+    if (invitesList) invitesList.innerHTML = '';
+
+    if (!state.currentUser) {
+        // Anonymous — show a "log in to interact" hint instead of buttons
+        if (actionPanel && actionContent) {
+            actionPanel.style.display = 'block';
+            actionContent.innerHTML = '<p style="color:#888; font-size:0.85em; margin:0;">Log in to request to join or interact with this squad.</p>';
+        }
+        return;
+    }
+
+    // Pull profile + relationships dynamically (lazy import to avoid cycles)
+    const squadsMod = await import('./squads.js');
+    const myProfileSnap = await getDoc(doc(db, 'publicProfiles', state.currentUser.uid));
+    const myProfile = myProfileSnap.exists() ? myProfileSnap.data() : {};
+
+    const isMember = !!(squadData.members &&
+        typeof squadData.members === 'object' &&
+        !Array.isArray(squadData.members) &&
+        squadData.members[state.currentUser.uid]) ||
+        (Array.isArray(squadData.members) && squadData.members.includes(state.currentUser.uid));
+    const isLeader = squadData.leaderId === state.currentUser.uid;
+    const isCoLeader = Array.isArray(squadData.coLeaderIds) && squadData.coLeaderIds.includes(state.currentUser.uid);
+    const isAdmin = myProfile.role === 'admin';
+    const canManage = isLeader || isCoLeader || isAdmin;
+    const inOtherSquad = myProfile.squadId && myProfile.squadId.length > 0 && myProfile.squadId !== squadId;
+
+    // === MEMBER-FACING ACTIONS ===
+    if (actionPanel && actionContent) {
+        actionPanel.style.display = 'block';
+        const buttons = [];
+
+        if (isLeader) {
+            buttons.push(`<button id="intelDisbandBtn" class="modal-button btn-danger">💥 Disband Squad</button>`);
+        } else if (isMember) {
+            buttons.push(`<button id="intelLeaveBtn" class="modal-button btn-danger">🚪 Leave Squad</button>`);
+        } else if (inOtherSquad) {
+            buttons.push(`<p style="color:#888; font-size:0.85em; margin:0;">You're already in squad [${escapeIntelHtml(myProfile.squadCallsign || '???')}]. Leave it first to join another.</p>`);
+        } else {
+            // Not a member, not in another squad. Either request-to-join, cancel
+            // an existing request, or "invite only" notice.
+            if (squadData.isOpen === false) {
+                buttons.push(`<p style="color:#888; font-size:0.85em; margin:0;">🔒 This squad is invite-only. Only the leader can add new members.</p>`);
+            } else {
+                // Check for existing request
+                const pending = await squadsMod.fetchMyJoinRequest(squadId);
+                if (pending) {
+                    buttons.push(`<p style="color:#4A7C59; font-size:0.85em; margin:0 0 4px 0;">⏳ Your request is pending review.</p>`);
+                    buttons.push(`<button id="intelCancelRequestBtn" class="modal-button btn-secondary">Cancel Request</button>`);
+                } else {
+                    // Check capacity before offering to join
+                    const memberCount = squadData.memberCount || (squadData.members && typeof squadData.members === 'object' ? Object.keys(squadData.members).length : 0);
+                    if (squadData.maxMembers && memberCount >= squadData.maxMembers) {
+                        buttons.push(`<p style="color:#dc3545; font-size:0.85em; margin:0;">⚠️ This squad is at full capacity (${memberCount}/${squadData.maxMembers}).</p>`);
+                    } else {
+                        buttons.push(`<button id="intelRequestJoinBtn" class="modal-button btn-primary">🙋 Request to Join</button>`);
+                    }
+                }
+            }
+        }
+
+        actionContent.innerHTML = buttons.join('');
+
+        // Wire member action buttons
+        document.getElementById('intelRequestJoinBtn')?.addEventListener('click', async () => {
+            const message = prompt('Optional message to the squad leader:', '') || '';
+            const btn = document.getElementById('intelRequestJoinBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+            const ok = await squadsMod.requestToJoin(squadId, message);
+            if (ok) await fetchSquadDetails(squadId); // refresh
+            else if (btn) { btn.disabled = false; btn.textContent = '🙋 Request to Join'; }
+        });
+        document.getElementById('intelCancelRequestBtn')?.addEventListener('click', async () => {
+            if (!confirm('Cancel your pending request to join this squad?')) return;
+            const ok = await squadsMod.cancelJoinRequest(squadId);
+            if (ok) await fetchSquadDetails(squadId);
+        });
+        document.getElementById('intelLeaveBtn')?.addEventListener('click', async () => {
+            if (!confirm(`Leave squad [${squadData.callsign}] ${squadData.squadName}?`)) return;
+            const ok = await squadsMod.leaveSquad();
+            if (ok) {
+                if (typeof window.showSquadRegistry === 'function') window.showSquadRegistry();
+                fetchLocalSquads();
+            }
+        });
+        document.getElementById('intelDisbandBtn')?.addEventListener('click', async () => {
+            if (!confirm(`Disband [${squadData.callsign}] ${squadData.squadName}?\n\nAll members will be removed from the squad. This cannot be undone.`)) return;
+            const typed = prompt('To confirm, type the callsign (e.g. ' + squadData.callsign + '):');
+            if (typed !== squadData.callsign) {
+                alert('Callsign did not match. Disband cancelled.');
+                return;
+            }
+            const ok = await squadsMod.disbandSquad(squadId);
+            if (ok) {
+                if (typeof window.showSquadRegistry === 'function') window.showSquadRegistry();
+                fetchLocalSquads();
+            }
+        });
+    }
+
+    // === LEADER-FACING PANELS ===
+    if (canManage) {
+        // Pending join requests panel
+        if (joinReqsSection && joinReqsList) {
+            const requests = await squadsMod.fetchSquadJoinRequests(squadId);
+            joinReqsSection.style.display = 'block';
+            if (joinReqsCountEl) joinReqsCountEl.textContent = `(${requests.length})`;
+            if (requests.length === 0) {
+                joinReqsList.innerHTML = '<p style="color:#888; font-size:0.85em;">No pending requests.</p>';
+            } else {
+                joinReqsList.innerHTML = requests.map(r => `
+                    <div class="join-request-row" data-uid="${escapeIntelHtml(r.userId)}" style="display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid #e0e0d8; border-radius:4px; margin-bottom:6px;">
+                        <div>
+                            <strong>${escapeIntelHtml(r.username || 'Unknown')}</strong>
+                            ${r.message ? `<div style="font-size:0.85em; color:#666; margin-top:2px;">"${escapeIntelHtml(r.message)}"</div>` : ''}
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="modal-button btn-primary jr-approve" style="flex:1; padding:6px;">Approve</button>
+                            <button class="modal-button btn-danger jr-deny" style="flex:1; padding:6px;">Deny</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                joinReqsList.querySelectorAll('.jr-approve').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const row = e.target.closest('.join-request-row');
+                        const uid = row.dataset.uid;
+                        btn.disabled = true; btn.textContent = '…';
+                        const ok = await squadsMod.approveJoinRequest(squadId, uid);
+                        if (ok) await fetchSquadDetails(squadId);
+                        else { btn.disabled = false; btn.textContent = 'Approve'; }
+                    });
+                });
+                joinReqsList.querySelectorAll('.jr-deny').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const row = e.target.closest('.join-request-row');
+                        const uid = row.dataset.uid;
+                        const reason = prompt('Reason for denial (optional):', '');
+                        if (reason === null) return;
+                        btn.disabled = true; btn.textContent = '…';
+                        const ok = await squadsMod.denyJoinRequest(squadId, uid, reason);
+                        if (ok) await fetchSquadDetails(squadId);
+                        else { btn.disabled = false; btn.textContent = 'Deny'; }
+                    });
+                });
+            }
+        }
+
+        // Outstanding invites panel
+        if (invitesSection && invitesList) {
+            const invites = await squadsMod.fetchOutstandingInvites(squadId);
+            invitesSection.style.display = 'block';
+            if (invitesCountEl) invitesCountEl.textContent = `(${invites.length})`;
+            if (invites.length === 0) {
+                invitesList.innerHTML = '<p style="color:#888; font-size:0.85em;">No outstanding invites.</p>';
+            } else {
+                invitesList.innerHTML = invites.map(inv => `
+                    <div class="invite-row" data-uid="${escapeIntelHtml(inv.userId)}" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px; border:1px solid #e0e0d8; border-radius:4px; margin-bottom:6px;">
+                        <div>
+                            <strong>${escapeIntelHtml(inv.username || 'Unknown')}</strong>
+                            <div style="font-size:0.75em; color:#888;">Pending</div>
+                        </div>
+                        <button class="modal-button btn-secondary inv-revoke" style="padding:6px 10px; font-size:0.85em;">Revoke</button>
+                    </div>
+                `).join('');
+
+                invitesList.querySelectorAll('.inv-revoke').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const row = e.target.closest('.invite-row');
+                        const uid = row.dataset.uid;
+                        if (!confirm('Revoke this invite?')) return;
+                        btn.disabled = true; btn.textContent = '…';
+                        const ok = await squadsMod.revokeInvite(squadId, uid);
+                        if (ok) await fetchSquadDetails(squadId);
+                        else { btn.disabled = false; btn.textContent = 'Revoke'; }
+                    });
+                });
+            }
+        }
+
+        // Wire the "Invite a Trooper" button - opens the picker modal
+        document.getElementById('intelInviteBtn')?.addEventListener('click', () => {
+            openInvitePicker(squadId, squadData);
+        });
+    }
+}
+
+/**
+ * Opens the invite-a-user typeahead modal. Search publicProfiles by username
+ * substring, click a result to send an invite to that user.
+ */
+function openInvitePicker(squadId, squadData) {
+    const modal = document.getElementById('invitePickerModal');
+    const input = document.getElementById('invitePickerSearch');
+    const resultsEl = document.getElementById('invitePickerResults');
+    if (!modal || !input || !resultsEl) return;
+
+    input.value = '';
+    resultsEl.innerHTML = '<p style="color:#888; font-size:0.85em; padding:10px;">Type to search…</p>';
+    modal.style.display = 'flex';
+    input.focus();
+
+    let searchTimer = null;
+    const handleInput = async () => {
+        const q = input.value.trim();
+        clearTimeout(searchTimer);
+        if (q.length < 1) {
+            resultsEl.innerHTML = '<p style="color:#888; font-size:0.85em; padding:10px;">Type to search…</p>';
+            return;
+        }
+        // Debounce typing so we don't run a Firestore query on every keystroke.
+        searchTimer = setTimeout(async () => {
+            resultsEl.innerHTML = '<p style="color:#888; font-size:0.85em; padding:10px;">Searching…</p>';
+            const squadsMod = await import('./squads.js');
+            const matches = await squadsMod.searchUsersByUsername(q, 10);
+            if (matches.length === 0) {
+                resultsEl.innerHTML = '<p style="color:#888; font-size:0.85em; padding:10px;">No matches.</p>';
+                return;
+            }
+            resultsEl.innerHTML = matches.map(u => {
+                const alreadyInSquad = u.squadId && u.squadId.length > 0;
+                const isSelf = u.uid === state.currentUser?.uid;
+                const isMember = !!(squadData.members && typeof squadData.members === 'object' && !Array.isArray(squadData.members) && squadData.members[u.uid]);
+                let actionHTML = '';
+                if (isSelf) {
+                    actionHTML = '<span style="color:#888; font-size:0.8em;">You</span>';
+                } else if (isMember) {
+                    actionHTML = '<span style="color:#888; font-size:0.8em;">In squad</span>';
+                } else if (alreadyInSquad) {
+                    actionHTML = `<span style="color:#888; font-size:0.8em;">In [${escapeIntelHtml(u.squadCallsign || '???')}]</span>`;
+                } else {
+                    actionHTML = `<button class="modal-button btn-primary invite-pick-btn" data-uid="${escapeIntelHtml(u.uid)}" data-username="${escapeIntelHtml(u.username || '')}" style="padding:4px 10px; font-size:0.85em;">Invite</button>`;
+                }
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-bottom:1px solid #eee;">
+                        <strong>${escapeIntelHtml(u.username || '(no username)')}</strong>
+                        ${actionHTML}
+                    </div>
+                `;
+            }).join('');
+
+            resultsEl.querySelectorAll('.invite-pick-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const uid = e.target.dataset.uid;
+                    const username = e.target.dataset.username;
+                    btn.disabled = true; btn.textContent = '…';
+
+                    // Pull inviter's name for the invite doc
+                    let inviterName = 'Unknown';
+                    try {
+                        const meSnap = await getDoc(doc(db, 'publicProfiles', state.currentUser.uid));
+                        if (meSnap.exists()) inviterName = meSnap.data().username || 'Unknown';
+                    } catch (_) {}
+
+                    const squadsMod = await import('./squads.js');
+                    const ok = await squadsMod.sendInvite(squadId, uid, inviterName);
+                    if (ok) {
+                        e.target.outerHTML = '<span style="color:#4A7C59; font-size:0.8em;">✓ Invited</span>';
+                        // Refresh squad detail in the background so the new invite appears
+                        await fetchSquadDetails(squadId);
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = 'Invite';
+                    }
+                });
+            });
+        }, 250);
+    };
+
+    input.removeEventListener('input', input._inviteInputHandler);
+    input._inviteInputHandler = handleInput;
+    input.addEventListener('input', handleInput);
+
+    // Close handlers (idempotent)
+    const closeBtn = document.getElementById('invitePickerClose');
+    if (closeBtn && !closeBtn._wired) {
+        closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+        closeBtn._wired = true;
     }
 }
 
