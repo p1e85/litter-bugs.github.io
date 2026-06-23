@@ -363,7 +363,14 @@
             <button class="close-btn">&times;</button>
             <h2>Community Hub</h2>
             <p class="modal-subtitle">Connect, challenge, and clean together.</p>
-            
+
+            <!-- Pending squad invites strip. Hidden by default; populated &
+                 shown by ui.js whenever the user opens the hub. -->
+            <div id="hubInvitesStrip" style="display:none; background:#fff8e1; border:1px solid #ffd54f; border-radius:6px; padding:10px 12px; margin-bottom:14px;">
+                <strong style="color:#b8860b;">🎟️ You have pending squad invites</strong>
+                <div id="hubInvitesList" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;"></div>
+            </div>
+
             <div class="hub-grid">
                 <div class="hub-card" id="hubChallengesBtn">
                     <span class="hub-icon">🏆</span>
@@ -441,8 +448,47 @@
         <ul id="intelSquadRoster" class="roster-list">
             </ul>
     </div>
-    
+
+    <!-- Action panel: shows context-aware buttons based on user's relationship
+         to this squad (member/non-member/has-request/has-invite/leader). All
+         visibility is set by JS in fetchSquadDetails. -->
+    <div id="intelActionPanel" class="intel-section" style="display:none;">
+        <h4>Actions</h4>
+        <div id="intelActionContent" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+
+    <!-- Leader-only: pending join requests for this squad. -->
+    <div id="intelJoinRequestsSection" class="intel-section" style="display:none;">
+        <h4>📥 Pending Join Requests <span id="intelJoinRequestCount" style="font-size:0.85em; color:#666;"></span></h4>
+        <div id="intelJoinRequestsList"></div>
+    </div>
+
+    <!-- Leader-only: outstanding invites this squad has sent. -->
+    <div id="intelInvitesSection" class="intel-section" style="display:none;">
+        <h4>📤 Outstanding Invites <span id="intelInvitesCount" style="font-size:0.85em; color:#666;"></span></h4>
+        <div id="intelInvitesList"></div>
+        <button id="intelInviteBtn" class="modal-button btn-secondary" style="margin-top:8px;">
+            🎟️ Invite a Trooper
+        </button>
+    </div>
+
     <button class="modal-button btn-secondary" onclick="showSquadRegistry()">← Back to Registry</button>
+</div>
+
+<!-- Invite picker modal: typeahead search over publicProfiles. Opens from the
+     leader's "Invite a Trooper" button inside squad intel. -->
+<div id="invitePickerModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width:420px;">
+        <button class="close-btn" id="invitePickerClose">&times;</button>
+        <h3>🎟️ Invite a Trooper</h3>
+        <p style="font-size:0.85em; color:#666;">Search by username. Users already in a squad can't be invited.</p>
+        <input type="text" id="invitePickerSearch" placeholder="Start typing a username..."
+            autocomplete="off" autocapitalize="off"
+            style="width:100%; padding:10px; margin:8px 0; box-sizing:border-box;">
+        <div id="invitePickerResults" style="max-height:300px; overflow-y:auto;">
+            <p style="color:#888; font-size:0.85em; padding:10px;">Type to search…</p>
+        </div>
+    </div>
 </div>
 
         <div id="squadCreateView" style="display: none;">
