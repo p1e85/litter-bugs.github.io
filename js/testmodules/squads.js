@@ -15,7 +15,7 @@
 // still says they're squadless.
 
 import {
-    db, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+    db, collection, collectionGroup, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
     query, where, limit, runTransaction
 } from './firebase.js';
 import { state } from './config.js';
@@ -466,17 +466,64 @@ export async function revokeInvite(squadId, invitedUid) {
 
 /**
  * Returns all pending invites for the current user across all squads.
- * Firestore can't do collection-group reads against a subcollection without a
- * collectionGroup query + appropriate index; we don't have one set up, so we
- * scan all squads. At your scale this is fine. Move to collectionGroup later.
+ *
+ * Uses a Firestore collectionGroup query so this is a SINGLE indexed lookup
+ * regardless of how many squads exist — not a scan-every-squad pattern.
+ *
+ * REQUIREMENTS:
+ *   1. Firestore composite index on the `invites` collectionGroup with fields
+ *      (userId ASC, status ASC). If the index is missing, the first call will
+ *      throw with a console error containing a one-click "create index" URL.
+ *      Click it once and the index builds in a minute.
+ *   2. Firestore rule allowing collectionGroup reads on `invites` where
+ *      request.auth.uid == resource.data.userId. See firestore.rules.
+ *
+ * Falls back to the old per-squad scan if the collectionGroup query fails for
+ * any reason (missing index, missing rule). Logs the fallback so you know to
+ * fix it.
  */
 export async function fetchMyInvites() {
     if (!state.currentUser) return [];
     const uid = state.currentUser.uid;
+
+    // Preferred path: one collectionGroup query.
+    try {
+        const cg = collectionGroup(db, 'invites');
+        const q = query(cg, where('userId', '==', uid), where('status', '==', 'pending'));
+        const snap = await getDocs(q);
+        const out = [];
+        snap.forEach(d => {
+            // Reconstruct squadId from the doc's parent path. For a doc at
+            // squads/{squadId}/invites/{userId}, parent.parent.id is the squadId.
+            const squadId = d.ref.parent.parent ? d.ref.parent.parent.id : null;
+            const data = d.data();
+            out.push({ squadId, ...data });
+        });
+        return out;
+    } catch (cgErr) {
+        // Common reasons we land here:
+        //   - composite index not yet created (error message contains a URL)
+        //   - collectionGroup rule not yet deployed (permission-denied)
+        // Both are recoverable. Log loudly so you can fix; fall back to scan
+        // so the feature still works in the meantime.
+        console.warn(
+            '[squads] collectionGroup fetchMyInvites failed, falling back to per-squad scan.',
+            'Most likely cause: missing index or missing security rule. See squads.js header for fix.',
+            cgErr
+        );
+        return await _fetchMyInvitesFallback(uid);
+    }
+}
+
+/**
+ * Slow fallback: scan all squads, attempt a single-doc read of each one's
+ * invites/{uid}. Worked before we added the collectionGroup query; kept so
+ * the UI doesn't break if the index or rule isn't deployed yet.
+ */
+async function _fetchMyInvitesFallback(uid) {
     const out = [];
     try {
         const squadsSnap = await getDocs(collection(db, 'squads'));
-        // Parallel reads of each squad's invite doc keyed to this user.
         const tasks = [];
         squadsSnap.forEach(sq => {
             tasks.push(
@@ -494,7 +541,7 @@ export async function fetchMyInvites() {
         });
         await Promise.all(tasks);
     } catch (err) {
-        console.error('fetchMyInvites failed:', err);
+        console.error('fetchMyInvites fallback also failed:', err);
     }
     return out;
 }
