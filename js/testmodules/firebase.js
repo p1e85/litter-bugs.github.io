@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
-    getFirestore, doc, getDoc, setDoc, updateDoc, collection,
+    getFirestore, doc, getDoc, setDoc, updateDoc, collection, collectionGroup,
     addDoc, getDocs, query, orderBy, where, deleteDoc, limit, onSnapshot, serverTimestamp, Timestamp, arrayUnion, arrayRemove, runTransaction, deleteField, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { 
@@ -43,6 +43,7 @@ export {
     setDoc,
     updateDoc,
     collection,
+    collectionGroup,
     addDoc,
     getDocs,
     query,
