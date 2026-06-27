@@ -132,7 +132,27 @@ export async function requestToJoin(squadId, message = '') {
         }
 
         // Write the join request. Doc ID = requester's uid (per spec).
-        await setDoc(doc(db, 'squads', squadId, 'joinRequests', state.currentUser.uid), {
+        // Pre-read first: if a stale denied/approved request exists from a
+        // previous attempt, setDoc would trigger an UPDATE (not create) which
+        // requires leader or admin permissions. We avoid that by deleting the
+        // stale doc first (delete rule allows the requester to delete their own).
+        const requestRef = doc(db, 'squads', squadId, 'joinRequests', state.currentUser.uid);
+        const existingSnap = await getDoc(requestRef);
+        if (existingSnap.exists()) {
+            const existing = existingSnap.data();
+            if (existing.status === 'pending') {
+                toast('You already have a pending request for this squad.', 'info');
+                return false;
+            }
+            if (existing.status === 'approved') {
+                toast("You're already a member of this squad.", 'info');
+                return false;
+            }
+            // status === 'denied' (or any other stale value) — delete and re-request.
+            await deleteDoc(requestRef);
+        }
+
+        await setDoc(requestRef, {
             userId: state.currentUser.uid,
             username: me.username || 'Unknown',
             message: message || '',
