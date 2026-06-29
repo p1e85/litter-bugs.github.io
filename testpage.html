@@ -1007,24 +1007,75 @@
     </div>
 </footer>
 
-<script>
-// ── Animated counter (realistic seed values — update these as you grow) ──
-const targets = {
-    pins:     1247,
-    miles:    84.3,
-    routes:   312,
-    troopers: 89
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// Same Firebase config as your web app
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "garbagepathv2.firebaseapp.com",
+    projectId: "garbagepathv2",
+    storageBucket: "garbagepathv2.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
 };
 
-// Slowly tick up to make it feel live
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── Fetch real stats then animate ──────────────────────────────────────────
+async function loadStats() {
+    let targets = { pins: 0, miles: 0, routes: 0, troopers: 0 };
+
+    try {
+        const snap = await getDoc(doc(db, "config", "appStats"));
+        if (snap.exists()) {
+            const d = snap.data();
+            targets.pins     = d.totalPins     ?? 0;
+            targets.miles    = parseFloat((d.totalMiles ?? 0).toFixed(1));
+            targets.routes   = d.totalRoutes   ?? 0;
+            targets.troopers = d.totalUsers    ?? 0;
+        }
+    } catch (e) {
+        console.warn("Stats fetch failed, using zeros:", e);
+    }
+
+    // Animate once we have real data
+    animateCounter(document.getElementById('cnt-pins'),     targets.pins,     false, 1800);
+    animateCounter(document.getElementById('cnt-miles'),    targets.miles,    true,  1800);
+    animateCounter(document.getElementById('cnt-routes'),   targets.routes,   false, 1800);
+    animateCounter(document.getElementById('cnt-troopers'), targets.troopers, false, 1800);
+
+    // Ambient tick after load
+    setTimeout(() => {
+        setInterval(() => {
+            const pEl = document.getElementById('cnt-pins');
+            const mEl = document.getElementById('cnt-miles');
+            if (pEl && pEl.textContent !== '—') {
+                targets.pins += Math.random() < 0.3 ? 1 : 0;
+                pEl.textContent = targets.pins.toLocaleString();
+            }
+            if (mEl && mEl.textContent !== '—') {
+                if (Math.random() < 0.2) {
+                    targets.miles = parseFloat((targets.miles + 0.1).toFixed(1));
+                    mEl.textContent = targets.miles.toFixed(1);
+                }
+            }
+        }, 8000);
+    }, 3000);
+
+    return targets;
+}
+
 function animateCounter(el, target, isFloat, duration) {
+    if (!el) return;
     const start = Date.now();
-    const from = 0;
     function tick() {
         const elapsed = Date.now() - start;
         const progress = Math.min(elapsed / duration, 1);
         const ease = 1 - Math.pow(1 - progress, 3);
-        const current = from + (target - from) * ease;
+        const current = target * ease;
         el.textContent = isFloat
             ? current.toFixed(1)
             : Math.floor(current).toLocaleString();
@@ -1033,31 +1084,19 @@ function animateCounter(el, target, isFloat, duration) {
     tick();
 }
 
-const observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) {
-        animateCounter(document.getElementById('cnt-pins'), targets.pins, false, 1800);
-        animateCounter(document.getElementById('cnt-miles'), targets.miles, true, 1800);
-        animateCounter(document.getElementById('cnt-routes'), targets.routes, false, 1800);
-        animateCounter(document.getElementById('cnt-troopers'), targets.troopers, false, 1800);
-        observer.disconnect();
-    }
-}, { threshold: 0.3 });
+// ── Trigger on scroll into view ────────────────────────────────────────────
+const counterStrip = document.querySelector('.counter-strip');
+if (counterStrip) {
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+            loadStats();
+            observer.disconnect();
+        }
+    }, { threshold: 0.3 });
+    observer.observe(counterStrip);
+}
 
-observer.observe(document.querySelector('.counter-strip'));
-
-// Slow ambient tick after load (makes it feel live)
-setTimeout(() => {
-    setInterval(() => {
-        targets.pins += Math.random() < 0.3 ? 1 : 0;
-        targets.miles = parseFloat((targets.miles + (Math.random() < 0.2 ? 0.1 : 0)).toFixed(1));
-        const pEl = document.getElementById('cnt-pins');
-        const mEl = document.getElementById('cnt-miles');
-        if (pEl && pEl.textContent !== '—') pEl.textContent = targets.pins.toLocaleString();
-        if (mEl && mEl.textContent !== '—') mEl.textContent = targets.miles.toFixed(1);
-    }, 8000);
-}, 3000);
-
-// ── XP bar animation on scroll ──
+// ── XP bar animation ───────────────────────────────────────────────────────
 const xpBar = document.getElementById('xp-bar');
 if (xpBar) {
     const xpObserver = new IntersectionObserver((entries) => {
@@ -1070,7 +1109,7 @@ if (xpBar) {
     xpObserver.observe(xpBar);
 }
 
-// ── Smooth scroll for anchor links ──
+// ── Smooth scroll ──────────────────────────────────────────────────────────
 document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', e => {
         const target = document.querySelector(a.getAttribute('href'));
