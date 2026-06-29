@@ -1008,19 +1008,10 @@
 </footer>
 
 <script type="module">
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyCE1b6VtJjUs0O5YvyLjeslxuHC8UlgJUM",
-    authDomain: "garbagepathv2.firebaseapp.com",
-    projectId: "garbagepathv2",
-    storageBucket: "garbagepathv2.firebasestorage.app",
-    messagingSenderId: "505856089619",
-    appId: "1:505856089619:web:682f58d02be4295be4a9e6"
-};
-
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const app = getApp(); 
 const db = getFirestore(app);
     
 // ── Fetch real stats then animate ──────────────────────────────────────────
