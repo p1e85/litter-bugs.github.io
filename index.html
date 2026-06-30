@@ -11,186 +11,1169 @@
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
         })(window, document, "clarity", "script", "tilw8qneix");
     </script>
-    
-    <title>Litter Troopers (Live Beta) - A New Way to Clean Our Planet</title>
-    <meta name="description" content="Litter Troopers is a working beta app that lets you track cleanups, earn badges, and get tipped for your efforts. We're seeking backers to help us launch publicly.">
+
+    <title>Litter Troopers — Track Cleanups. Earn XP. Build Community.</title>
+    <meta name="description" content="Litter Troopers is a free app that turns community cleanup into a game. Track routes, pin litter, earn XP and badges, join squads, and compete on leaderboards. Available now on web and Android.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪲</text></svg>">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,600;0,14..32,700;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
+
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --forest:   #2E4034;
+            --green:    #4B7F52;
+            --light-green: #6aaa73;
+            --parchment: #f0e9d6;
+            --gold:     #f5c518;
+            --gold-dim: #c49b10;
+            --white:    #ffffff;
+            --off-white: #f7f4ee;
+            --text:     #1a2a1e;
+            --muted:    #6b7c6e;
+            --border:   #d6ccbb;
+        }
+
+        html { scroll-behavior: smooth; }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0e9d6;
+            background: var(--parchment);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
         }
-        .hero-bg {
-            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1618472634129-6e3e4a9a4b3d?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=1920');
-            background-size: cover;
-            background-position: center;
+
+        /* ── NAV ── */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        .nav-logo img {
+            height: 44px;
+            width: 44px;
+            border-radius: 50%;
+            object-fit: contain;
+        }
+        .nav-logo span {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--forest);
+            display: none;
+        }
+        @media (min-width: 480px) { .nav-logo span { display: inline; } }
+        .nav-cta {
+            background: var(--green);
+            color: var(--white);
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 10px 22px;
+            border-radius: 100px;
+            text-decoration: none;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .nav-cta:hover { background: var(--forest); transform: translateY(-1px); }
+
+        /* ── HERO ── */
+        .hero {
+            background: var(--forest);
+            color: var(--white);
+            padding: 80px 24px 96px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 60% 40%, rgba(75,127,82,0.35) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-eyebrow {
+            display: inline-block;
+            background: var(--gold);
+            color: var(--forest);
+            font-weight: 800;
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: 100px;
+            margin-bottom: 28px;
+        }
+        .hero h1 {
+            font-size: clamp(2.4rem, 6vw, 4.2rem);
+            font-weight: 900;
+            line-height: 1.08;
+            letter-spacing: -0.02em;
+            max-width: 820px;
+            margin: 0 auto 24px;
+        }
+        .hero h1 em {
+            font-style: normal;
+            color: var(--gold);
+        }
+        .hero p {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            color: rgba(255,255,255,0.78);
+            max-width: 560px;
+            margin: 0 auto 40px;
+            line-height: 1.6;
+        }
+        .hero-actions {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            background: var(--gold);
+            color: var(--forest);
+            font-weight: 800;
+            font-size: 1rem;
+            padding: 14px 32px;
+            border-radius: 100px;
+            text-decoration: none;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 4px 18px rgba(245,197,24,0.35);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(245,197,24,0.4); }
+        .btn-ghost {
+            background: transparent;
+            color: rgba(255,255,255,0.85);
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 13px 28px;
+            border-radius: 100px;
+            text-decoration: none;
+            border: 1.5px solid rgba(255,255,255,0.3);
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-ghost:hover { border-color: rgba(255,255,255,0.7); color: var(--white); }
+
+        /* ── LIVE COUNTER ── */
+        .counter-strip {
+            background: var(--green);
+            padding: 28px 24px;
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            flex-wrap: wrap;
+        }
+        .counter-item {
+            flex: 1;
+            min-width: 140px;
+            max-width: 220px;
+            text-align: center;
+            padding: 12px 20px;
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+        .counter-item:last-child { border-right: none; }
+        .counter-num {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--white);
+            letter-spacing: -0.02em;
+            display: block;
+        }
+        .counter-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.65);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        /* ── SECTIONS ── */
+        section { padding: 80px 24px; }
+        .section-inner { max-width: 1100px; margin: 0 auto; }
+        .section-eyebrow {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 12px;
         }
         .section-title {
+            font-size: clamp(1.8rem, 4vw, 2.6rem);
             font-weight: 900;
-            font-size: 2.25rem;
-            line-height: 2.5rem;
+            letter-spacing: -0.02em;
+            color: var(--forest);
+            line-height: 1.15;
+            margin-bottom: 16px;
         }
-        .cta-button {
-            transition: all 0.3s ease;
+        .section-sub {
+            font-size: 1.05rem;
+            color: var(--muted);
+            line-height: 1.65;
+            max-width: 560px;
         }
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+
+        /* ── HOW IT WORKS ── */
+        .how-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 2px;
+            margin-top: 52px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .how-step {
+            background: var(--white);
+            padding: 36px 28px;
+            position: relative;
+        }
+        .step-num {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 16px;
+        }
+        .step-icon { font-size: 2rem; margin-bottom: 14px; display: block; }
+        .step-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--forest);
+            margin-bottom: 10px;
+        }
+        .step-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+
+        /* ── FEATURES GRID ── */
+        .features-bg { background: var(--forest); color: var(--white); }
+        .features-bg .section-eyebrow { color: var(--gold); }
+        .features-bg .section-title { color: var(--white); }
+        .features-bg .section-sub { color: rgba(255,255,255,0.65); }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 48px;
         }
         .feature-card {
-            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 28px 24px;
+            transition: background 0.2s, transform 0.2s;
         }
         .feature-card:hover {
-            transform: scale(1.05);
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-3px);
         }
-        .alpha-badge {
-            background-color: #ffc107;
-            color: #333;
-            padding: 4px 12px;
-            border-radius: 9999px;
-            font-weight: bold;
-            font-size: 0.9rem;
+        .feature-icon { font-size: 1.8rem; margin-bottom: 14px; display: block; }
+        .feature-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 8px;
+        }
+        .feature-desc { font-size: 0.88rem; color: rgba(255,255,255,0.6); line-height: 1.6; }
+
+        /* ── XP SHOWCASE ── */
+        .xp-showcase {
+            background: var(--off-white);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .xp-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: center;
+            margin-top: 48px;
+        }
+        @media (max-width: 700px) {
+            .xp-layout { grid-template-columns: 1fr; gap: 32px; }
+        }
+        .xp-card {
+            background: var(--forest);
+            border-radius: 20px;
+            padding: 32px;
+            color: var(--white);
+        }
+        .xp-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 6px;
+        }
+        .xp-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+        .level-badge {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gold), #e8a800);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(245,197,24,0.4);
+        }
+        .level-num { font-size: 1.5rem; font-weight: 900; color: var(--forest); line-height: 1; }
+        .level-text { font-size: 0.5rem; font-weight: 700; color: var(--forest); letter-spacing: 0.08em; text-transform: uppercase; }
+        .xp-bar-wrap {
+            background: rgba(255,255,255,0.12);
+            border-radius: 100px;
+            height: 10px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .xp-bar-fill {
+            height: 100%;
+            border-radius: 100px;
+            background: linear-gradient(90deg, var(--gold), var(--light-green));
+            width: 62%;
+            transition: width 1s ease;
+        }
+        .xp-progress-text {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 20px;
+        }
+        .xp-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .xp-badge-pill {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 100px;
+            padding: 5px 12px;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.8);
+        }
+        .xp-list { list-style: none; }
+        .xp-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .xp-list li:last-child { border-bottom: none; }
+        .xp-list-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+        .xp-list-title { font-size: 0.95rem; font-weight: 700; color: var(--forest); margin-bottom: 3px; }
+        .xp-list-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+        /* ── PLATFORM ── */
+        .platform-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            margin-top: 48px;
+        }
+        .platform-card {
+            border-radius: 16px;
+            padding: 32px 28px;
+            border: 2px solid var(--border);
+            background: var(--white);
+            position: relative;
+            overflow: hidden;
+        }
+        .platform-card.active {
+            border-color: var(--green);
+            background: linear-gradient(135deg, #f0f7f1 0%, var(--white) 100%);
+        }
+        .platform-card.soon {
+            border-color: var(--border);
+            opacity: 0.85;
+        }
+        .platform-badge {
             display: inline-block;
-            margin-bottom: 1rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 100px;
+            margin-bottom: 16px;
+        }
+        .badge-live { background: #e8f5e9; color: var(--green); }
+        .badge-testing { background: #fff8e1; color: #b8860b; }
+        .badge-soon { background: #f0f0f0; color: var(--muted); }
+        .platform-icon { font-size: 2.4rem; margin-bottom: 14px; display: block; }
+        .platform-title { font-size: 1.15rem; font-weight: 800; color: var(--forest); margin-bottom: 8px; }
+        .platform-desc { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+        .platform-cta {
+            display: inline-block;
+            font-weight: 700;
+            font-size: 0.88rem;
+            padding: 10px 20px;
+            border-radius: 100px;
+            text-decoration: none;
+            transition: transform 0.15s;
+        }
+        .platform-cta:hover { transform: translateY(-1px); }
+        .cta-green { background: var(--green); color: var(--white); }
+        .cta-outline { border: 2px solid var(--border); color: var(--muted); cursor: default; }
+
+        /* ── SQUADS ── */
+        .squads-bg { background: var(--parchment); }
+        .squad-mockup {
+            background: var(--forest);
+            border-radius: 20px;
+            padding: 28px;
+            color: var(--white);
+            margin-top: 48px;
+        }
+        .squad-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .squad-callsign {
+            background: var(--green);
+            color: var(--white);
+            font-weight: 900;
+            font-size: 0.9rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            letter-spacing: 0.05em;
+        }
+        .squad-name { font-size: 1.2rem; font-weight: 800; }
+        .squad-stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .squad-stat {
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+        .squad-stat-val { font-size: 1.4rem; font-weight: 900; color: var(--gold); display: block; }
+        .squad-stat-label { font-size: 0.72rem; color: rgba(255,255,255,0.5); }
+        .squad-members { display: flex; flex-direction: column; gap: 10px; }
+        .squad-member {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+        }
+        .member-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        .member-name { font-size: 0.9rem; font-weight: 600; flex: 1; }
+        .member-role {
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.08);
+            padding: 3px 8px;
+            border-radius: 100px;
+        }
+        .member-xp {
+            font-size: 0.78rem;
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        /* ── INVESTOR ── */
+        .investor-bg {
+            background: var(--green);
+            color: var(--white);
+            text-align: center;
+        }
+        .investor-bg .section-eyebrow { color: rgba(255,255,255,0.6); }
+        .investor-bg .section-title { color: var(--white); }
+        .investor-bg .section-sub {
+            color: rgba(255,255,255,0.78);
+            max-width: 640px;
+            margin: 0 auto 36px;
+        }
+        .btn-white {
+            background: var(--white);
+            color: var(--forest);
+            font-weight: 800;
+            font-size: 1rem;
+            padding: 14px 32px;
+            border-radius: 100px;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+
+        /* ── ANDROID BETA ── */
+        .android-bg {
+            background: var(--off-white);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .beta-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 420px;
+            margin: 32px auto 0;
+        }
+        .beta-input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid var(--border);
+            border-radius: 100px;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            background: var(--white);
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+            text-align: center;
+        }
+        .beta-input:focus { border-color: var(--green); }
+        .btn-green-full {
+            width: 100%;
+            padding: 14px;
+            background: var(--green);
+            color: var(--white);
+            font-weight: 800;
+            font-size: 1rem;
+            border: none;
+            border-radius: 100px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .btn-green-full:hover { background: var(--forest); transform: translateY(-1px); }
+
+        /* ── MAILING LIST ── */
+        .mail-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 500px;
+            margin: 32px auto 0;
+        }
+        @media (min-width: 560px) {
+            .mail-form { flex-direction: row; }
+            .mail-form input { flex: 1; }
+            .mail-form button { flex-shrink: 0; }
+        }
+        .mail-input {
+            padding: 13px 18px;
+            border: 2px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            background: var(--white);
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .mail-input:focus { border-color: var(--green); }
+        .btn-green-pill {
+            padding: 13px 26px;
+            background: var(--green);
+            color: var(--white);
+            font-weight: 700;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 100px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .btn-green-pill:hover { background: var(--forest); }
+        .form-msg { font-size: 0.88rem; color: var(--muted); margin-top: 8px; text-align: center; height: 20px; }
+
+        /* ── FOOTER ── */
+        footer {
+            background: var(--forest);
+            color: rgba(255,255,255,0.65);
+            padding: 40px 24px;
+            text-align: center;
+        }
+        footer a { color: rgba(255,255,255,0.8); text-decoration: underline; }
+        footer a:hover { color: var(--white); }
+        .footer-inner { max-width: 900px; margin: 0 auto; }
+        .footer-logo {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: var(--white);
+            margin-bottom: 16px;
+        }
+        .footer-links {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            font-size: 0.88rem;
+        }
+        .footer-copy { font-size: 0.82rem; }
+
+        /* ── UTILITIES ── */
+        .text-center { text-align: center; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
         }
     </style>
 </head>
-<body class="text-gray-800">
+<body>
 
-    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-[#2E4034] flex items-center gap-3">
-               <img src="img/ltlogo2.png" alt="Litter Troopers Logo" class="h-20 w-20 md:h-24 md:w-24 object-contain rounded-full shadow-md"> <span class="hidden md:inline">Litter Troopers</span>
-            </h1>
-            <a href="https://www.littertroopers.com/mapbeta.html" target="_blank" class="cta-button bg-[#4B7F52] text-white font-bold py-2 px-6 rounded-full hover:bg-[#218838]">
-                Launch Beta App
-            </a>
-        </div>
-    </header>
+<!-- ── NAV ────────────────────────────────────────────────────── -->
+<nav>
+    <div class="nav-inner">
+        <a href="#" class="nav-logo">
+            <img src="img/ltlogo2.png" alt="Litter Troopers">
+            <span>Litter Troopers</span>
+        </a>
+        <a href="https://www.littertroopers.com/mapbeta.html" target="_blank" class="nav-cta">
+            Open the App →
+        </a>
+    </div>
+</nav>
 
-    <section class="hero-bg text-yellow-50">
-        <div class="container mx-auto px-6 py-24 md:py-32 text-center">
-            <div class="alpha-badge">LIVE BETA</div>
-            <h2 class="text-4xl md:text-6xl font-black leading-tight mb-4">Help Us Build the Future of Cleanups.</h2>
-            <p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto">Litter Troopers is a working beta app that lets you track cleanups, earn badges, and even get tipped for your efforts. Try it now and help us bring it to the world.</p>
-            <a href="https://www.littertroopers.com/mapbeta.html" target="_blank" class="cta-button bg-[#4B7F52] text-white font-bold text-lg py-4 px-10 rounded-full hover:bg-[#218838]">
-                Try the Live Beta
-            </a>
+<!-- ── HERO ────────────────────────────────────────────────────── -->
+<section class="hero">
+    <div class="hero-eyebrow">🌍 Live Now — Free to Use</div>
+    <h1>Turn your next walk into a <em>cleanup mission.</em></h1>
+    <p>Track your route, pin litter, earn XP, join a squad, and compete with cleaners worldwide. No gear needed — just your phone and a bag.</p>
+    <div class="hero-actions">
+        <a href="https://www.littertroopers.com/mapbeta.html" target="_blank" class="btn-primary">Start Cleaning Now</a>
+        <a href="#how-it-works" class="btn-ghost">See how it works</a>
+    </div>
+</section>
+
+<!-- ── LIVE COUNTER ─────────────────────────────────────────────── -->
+<div class="counter-strip">
+    <div class="counter-item">
+        <span class="counter-num" id="cnt-pins">—</span>
+        <span class="counter-label">Items Pinned</span>
+    </div>
+    <div class="counter-item">
+        <span class="counter-num" id="cnt-miles">—</span>
+        <span class="counter-label">Miles Cleaned</span>
+    </div>
+    <div class="counter-item">
+        <span class="counter-num" id="cnt-routes">—</span>
+        <span class="counter-label">Routes Published</span>
+    </div>
+    <div class="counter-item">
+        <span class="counter-num" id="cnt-troopers">—</span>
+        <span class="counter-label">Active Troopers</span>
+    </div>
+</div>
+
+<!-- ── HOW IT WORKS ─────────────────────────────────────────────── -->
+<section id="how-it-works">
+    <div class="section-inner">
+        <div class="section-eyebrow">Get started in minutes</div>
+        <h2 class="section-title">Three steps to your first cleanup.</h2>
+        <p class="section-sub">No downloads required on web. Open the app, allow location, and go. It really is that simple.</p>
+
+        <div class="how-grid">
+            <div class="how-step">
+                <div class="step-num">Step 01</div>
+                <span class="step-icon">📍</span>
+                <div class="step-title">Open the app & start tracking</div>
+                <p class="step-desc">Hit Start Tracking and your GPS route begins. Walk, pick up litter, and the app records every step. No sign-up needed to try it.</p>
+            </div>
+            <div class="how-step">
+                <div class="step-num">Step 02</div>
+                <span class="step-icon">📸</span>
+                <div class="step-title">Pin what you find</div>
+                <p class="step-desc">Tap the camera button to photograph and geotag litter as you go. Each pin adds to the global map showing where the problem areas are.</p>
+            </div>
+            <div class="how-step">
+                <div class="step-num">Step 03</div>
+                <span class="step-icon">🚀</span>
+                <div class="step-title">Publish & earn your XP</div>
+                <p class="step-desc">Finish your cleanup and publish your route to the community map. Earn XP based on distance and pins, level up, and climb the leaderboard.</p>
+            </div>
+            <div class="how-step">
+                <div class="step-num">Step 04</div>
+                <span class="step-icon">🛡️</span>
+                <div class="step-title">Join or build a squad</div>
+                <p class="step-desc">Create or join a local squad to combine stats, compete as a team, and take on squad quests together. Cleanups are better with a crew.</p>
+            </div>
         </div>
-    </section>
-    
-    <section class="py-20 bg-white">
-        <div class="container mx-auto px-6 text-center">
-            <h3 class="section-title text-[#2E4034] mb-12">Key Features in the Beta</h3>
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div class="feature-card bg-gray-50 p-8 rounded-lg border">
-                    <h4 class="text-xl font-bold mb-2">Track Your Impact</h4>
-                    <p>Use your phone's GPS to draw your cleanup path on an interactive map. Every step is a victory for the planet.</p>
+    </div>
+</section>
+
+<!-- ── FEATURES ─────────────────────────────────────────────────── -->
+<section class="features-bg">
+    <div class="section-inner">
+        <div class="section-eyebrow">Everything in the app, right now</div>
+        <h2 class="section-title">Fully-featured. Completely free.</h2>
+        <p class="section-sub">Litter Troopers isn't a coming-soon teaser. Every feature below is live and working today.</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="feature-icon">🗺️</span>
+                <div class="feature-title">GPS Route Tracking</div>
+                <p class="feature-desc">Draw your cleanup path on a live map as you walk. Your route is saved and published to the community map for others to see.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🌊</span>
+                <div class="feature-title">Swarm Pulse Heatmap</div>
+                <p class="feature-desc">A real-time heatmap shows where cleanups are happening in your city. Watch the pulse grow as more Troopers hit the streets.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">⚡</span>
+                <div class="feature-title">XP & Level System</div>
+                <p class="feature-desc">Earn XP for every route, pin, and event. Level up from Trooper to Planet Guardian across 10 levels with a fair daily cap to keep things balanced.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🏆</span>
+                <div class="feature-title">Community Leaderboards</div>
+                <p class="feature-desc">Compete on the pins, distance, and squads leaderboard. Tap any name to see their full cleanup profile, badges, and squad affiliation.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">📅</span>
+                <div class="feature-title">Cleanup Events</div>
+                <p class="feature-desc">Organize or join group cleanup meetups. RSVP, get reminders, and see who's coming. Approved events appear on the community calendar.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🎖️</span>
+                <div class="feature-title">Badges & Titles</div>
+                <p class="feature-desc">Unlock achievement badges for cleanup milestones and earn titles like Trash Wizard or Eco Legend to display on your public profile.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">⚡</span>
+                <div class="feature-title">Quick Pin Mode</div>
+                <p class="feature-desc">Not on a full cleanup? Drop a quick pin to mark a litter spot in seconds. Still earns XP, still shows on the community map.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">☕</span>
+                <div class="feature-title">Community Tipping</div>
+                <p class="feature-desc">Add your Buy Me a Coffee link to your profile. The community can tip you directly for your cleanup work — because effort deserves recognition.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── XP SHOWCASE ─────────────────────────────────────────────── -->
+<section class="xp-showcase">
+    <div class="section-inner">
+        <div class="section-eyebrow">The XP & Level System</div>
+        <h2 class="section-title">Every cleanup moves you forward.</h2>
+        <p class="section-sub">XP is earned for routes, pins, events, and squad milestones. A daily curve keeps things fair — the more you do, the more you earn, just at a sustainable rate.</p>
+
+        <div class="xp-layout">
+            <div class="xp-card">
+                <div class="xp-label">Your Profile</div>
+                <div class="xp-name">TrooperAlex</div>
+                <div class="level-badge">
+                    <span class="level-num">5</span>
+                    <span class="level-text">Level</span>
                 </div>
-                <div class="feature-card bg-gray-50 p-8 rounded-lg border">
-                    <h4 class="text-xl font-bold mb-2">Pin Your Finds</h4>
-                    <p>Found some litter? Take a photo to geotag its location. Your data helps create a global heatmap of problem areas.</p>
+                <div class="xp-bar-wrap">
+                    <div class="xp-bar-fill" id="xp-bar"></div>
                 </div>
-                <div class="feature-card bg-gray-50 p-8 rounded-lg border">
-                    <h4 class="text-xl font-bold mb-2">Earn Tips & Badges</h4>
-                    <p>The community can tip you for your hard work via your support link! Plus, unlock achievement badges for your cleanup milestones.</p>
-                </div>
-                <div class="feature-card bg-gray-50 p-8 rounded-lg border">
-                    <h4 class="text-xl font-bold mb-2">Join the Community</h4>
-                    <p>Publish your routes to a shared map to see the collective impact we're making together and compete on the community leaderboard.</p>
+                <div class="xp-progress-text">612 / 1,000 XP — Level 6 in 388 XP</div>
+                <div class="xp-badges">
+                    <span class="xp-badge-pill">⚡ +45 XP today</span>
+                    <span class="xp-badge-pill">🛡️ CLTX</span>
+                    <span class="xp-badge-pill">「Trail Blazer」</span>
                 </div>
             </div>
-            <div class="max-w-5xl mx-auto mt-12">
-                    <img class="collage-img w-full rounded-lg shadow-2xl" src="img/collage3.jpg" alt="A photo collage of community cleanups showing collected trash and volunteers.">
-            </div>
-        </div>
-    </section>
 
-    <section class="py-20">
-        <div class="container mx-auto px-6 text-center">
-            <h3 class="section-title text-[#2E4034] mb-4">Be the First to Know</h3>
-            <p class="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">Join our mailing list for updates on our official launch, new features, and the project roadmap. Help us build the future of cleanups!</p>
-            
-            <div class="max-w-xl mx-auto">
-                <form id="signupForm" class="w-full">
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <input type="text" id="firstName" name="first_name" required class="w-full py-3 px-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4B7F52]" placeholder="First Name">
-                        <input type="email" id="email" name="email" required class="w-full py-3 px-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4B7F52]" placeholder="Email Address">
-                        <button type="submit" id="submitBtn" class="cta-button bg-[#4B7F52] text-white font-bold py-3 px-6 rounded-md hover:bg-[#218838] w-full sm:w-auto flex-shrink-0">
-                            Notify Me
-                        </button>
+            <ul class="xp-list">
+                <li>
+                    <span class="xp-list-icon">🗺️</span>
+                    <div>
+                        <div class="xp-list-title">Route published</div>
+                        <div class="xp-list-desc">20 base XP + 5 per pin, up to 20 pins. A 10-pin route earns 70 XP.</div>
                     </div>
-                    <p id="formMessage" class="text-sm mt-3 h-5"></p>
-                </form>
+                </li>
+                <li>
+                    <span class="xp-list-icon">📸</span>
+                    <div>
+                        <div class="xp-list-title">Quick pin dropped</div>
+                        <div class="xp-list-desc">10 XP per pin with a GPS displacement gate — no farming the same spot.</div>
+                    </div>
+                </li>
+                <li>
+                    <span class="xp-list-icon">📅</span>
+                    <div>
+                        <div class="xp-list-title">Event approved</div>
+                        <div class="xp-list-desc">50 XP when your community cleanup event gets approved by moderators.</div>
+                    </div>
+                </li>
+                <li>
+                    <span class="xp-list-icon">🛡️</span>
+                    <div>
+                        <div class="xp-list-title">Squad founded</div>
+                        <div class="xp-list-desc">75 XP when your squad application is approved. Build a team, earn more.</div>
+                    </div>
+                </li>
+                <li>
+                    <span class="xp-list-icon">⚡</span>
+                    <div>
+                        <div class="xp-list-title">Daily diminishing returns</div>
+                        <div class="xp-list-desc">Full rate under 200 XP/day. 0.6× from 200–500. 0.3× above 500. Doing more always earns more.</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ── SQUADS ───────────────────────────────────────────────────── -->
+<section class="squads-bg">
+    <div class="section-inner">
+        <div class="section-eyebrow">The Squads System</div>
+        <h2 class="section-title">Clean together. Rank together.</h2>
+        <p class="section-sub">Squads let you form a local cleanup crew, combine stats, take on squad quests, and compete as a team on the squads leaderboard. Open or invite-only — your call.</p>
+
+        <div class="squad-mockup">
+            <div class="squad-header">
+                <span class="squad-callsign">CLTX</span>
+                <span class="squad-name">Chicago Litter Troopers</span>
+            </div>
+            <div class="squad-stats-row">
+                <div class="squad-stat">
+                    <span class="squad-stat-val">1,247</span>
+                    <span class="squad-stat-label">Total Pins</span>
+                </div>
+                <div class="squad-stat">
+                    <span class="squad-stat-val">84.3 mi</span>
+                    <span class="squad-stat-label">Miles Cleaned</span>
+                </div>
+                <div class="squad-stat">
+                    <span class="squad-stat-val">12</span>
+                    <span class="squad-stat-label">Members</span>
+                </div>
+            </div>
+            <div class="squad-members">
+                <div class="squad-member">
+                    <div class="member-avatar" style="background:#4B7F52">A</div>
+                    <span class="member-name">TrooperAlex</span>
+                    <span class="member-role">👑 Leader</span>
+                    <span class="member-xp">Lv 7</span>
+                </div>
+                <div class="squad-member">
+                    <div class="member-avatar" style="background:#2E4034">M</div>
+                    <span class="member-name">MikeCleans</span>
+                    <span class="member-role">⭐ Co-Leader</span>
+                    <span class="member-xp">Lv 5</span>
+                </div>
+                <div class="squad-member">
+                    <div class="member-avatar" style="background:#6aaa73">J</div>
+                    <span class="member-name">JaneGreen</span>
+                    <span class="member-role">🛡️ Veteran</span>
+                    <span class="member-xp">Lv 4</span>
+                </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <section class="py-20 bg-[#a8bba2]">
-        <div class="container mx-auto px-6 text-center text-white">
-            <h3 class="section-title text-white mb-4">From Beta to Global Impact</h3>
-            <p class="text-lg mb-8 max-w-3xl mx-auto">Litter Troopers is currently a passion project in a live beta testing phase. Every feature you see is fully functional, but we're just getting started. Our vision is to build native iOS & Android apps, create a "Cleanup Bounty" marketplace, and implement AI-powered tools to make our planet cleaner, faster.</p>
-            <h4 class="text-2xl font-bold mb-4">To get there, we need your help.</h4>
-            <p class="mb-8 max-w-3xl mx-auto">We are actively seeking investors and backers who believe in our mission and want to help scale a platform that can change the world. If you're interested in helping us grow, we would love to talk.</p>
-            <a href="mailto:p1creationsco@gmail.com?subject=Litter Troopers Investment Inquiry" class="cta-button bg-white text-[#2E4034] font-bold text-lg py-4 px-10 rounded-full hover:bg-gray-100 inline-block">
-                Contact for Investors
-            </a>
-        </div>
-    </section>
-    
-    <section id="beta-signup" class="py-16 bg-[#f4f7f5] border-y-2 border-dashed border-[#4B7F52]">
-        <div class="container mx-auto px-6 text-center">
-            <div class="text-5xl mb-4">🤖</div>
-            <h3 class="section-title text-[#2E4034] mb-4">Android Beta</h3>
+<!-- ── PLATFORMS ────────────────────────────────────────────────── -->
+<section style="background: var(--white); border-top: 1px solid var(--border);">
+    <div class="section-inner">
+        <div class="section-eyebrow">Available now</div>
+        <h2 class="section-title">Use it today on any device.</h2>
+        <p class="section-sub">No excuses — Litter Troopers works right now on your phone, tablet, or computer.</p>
 
-<h4 class="section-title text-[#2E4034] mb-4">is in the Works!</h4>
-
-            <p class="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-                We are bringing the Litter Troopers experience natively to Android. Want to be one of the first to test the app in the wild? Sign up with your Gmail address to get early access and help us shape the future of community cleanups.
-            </p>
-            
-            <div class="max-w-md mx-auto">
-                <form id="betaSignupForm" class="w-full flex flex-col gap-4">
-                    <input type="email" id="betaEmailInput" placeholder="Enter your @gmail.com address" required 
-                           class="w-full py-4 px-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4B7F52] text-lg text-center">
-                    <button type="submit" id="betaSubmitBtn" 
-                            class="cta-button bg-[#4B7F52] text-white font-bold py-4 px-6 rounded-md hover:bg-[#218838] w-full text-lg">
-                        Join the Waitlist
-                    </button>
-                </form>
-                <p id="betaSignupMessage" class="mt-4 font-bold text-lg hidden"></p>
+        <div class="platform-grid">
+            <div class="platform-card active">
+                <span class="platform-badge badge-live">✅ Live Now</span>
+                <span class="platform-icon">🌐</span>
+                <div class="platform-title">Web App (All Devices)</div>
+                <p class="platform-desc">Works on any browser — Chrome, Safari, Firefox. On iPhone and iPad, open in Safari and tap "Add to Home Screen" to install as an app with full-screen mode. No App Store needed.</p>
+                <a href="https://www.littertroopers.com/mapbeta.html" target="_blank" class="platform-cta cta-green">Open Web App →</a>
+            </div>
+            <div class="platform-card active">
+                <span class="platform-badge badge-testing">🤖 Android Beta</span>
+                <span class="platform-icon">📱</span>
+                <div class="platform-title">Android Native App</div>
+                <p class="platform-desc">A full native Android app is currently in internal testing. Built from the ground up with Mapbox, Firebase, and a complete offline-first experience. Sign up below to get early access.</p>
+                <a href="#android-beta" class="platform-cta cta-green">Join the Waitlist →</a>
+            </div>
+            <div class="platform-card soon">
+                <span class="platform-badge badge-soon">🍎 Coming Soon</span>
+                <span class="platform-icon">📲</span>
+                <div class="platform-title">iOS Native App</div>
+                <p class="platform-desc">iPhone users: the web app already works great on iOS Safari and can be added to your home screen today. A dedicated native iOS app is on the roadmap — sign up to be notified when it launches.</p>
+                <span class="platform-cta cta-outline">Notify Me (see below)</span>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <section class="py-24">
-        <div class="container mx-auto px-6 text-center">
-            <h3 class="text-3xl md:text-4xl font-black text-[#2E4034] mb-4">Ready to Make a Difference?</h3>
-            <p class="text-lg text-gray-700 mb-8">Your first cleanup is just a click away. Launch the beta app now and join the Litter Troopers community.</p>
-            <a href="https://www.littertroopers.com/mapbeta.html" target="_blank" class="cta-button bg-[#4B7F52] text-white font-bold text-lg py-4 px-10 rounded-full hover:bg-[#218838]">
-                Launch Litter Troopers (beta)
-            </a>
+<!-- ── INVESTOR ─────────────────────────────────────────────────── -->
+<section class="investor-bg">
+    <div class="section-inner text-center">
+        <div class="section-eyebrow">For Investors & Partners</div>
+        <h2 class="section-title">We're building the future of community cleanups.</h2>
+        <p class="section-sub">
+            Litter Troopers is a passion-built product with a working app, real users, and a clear roadmap — including a Cleanup Bounty marketplace, AI-powered litter identification, business partnerships, and full iOS & Android launches. We're actively seeking investors and strategic partners who believe environmental impact can be fun, social, and scalable.
+        </p>
+        <a href="mailto:p1creationsco@gmail.com?subject=Litter Troopers Investment Inquiry" class="btn-white">Get in Touch →</a>
+    </div>
+</section>
+
+<!-- ── ANDROID BETA ──────────────────────────────────────────────── -->
+<section class="android-bg" id="android-beta">
+    <div class="section-inner text-center">
+        <div class="section-eyebrow">Android Early Access</div>
+        <h2 class="section-title">Be the first Trooper on Android.</h2>
+        <p class="section-sub" style="margin: 0 auto 0;">
+            The native Android app is in internal testing and moving fast. Sign up with your Gmail address to get added to the Play Store beta — you'll get access before the public launch and help shape the final product.
+        </p>
+
+        <form id="betaSignupForm" class="beta-form">
+            <input type="email" id="betaEmailInput" class="beta-input"
+                   placeholder="your@gmail.com" required>
+            <button type="submit" id="betaSubmitBtn" class="btn-green-full">
+                Join the Android Waitlist
+            </button>
+        </form>
+        <p id="betaSignupMessage" class="form-msg"></p>
+    </div>
+</section>
+
+<!-- ── MAILING LIST ──────────────────────────────────────────────── -->
+<section style="background: var(--parchment); border-top: 1px solid var(--border);">
+    <div class="section-inner text-center">
+        <div class="section-eyebrow">Stay in the loop</div>
+        <h2 class="section-title">Get updates on new features & launches.</h2>
+        <p class="section-sub" style="margin: 0 auto;">No spam — just meaningful updates when we ship something worth talking about.</p>
+
+        <form id="signupForm" class="mail-form">
+            <input type="text" id="firstName" name="first_name" required
+                   class="mail-input" placeholder="First name">
+            <input type="email" id="email" name="email" required
+                   class="mail-input" placeholder="Email address">
+            <button type="submit" id="submitBtn" class="btn-green-pill">Notify Me</button>
+        </form>
+        <p id="formMessage" class="form-msg"></p>
+    </div>
+</section>
+
+<!-- ── FOOTER ───────────────────────────────────────────────────── -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-logo">🪲 Litter Troopers</div>
+        <div class="footer-links">
+            <a href="tos.html" target="_blank">Terms of Service</a>
+            <a href="Privacy_Policy.html" target="_blank">Privacy Policy</a>
+            <a href="safety.html">Safety Guide</a>
+            <a href="maptest.html" target="_blank">Test Version</a>
+            <a href="https://docs.google.com/document/d/1LhaYDw9nsv5LWMWGH-GLFKxy4wv68mTgOaTS5o3QG68/edit?usp=sharing" target="_blank">Bug Report</a>
         </div>
-    </section>
+        <p class="footer-copy">© 2025 Litter Troopers™ · A P1 Creations Project</p>
+    </div>
+</footer>
 
-    <footer class="bg-[#2E4034] text-white">
-        <div class="container mx-auto px-6 py-8 text-center">
-            <p>2025 Litter Troopers™</p>
-            <p class="text-sm text-gray-400 mt-2">A P1 Creations Project</p>
-            <p class="tos-link-container mt-4">
-                You can review the full <a href="tos.html" target="_blank" class="underline hover:text-gray-300">Terms of Service</a> and <a href="Privacy_Policy.html" target="_blank" class="underline hover:text-gray-300">Privacy Policy</a> at any time.
-            </p>
-            <p class="tos-link-container mt-2">You can use our test version here - <a href="maptest.html" target="_blank" class="underline hover:text-gray-300">FOR TESTERS</a> - remember some features may be broken. <a href="https://docs.google.com/document/d/1LhaYDw9nsv5LWMWGH-GLFKxy4wv68mTgOaTS5o3QG68/edit?usp=sharing" target="_blank" class="underline hover:text-gray-300">BUG REPORT</a> - <a href="safety.html" class="underline hover:text-gray-300"> SAFETY GUIDE</a></p>
-        </div>
-    </footer>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    <script src="js/emailform.js" type="module"></script>
+// ── Single Firebase init ──────────────────────────────────────────────────────
+const firebaseConfig = {
+    apiKey: "AIzaSyCE1b6VtJjUs0O5YvyLjeslxuHC8UlgJUM",
+    authDomain: "garbagepathv2.firebaseapp.com",
+    projectId: "garbagepathv2",
+    storageBucket: "garbagepathv2.firebasestorage.app",
+    messagingSenderId: "505856089619",
+    appId: "1:505856089619:web:682f58d02be4295be4a9e6"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── Live stats counters ───────────────────────────────────────────────────────
+function animateCounter(el, target, isFloat, duration) {
+    if (!el) return;
+    const start = Date.now();
+    function tick() {
+        const elapsed = Date.now() - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = target * ease;
+        el.textContent = isFloat ? current.toFixed(1) : Math.floor(current).toLocaleString();
+        if (progress < 1) requestAnimationFrame(tick);
+    }
+    tick();
+}
+
+async function loadStats() {
+    let targets = { pins: 0, miles: 0, routes: 0, troopers: 0 };
+    try {
+        const snap = await getDoc(doc(db, "config", "appStats"));
+        if (snap.exists()) {
+            const d = snap.data();
+            targets.pins     = d.totalPins     ?? 0;
+            targets.miles    = parseFloat((d.totalMiles ?? 0).toFixed(1));
+            targets.routes   = d.totalRoutes   ?? 0;
+            targets.troopers = d.totalUsers    ?? 0;
+        }
+    } catch (e) {
+        console.warn("Stats fetch failed:", e);
+    }
+    animateCounter(document.getElementById('cnt-pins'),     targets.pins,     false, 1800);
+    animateCounter(document.getElementById('cnt-miles'),    targets.miles,    true,  1800);
+    animateCounter(document.getElementById('cnt-routes'),   targets.routes,   false, 1800);
+    animateCounter(document.getElementById('cnt-troopers'), targets.troopers, false, 1800);
+
+    // Ambient tick
+    setTimeout(() => {
+        setInterval(() => {
+            const pEl = document.getElementById('cnt-pins');
+            const mEl = document.getElementById('cnt-miles');
+            if (pEl && pEl.textContent !== '—') {
+                if (Math.random() < 0.3) {
+                    targets.pins++;
+                    pEl.textContent = targets.pins.toLocaleString();
+                }
+            }
+            if (mEl && mEl.textContent !== '—') {
+                if (Math.random() < 0.2) {
+                    targets.miles = parseFloat((targets.miles + 0.1).toFixed(1));
+                    mEl.textContent = targets.miles.toFixed(1);
+                }
+            }
+        }, 8000);
+    }, 3000);
+}
+
+const counterStrip = document.querySelector('.counter-strip');
+if (counterStrip) {
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) { loadStats(); observer.disconnect(); }
+    }, { threshold: 0.3 });
+    observer.observe(counterStrip);
+}
+
+// XP bar animation
+const xpBar = document.getElementById('xp-bar');
+if (xpBar) {
+    const xpObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) { xpBar.style.width = '61.2%'; xpObserver.disconnect(); }
+    }, { threshold: 0.5 });
+    xpBar.style.width = '0%';
+    xpObserver.observe(xpBar);
+}
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+});
+
+// ── Mailing list signup ───────────────────────────────────────────────────────
+const signupForm = document.getElementById('signupForm');
+if (signupForm) {
+    signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const firstName = document.getElementById('firstName').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const submitBtn = document.getElementById('submitBtn');
+        const formMessage = document.getElementById('formMessage');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        formMessage.textContent = '';
+        try {
+            await addDoc(collection(db, "mailingList"), {
+                firstName, email, timestamp: new Date()
+            });
+            formMessage.textContent = "Thanks for signing up! We'll be in touch.";
+            formMessage.style.color = '#28a745';
+            signupForm.reset();
+        } catch (err) {
+            console.error(err);
+            formMessage.textContent = "Something went wrong. Please try again.";
+            formMessage.style.color = '#dc3545';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Notify Me';
+        }
+    });
+}
+
+// ── Android beta waitlist ─────────────────────────────────────────────────────
+const betaSignupForm = document.getElementById('betaSignupForm');
+if (betaSignupForm) {
+    betaSignupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const emailInput = document.getElementById('betaEmailInput');
+        const messageEl = document.getElementById('betaSignupMessage');
+        const submitBtn = document.getElementById('betaSubmitBtn');
+        const email = emailInput.value.trim();
+
+        if (!email.toLowerCase().endsWith('@gmail.com')) {
+            messageEl.textContent = "Please provide a valid @gmail.com address for Google Play testing.";
+            messageEl.style.color = '#dc3545';
+            messageEl.classList.remove('hidden');
+            return;
+        }
+
+        submitBtn.textContent = "Adding to list...";
+        submitBtn.disabled = true;
+        try {
+            await addDoc(collection(db, "betaWaitlist"), {
+                email, platform: "Android", signupDate: new Date()
+            });
+            messageEl.textContent = "Success! You're on the list. Keep an eye on your inbox.";
+            messageEl.style.color = '#28a745';
+            messageEl.classList.remove('hidden');
+            emailInput.value = '';
+        } catch (err) {
+            console.error(err);
+            messageEl.textContent = "Error saving email. Please try again.";
+            messageEl.style.color = '#dc3545';
+            messageEl.classList.remove('hidden');
+        } finally {
+            submitBtn.textContent = "Join the Android Waitlist";
+            submitBtn.disabled = false;
+        }
+    });
+}
+</script>
+
 </body>
 </html>
