@@ -1,6 +1,6 @@
 import { state, mapStyles, ZOOM_THRESHOLD } from './config.js';
-import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners, updateSwarmPulse } from './community.js';
-import { pinCategories, RP_SECTORS } from './config.js';
+import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners } from './community.js';
+import { pinCategories } from './config.js';
 import { showPublicProfile } from './ui.js';
 import { openReportPinModal } from './reports.js';
 
@@ -99,24 +99,6 @@ export function changeMapStyle() {
             fetchAndDisplayCommunityRoutes();
         }
         updateUserPinsSource();
-
-        // --- 2. RESTORE THE SECTORS (The Fix) ---
-        setupSectorVisuals(); // Re-creates the polygon geometry
-        updateSwarmPulse();   // Re-applies the 'glow' opacities
-        
-        // --- 3. RESPECT THE TOGGLE STATE ---
-        // Check if the button is currently 'active' (meaning sectors should be visible)
-        const sectorBtn = document.getElementById('toggleSectorsBtn');
-        const isSectorsActive = sectorBtn && sectorBtn.classList.contains('active');
-        
-        if (isSectorsActive) {
-            ['RP-01', 'RP-02', 'RP-03', 'RP-04', 'RP-05'].forEach(id => {
-                const fillLayer = `layer-${id}`;
-                const labelLayer = `label-${id}`;
-                if (state.map.getLayer(fillLayer)) state.map.setLayoutProperty(fillLayer, 'visibility', 'visible');
-                if (state.map.getLayer(labelLayer)) state.map.setLayoutProperty(labelLayer, 'visibility', 'visible');
-            });
-        }
     });
 }
 
@@ -340,104 +322,4 @@ export function centerOnRoute() {
     });
 }
 
-export function addSectorLayers() {
-    Object.entries(RP_SECTORS).forEach(([id, bounds]) => {
-        const sourceId = `source-${id}`;
-        
-        state.map.addSource(sourceId, {
-            'type': 'geojson',
-            'data': {
-                'type': 'Feature',
-                'geometry': {
-                    'type': 'Polygon',
-                    'coordinates': [[
-                        [bounds.minLon, bounds.minLat],
-                        [bounds.maxLon, bounds.minLat],
-                        [bounds.maxLon, bounds.maxLat],
-                        [bounds.minLon, bounds.maxLat],
-                        [bounds.minLon, bounds.minLat]
-                    ]]
-                }
-            }
-        });
 
-        state.map.addLayer({
-            'id': `layer-${id}`,
-            'type': 'fill',
-            'source': sourceId,
-            'layout': { 'visibility': 'none' }, // Start hidden
-            'paint': {
-                'fill-color': id === 'RP-01' ? '#ff0000' : id === 'RP-02' ? '#00ff00' : '#0000ff', // Different colors per sector
-                'fill-opacity': 0.1,
-                'fill-outline-color': '#000'
-            }
-        });
-    });
-}
-
-export function setupSectorVisuals() {
-    if (!state.map) return;
-
-    Object.entries(RP_SECTORS).forEach(([id, sector]) => {
-        const sourceId = `source-${id}`;
-        const layerId = `layer-${id}`;
-
-        let polygonCoords;
-
-        if (sector.isPolygon) {
-            // Use the custom diagonal path defined in config.js
-            polygonCoords = [sector.path];
-        } else {
-            // Build the standard rectangular box path
-            polygonCoords = [[
-                [sector.minLon, sector.minLat],
-                [sector.maxLon, sector.minLat],
-                [sector.maxLon, sector.maxLat],
-                [sector.minLon, sector.maxLat],
-                [sector.minLon, sector.minLat]
-            ]];
-        }
-
-        // 1. Add the Source (the geometry data)
-        state.map.addSource(sourceId, {
-            'type': 'geojson',
-            'data': {
-                'type': 'Feature',
-                'geometry': {
-                    'type': 'Polygon',
-                    'coordinates': polygonCoords
-                }
-            }
-        });
-
-        // 2. Add the Fill Layer (the colored shape)
-        state.map.addLayer({
-            'id': layerId,
-            'type': 'fill',
-            'source': sourceId,
-            'layout': { 'visibility': 'none' }, // Toggleable via UI
-            'paint': {
-                'fill-color': sector.color,
-                'fill-opacity': 0.15,
-                'fill-outline-color': sector.color
-            }
-        });
-
-        // 3. Add a Label Layer (optional: shows the sector name)
-        state.map.addLayer({
-            'id': `label-${id}`,
-            'type': 'symbol',
-            'source': sourceId,
-            'layout': {
-                'text-field': id, // Displays "RP-01", "RP-05", etc.
-                'text-size': 14,
-                'visibility': 'none'
-            },
-            'paint': {
-                'text-color': sector.color,
-                'text-halo-color': '#ffffff',
-                'text-halo-width': 2
-            }
-        });
-    });
-}
