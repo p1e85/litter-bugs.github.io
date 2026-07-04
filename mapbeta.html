@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Litter Troopers - Map Tracker</title>
 
-
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4A7C59">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -42,12 +41,12 @@
         </div>
     </div>
 
-
     <div class="map-wrapper">
     <div id="map"></div>
       <button id="findMeBtn" class="control-btn">📍</button>
       <button id="pictureBtn" class="control-btn" disabled>📸</button>
       <input type="file" id="cameraInput" accept="image/*" capture style="display: none;">
+      <input type="file" id="quickPinCameraInput" accept="image/*" capture="environment" style="display:none;">
     </div>
 
     <div class="bottom-container">
@@ -70,7 +69,7 @@
             <button id="trackBtn" class="modal-button btn-secondary">🛰️ Start Tracking</button>
             <button id="dataBtn" class="modal-button btn-secondary">💾 Data Management</button>
             <hr>
-            <button id="infoBtn" class="modal-button btn-secondary">ℹ️ Info & Terms</button>
+            <button id="infoBtn" class="modal-button btn-secondary">ℹ️ Info &amp; Terms</button>
             <button id="editProfileBtn" class="modal-button btn-secondary edit-profile">👤 Edit My Profile</button>
             <a href="https://www.littertroopers.com" target="_blank" class="modal-button btn-secondary">🌐 Visit Website</a>
             <a href="https://www.paypal.com/donate/?hosted_button_id=8HAXRDMMHHKQU" target="_blank" class="modal-button btn-support">☕ Support</a>
@@ -90,7 +89,8 @@
                 <h4>How to Use the App</h4>
                 <ol class="info-list">
                     <li><strong>Start Tracking:</strong> Open the menu and press 'Start Tracking'...</li>
-                    <li><strong>Pin Litter:</strong> When you find litter, press the 'Pin Picture' camera button...</li>
+                    <li><strong>Quick Pin:</strong> Tap 📸 anytime you're logged in to drop a quick pin — no route needed.</li>
+                    <li><strong>Pin Litter:</strong> During a tracked route, press 📸 to pin and photo litter as you go.</li>
                     <li><strong>Manage Data:</strong> Use the 'Data Management' button to save, load, or export...</li>
                     <li><strong>Publish:</strong> When logged in, 'Publish to Community' shares your completed route...</li>
                     <li><strong>Community View:</strong> Toggle the 'Community View' button to see all routes...</li>
@@ -108,7 +108,7 @@
         
         <div style="text-align: left; background: #f4f7f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
             <p style="margin: 10px 0;"><strong>1. 📍 Start Tracking:</strong> Tap the "Track Route" button when you start your walk.</p>
-            <p style="margin: 10px 0;"><strong>2. 🥤 Log Items:</strong> Tap the quick buttons to count trash as you pick it up.</p>
+            <p style="margin: 10px 0;"><strong>2. ⚡ Quick Pin:</strong> Tap 📸 anytime to log an item — even without tracking.</p>
             <p style="margin: 10px 0;"><strong>3. 📸 Publish:</strong> Hit stop, snap a photo of your full garbage bag, and publish your route!</p>
         </div>
 
@@ -218,7 +218,6 @@
             <hr>
             <p style="margin-bottom: 5px; font-style: italic;">Your Cleanup Photo:</p>
             <div id="cleanupPhotoPreviewContainer" style="margin-top: 15px; display: none;">
-                
                 <img id="cleanupPhotoPreview" src="#" alt="Cleanup Photo Thumbnail" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid #ccc;">
             </div>
             <input type="file" id="cleanupCameraInput" accept="image/*" capture style="display: none;">
@@ -324,7 +323,40 @@
             <ul id="meetupsList" class="session-list"></ul>
         </div>
     </div>
-    
+
+    <!-- QUICK PIN MODAL -->
+    <div id="quickPinModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="max-width:420px;">
+            <button class="close-btn" id="quickPinCancelBtn">&times;</button>
+            <h2>⚡ Quick Pin</h2>
+            <div style="text-align:center; margin-bottom:12px;">
+                <img id="quickPinPreview" src="" alt="Quick pin photo"
+                    style="max-width:100%; max-height:240px; border-radius:6px; object-fit:cover; border:1px solid #e0e0d8;">
+            </div>
+            <p id="quickPinUploadStatus"
+                style="text-align:center; color:#666; font-size:0.85em; margin-bottom:8px; display:none;">
+                ☁️ Uploading photo…
+            </p>
+            <label for="quickPinTitle" style="display:block; font-weight:600; margin-bottom:4px;">
+                Title <span style="font-weight:normal; color:#888;">(optional)</span>
+            </label>
+            <input type="text" id="quickPinTitle" maxlength="50"
+                placeholder="e.g. Plastic bottle by bench"
+                style="width:100%; padding:8px; margin-bottom:12px; box-sizing:border-box;">
+            <label for="quickPinCategory" style="display:block; font-weight:600; margin-bottom:4px;">
+                Category
+            </label>
+            <select id="quickPinCategory" style="width:100%; padding:8px; margin-bottom:10px;"></select>
+            <div id="quickPinSubcategoryWrap" style="display:none; margin-bottom:10px;">
+                <label for="quickPinSubcategory" style="display:block; font-weight:600; margin-bottom:4px;">
+                    More specific?
+                </label>
+                <select id="quickPinSubcategory" style="width:100%; padding:8px;"></select>
+            </div>
+            <button id="quickPinSaveBtn" class="modal-button btn-primary" disabled>Save Pin</button>
+        </div>
+    </div>
+
     <script src="js/main.js" type="module"></script>
 
 </body>
