@@ -1,7 +1,7 @@
 import { state } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion } from './auth.js';
-import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
+import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState, handleQuickPinPhoto, saveQuickPin, cancelQuickPin } from './tracking.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
 import {
     toggleCommunityView,
@@ -17,7 +17,6 @@ import {
 } from './community.js';
 
 // --- DOM Element Selection ---
-// Note: Some of these might be NULL in the Beta/MVP HTML.
 const elements = {
     // Modals
     termsModal: document.getElementById('termsModal'),
@@ -41,7 +40,6 @@ const elements = {
     addChallengeBtn: document.getElementById('addChallengeBtn'),
     currentChallengesTab: document.getElementById('currentChallengesTab'),
     pastChallengesTab: document.getElementById('pastChallengesTab'),
-    // General Modals
     welcomeModal: document.getElementById('welcomeModal'),
     closeWelcomeBtn: document.getElementById('closeWelcomeBtn'),
 
@@ -94,13 +92,9 @@ const elements = {
 
 // --- Initializer ---
 
-/**
- * Main initializer for the entire UI.
- */
 export function initializeUI() {
     initializeMap();
     
-    // Listen for user map interaction to reset the "Find Me" state
     state.map.on('dragstart', (e) => { if (e.originalEvent) resetFindMeState(); });
     state.map.on('zoomstart', (e) => { if (e.originalEvent) resetFindMeState(); });
 
@@ -115,36 +109,24 @@ export function initializeUI() {
     }
 }
 
-// --- Event Listeners *******************
-
-/**
- * Attaches all event listeners to the DOM elements.
- */
 function attachEventListeners() {
     // --- Auth Flow & Terms ---
     if (elements.termsCheckbox) elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
-elements.agreeBtn.addEventListener('click', () => {
+    elements.agreeBtn.addEventListener('click', () => {
         elements.termsModal.style.display = 'none';
         sessionStorage.setItem('termsAccepted', 'true');
         document.getElementById('userStatus').style.display = 'flex';
         
-        // --- THE NEW ONBOARDING LOGIC ---
-        // Check if they have ever seen the welcome screen
         if (!localStorage.getItem('lt_has_seen_welcome')) {
-            // Show the welcome tutorial
             elements.welcomeModal.style.display = 'flex';
-            // Mark it so they never see it again
             localStorage.setItem('lt_has_seen_welcome', 'true');
         } else if (!state.currentUser) {
-            // If they HAVE seen it before, but aren't logged in, prompt login
             elements.authModal.style.display = 'flex';
         }
     });
 
     elements.closeWelcomeBtn.addEventListener('click', () => {
         elements.welcomeModal.style.display = 'none';
-        
-        // After reading the tutorial, prompt them to log in if they are a guest!
         if (!state.currentUser) {
             elements.authModal.style.display = 'flex';
         }
@@ -212,8 +194,31 @@ elements.agreeBtn.addEventListener('click', () => {
     // --- Main Controls ---
     if (elements.findMeBtn) elements.findMeBtn.addEventListener('click', findMe);
     if (elements.trackBtn) elements.trackBtn.addEventListener('click', toggleTracking);
-    if (elements.pictureBtn) elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
+
+    // QUICK PIN: pictureBtn routes based on tracking state.
+    // During tracking → existing route-photo camera.
+    // Not tracking (but logged in) → quick pin camera.
+    if (elements.pictureBtn) {
+        elements.pictureBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent bubble to window modal-close handler
+            if (state.isTracking) {
+                elements.cameraInput.click();
+            } else {
+                document.getElementById('quickPinCameraInput')?.click();
+            }
+        });
+    }
     if (elements.cameraInput) elements.cameraInput.addEventListener('change', handlePhoto);
+
+    // Quick pin camera input and modal buttons
+    const quickPinInput = document.getElementById('quickPinCameraInput');
+    if (quickPinInput) quickPinInput.addEventListener('change', handleQuickPinPhoto);
+    document.getElementById('quickPinSaveBtn')?.addEventListener('click', saveQuickPin);
+    document.getElementById('quickPinCancelBtn')?.addEventListener('click', cancelQuickPin);
+    document.getElementById('quickPinModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'quickPinModal') cancelQuickPin();
+    });
+
     if (elements.changeStyleBtn) elements.changeStyleBtn.addEventListener('click', changeMapStyle);
     if (elements.communityBtn) elements.communityBtn.addEventListener('click', toggleCommunityView);
     if (elements.menuBtn) elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
@@ -292,7 +297,7 @@ elements.agreeBtn.addEventListener('click', () => {
     }
     if (elements.saveProfileBtn) elements.saveProfileBtn.addEventListener('click', saveProfile);
 
-    // --- Leaderboard & Stats (SAFETY CHECK ADDED) ---
+    // --- Leaderboard & Stats ---
     if (elements.leaderboardBtn) {
         elements.leaderboardBtn.addEventListener('click', () => {
             elements.leaderboardModal.style.display = 'flex';
@@ -315,7 +320,6 @@ elements.agreeBtn.addEventListener('click', () => {
                 const stats = document.getElementById('myStatsContainer');
                 if (list) list.style.display = isMyStats ? 'none' : 'block';
                 if (stats) stats.style.display = isMyStats ? 'block' : 'none';
-                
                 if (isMyStats) { fetchAndDisplayMyStats(); }
                 else { fetchAndDisplayLeaderboard(tab.dataset.metric); }
             });
@@ -342,20 +346,16 @@ elements.agreeBtn.addEventListener('click', () => {
     const photoPreview = document.getElementById('cleanupPhotoPreview');
 
     if (addCleanupPhotoBtn) { 
-        addCleanupPhotoBtn.addEventListener('click', () => {
-            cleanupCameraInput.click();
-        });
+        addCleanupPhotoBtn.addEventListener('click', () => cleanupCameraInput.click());
     }
 
     if (cleanupCameraInput) { 
         cleanupCameraInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
-                // NOTE: imageCompression is loaded globally via CDN in HTML
                 const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280 };
                 let compressedFile;
                 try {
-                    // Check if imageCompression exists (it might not in test env)
                     if (typeof imageCompression !== 'undefined') {
                         compressedFile = await imageCompression(file, options);
                     } else {
@@ -365,7 +365,6 @@ elements.agreeBtn.addEventListener('click', () => {
                     console.error("Compression error:", error);
                     compressedFile = file;
                 }
-                
                 state.cleanupPhoto = compressedFile; 
                 const objectURL = URL.createObjectURL(compressedFile);
                 if (photoPreview) photoPreview.src = objectURL;
@@ -379,7 +378,7 @@ elements.agreeBtn.addEventListener('click', () => {
         });
     }
 
-    // --- Meetups (SAFETY CHECK ADDED - THIS WAS THE CRASH) ---
+    // --- Meetups ---
     if (elements.safetyCheckbox) elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
     if (elements.meetupTitleInput) elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
     if (elements.meetupDescriptionInput) elements.meetupDescriptionInput.addEventListener('input', validateMeetupForm);
@@ -389,22 +388,15 @@ elements.agreeBtn.addEventListener('click', () => {
     if (elements.shareBtn) elements.shareBtn.addEventListener('click', shareCleanupResults);
     
     addAllModalCloseListeners();
-}  // end of event listener!
+}
 
-/**
- * Adds listeners to close modals when clicking the close button or outside the modal content.
- */
 function addAllModalCloseListeners() {
     const allModals = Object.values(elements).filter(el => el && el.classList && el.classList.contains('modal-overlay'));
     allModals.forEach(modal => {
         const closeBtn = modal.querySelector('.close-btn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => modal.style.display = 'none');
-        }
+        if (closeBtn) closeBtn.addEventListener('click', () => modal.style.display = 'none');
         const okBtn = modal.querySelector('.ok-btn');
-        if (okBtn) {
-            okBtn.addEventListener('click', () => modal.style.display = 'none');
-        }
+        if (okBtn) okBtn.addEventListener('click', () => modal.style.display = 'none');
     });
 
     window.addEventListener('click', (event) => {
@@ -416,9 +408,6 @@ function addAllModalCloseListeners() {
 
 // --- UI Update Functions ---
 
-/**
- * Updates the UI to reflect the user's login status.
- */
 export function updateLoggedInStatusUI(isLoggedIn, username = '') {
     const userStatus = document.getElementById('userStatus');
     const loggedInContent = document.getElementById('loggedInContent');
@@ -435,18 +424,19 @@ export function updateLoggedInStatusUI(isLoggedIn, username = '') {
         if (elements.publishBtn) elements.publishBtn.style.display = 'block';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'block';
         if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'block';
+        // Enable Quick Pin — 📸 button works whenever logged in, not just during tracking
+        if (elements.pictureBtn) elements.pictureBtn.disabled = false;
     } else {
         if (loggedInContent) loggedInContent.style.display = 'none';
         if (guestContent) guestContent.style.display = 'block';
         if (elements.publishBtn) elements.publishBtn.style.display = 'none';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'none';
         if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'none';
+        // Disable Quick Pin on logout (tracking won't be active either)
+        if (elements.pictureBtn) elements.pictureBtn.disabled = true;
     }
 }
 
-/**
- * Toggles the auth modal between Sign Up and Log In modes.
- */
 export function updateAuthModalUI() {
     const authForm = document.getElementById('authForm');
     const authTitle = document.getElementById('authTitle');
@@ -469,9 +459,6 @@ export function updateAuthModalUI() {
     validateSignUpForm();
 }
 
-/**
- * Validates the sign-up/login form and enables/disables the action button.
- */
 function validateSignUpForm() {
     const isEmailValid = elements.emailInput.value.includes('@');
     const isPasswordValid = elements.passwordInput.value.length >= 6;
