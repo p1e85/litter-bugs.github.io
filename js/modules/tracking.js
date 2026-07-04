@@ -1,5 +1,5 @@
-import { storage, ref, uploadBytes, getDownloadURL } from './firebase.js';
-import { state } from './config.js';
+import { db, storage, ref, uploadBytes, getDownloadURL, collection, addDoc, serverTimestamp, doc, getDoc } from './firebase.js';
+import { state, pinCategories } from './config.js';
 import { createAndAddMarker, updateUserPinsSource } from './map.js';
 import { calculateRouteDistance } from './utils.js';
 import { clearCurrentSession } from './data.js';
@@ -254,4 +254,153 @@ export function resetFindMeState() {
     document.getElementById('findMeBtn').classList.remove('active');
     document.getElementById('findMeBtn').innerHTML = '📍';
     state.findMeState = 0;
+}
+
+// =============================================================================
+// QUICK PIN FEATURE (production / modules version — uses alert instead of toast)
+// =============================================================================
+
+let _qp = null;
+
+function getGPSWithTimeout(ms) {
+    return new Promise((resolve) => {
+        let done = false;
+        const timer = setTimeout(() => {
+            if (!done) { done = true; resolve(null); }
+        }, ms);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => { if (!done) { done = true; clearTimeout(timer); resolve(pos.coords); } },
+            ()     => { if (!done) { done = true; clearTimeout(timer); resolve(null); } },
+            { timeout: ms, maximumAge: 10000, enableHighAccuracy: true }
+        );
+    });
+}
+
+async function uploadQuickPinPhoto(file) {
+    const timestamp = Date.now();
+    const uid = state.currentUser.uid;
+    const fullOpts = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
+    const compressed = await imageCompression(file, fullOpts);
+    const fullRef = ref(storage, `photos/${uid}/${timestamp}-full.jpg`);
+    const fullSnap = await uploadBytes(fullRef, compressed);
+    const imageURL = await getDownloadURL(fullSnap.ref);
+    const thumbOpts = { maxSizeMB: 0.05, maxWidthOrHeight: 100, useWebWorker: true };
+    const thumb = await imageCompression(file, thumbOpts);
+    const thumbRef = ref(storage, `photos/${uid}/${timestamp}-thumb.jpg`);
+    const thumbSnap = await uploadBytes(thumbRef, thumb);
+    const thumbnailURL = await getDownloadURL(thumbSnap.ref);
+    return { imageURL, thumbnailURL };
+}
+
+function populateQuickPinCategories() {
+    const catSelect = document.getElementById('quickPinCategory');
+    const subWrap   = document.getElementById('quickPinSubcategoryWrap');
+    const subSelect = document.getElementById('quickPinSubcategory');
+    if (!catSelect) return;
+    catSelect.innerHTML = '';
+    for (const cat in pinCategories) {
+        const opt = document.createElement('option');
+        opt.value = cat; opt.textContent = cat;
+        catSelect.appendChild(opt);
+    }
+    const syncSubs = () => {
+        const subs = pinCategories[catSelect.value] || [];
+        if (subs.length > 0) {
+            subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+            subWrap.style.display = 'block';
+        } else { subWrap.style.display = 'none'; }
+    };
+    catSelect.addEventListener('change', syncSubs);
+    syncSubs();
+}
+
+function openQuickPinModal(previewURL) {
+    const modal = document.getElementById('quickPinModal');
+    if (!modal) return;
+    document.getElementById('quickPinPreview').src = previewURL;
+    document.getElementById('quickPinTitle').value = '';
+    document.getElementById('quickPinUploadStatus').style.display = 'block';
+    document.getElementById('quickPinSaveBtn').disabled = true;
+    populateQuickPinCategories();
+    modal.style.display = 'flex';
+}
+
+function quickPinUploadReady() {
+    document.getElementById('quickPinUploadStatus').style.display = 'none';
+    document.getElementById('quickPinSaveBtn').disabled = false;
+}
+
+export async function handleQuickPinPhoto(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file || !state.currentUser) { if (event.target) event.target.value = ''; return; }
+    event.target.value = '';
+    const pictureBtn = document.getElementById('pictureBtn');
+    pictureBtn.innerHTML = '⏳';
+    pictureBtn.disabled = true;
+    const gpsPromise = getGPSWithTimeout(3000);
+    const previewURL = URL.createObjectURL(file);
+    const coords = await gpsPromise;
+    if (!coords) {
+        URL.revokeObjectURL(previewURL);
+        pictureBtn.innerHTML = '📸';
+        pictureBtn.disabled = false;
+        return; // fail silently per spec
+    }
+    _qp = { previewURL, coords, file, imageURL: null, thumbnailURL: null };
+    openQuickPinModal(previewURL);
+    pictureBtn.innerHTML = '📸';
+    pictureBtn.disabled = false;
+    try {
+        const { imageURL, thumbnailURL } = await uploadQuickPinPhoto(file);
+        _qp.imageURL = imageURL;
+        _qp.thumbnailURL = thumbnailURL;
+        quickPinUploadReady();
+    } catch (err) {
+        console.error('Quick pin upload failed:', err);
+        cancelQuickPin();
+        alert('Upload failed. Please try again.');
+    }
+}
+
+export async function saveQuickPin() {
+    if (!_qp || !_qp.imageURL || !state.currentUser) return;
+    const saveBtn = document.getElementById('quickPinSaveBtn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Saving…'; }
+    try {
+        const profileSnap = await getDoc(doc(db, 'publicProfiles', state.currentUser.uid));
+        const username = profileSnap.exists() ? (profileSnap.data().username || 'Anonymous') : 'Anonymous';
+        const title    = (document.getElementById('quickPinTitle')?.value || '').trim() || 'Quick Pin';
+        const category = document.getElementById('quickPinCategory')?.value || 'Other';
+        const subCat   = document.getElementById('quickPinSubcategory')?.value || null;
+        await addDoc(collection(db, 'publishedRoutes'), {
+            userId:    state.currentUser.uid,
+            username,
+            timestamp: serverTimestamp(),
+            route:     [],
+            isQuickPin: true,
+            pins: [{
+                id:           'pin-' + Date.now(),
+                lat:          _qp.coords.latitude,
+                lng:          _qp.coords.longitude,
+                imageURL:     _qp.imageURL,
+                thumbnailURL: _qp.thumbnailURL,
+                title,
+                category,
+                ...(subCat ? { subCategory: subCat } : {})
+            }]
+        });
+        alert('⚡ Quick pin saved!');
+        cancelQuickPin();
+    } catch (err) {
+        console.error('saveQuickPin failed:', err);
+        alert('Could not save pin: ' + (err.message || err));
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Pin'; }
+    }
+}
+
+export function cancelQuickPin() {
+    const modal = document.getElementById('quickPinModal');
+    if (modal) modal.style.display = 'none';
+    if (_qp && _qp.previewURL) URL.revokeObjectURL(_qp.previewURL);
+    _qp = null;
 }
