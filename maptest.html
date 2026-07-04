@@ -47,6 +47,9 @@
       <button id="findMeBtn" class="control-btn">📍</button>
       <button id="pictureBtn" class="control-btn" disabled>📸</button>
       <input type="file" id="cameraInput" accept="image/*" capture style="display: none;">
+      <!-- Quick pin uses a separate hidden input so it never interferes with
+           the tracking-route photo flow (different handler, different state) -->
+      <input type="file" id="quickPinCameraInput" accept="image/*" capture="environment" style="display:none;">
     </div>
 
     <div class="bottom-container">
@@ -102,9 +105,7 @@
                     <li><strong>Community View:</strong> Toggle the 'Community View' button to see all routes...</li>
                 </ol>
             </div>
-
-            <p class="tos-link-container">You can review the full <a href="https://www.littertroopers.com/tos.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> at any time.</p>
-
+            <p class="tos-link-container">You can review the full <a href="#" id="viewTermsLink">Terms of Use</a> at any time.</p>
         </div>
     </div>
     
@@ -878,6 +879,48 @@
         .admin-badge-organizer { background: #4A7C59; color: white; }
         .admin-badge-past { background: #888; color: white; }
     </style>
+
+    <!-- QUICK PIN MODAL
+         Opens when the user taps 📸 while NOT tracking a route.
+         Photo is previewed immediately; upload runs in background.
+         Save is enabled once upload resolves. Per Android spec. -->
+    <div id="quickPinModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="max-width:420px;">
+            <button class="close-btn" id="quickPinCancelBtn">&times;</button>
+            <h2>⚡ Quick Pin</h2>
+            <div style="text-align:center; margin-bottom:12px;">
+                <img id="quickPinPreview" src="" alt="Quick pin photo"
+                    style="max-width:100%; max-height:240px; border-radius:6px; object-fit:cover; border:1px solid #e0e0d8;">
+            </div>
+            <p id="quickPinUploadStatus"
+                style="text-align:center; color:#666; font-size:0.85em; margin-bottom:8px; display:none;">
+                ☁️ Uploading photo…
+            </p>
+            <label for="quickPinTitle" style="display:block; font-weight:600; margin-bottom:4px;">
+                Title <span style="font-weight:normal; color:#888;">(optional)</span>
+            </label>
+            <input type="text" id="quickPinTitle" maxlength="50"
+                placeholder="e.g. Plastic bottle by bench"
+                style="width:100%; padding:8px; margin-bottom:12px; box-sizing:border-box;">
+            <label for="quickPinCategory" style="display:block; font-weight:600; margin-bottom:4px;">
+                Category
+            </label>
+            <select id="quickPinCategory"
+                style="width:100%; padding:8px; margin-bottom:10px;">
+                <!-- Populated dynamically from pinCategories in tracking.js -->
+            </select>
+            <div id="quickPinSubcategoryWrap" style="display:none; margin-bottom:10px;">
+                <label for="quickPinSubcategory"
+                    style="display:block; font-weight:600; margin-bottom:4px;">
+                    More specific?
+                </label>
+                <select id="quickPinSubcategory" style="width:100%; padding:8px;"></select>
+            </div>
+            <button id="quickPinSaveBtn" class="modal-button btn-primary" disabled>
+                Save Pin
+            </button>
+        </div>
+    </div>
 
     <script src="js/maintest.js" type="module"></script>
 
