@@ -1,9 +1,10 @@
 
-import { db, storage, ref, uploadBytes, getDownloadURL, collection, query, where, getDocs, updateDoc, doc } from './firebase.js';
-import { state } from './config.js';
+import { db, storage, ref, uploadBytes, getDownloadURL, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, getDoc } from './firebase.js';
+import { state, pinCategories } from './config.js';
 import { createAndAddMarker, updateUserPinsSource } from './map.js';
 import { calculateRouteDistance } from './utils.js';
 import { clearCurrentSession } from './data.js';
+import { toast } from './toast.js';
 
 let locationWatcher = null;
 
@@ -321,4 +322,232 @@ export async function updateUserChallenges(userId, sessionDistance, itemsCollect
     } catch (error) {
         console.error("Error updating challenges:", error);
     }
+}
+
+// =============================================================================
+// QUICK PIN FEATURE
+// A single geotagged photo pin without a full tracked route.
+// Writes to the same `publishedRoutes` collection with isQuickPin:true,
+// route:[] — Cloud Functions handle XP, stats, and badge grants automatically.
+// Spec: https://littertroopers.com (internal Android spec doc)
+// =============================================================================
+
+// In-flight state for a quick pin in progress. Cleared on save or cancel.
+let _qp = null;
+
+/**
+ * Returns GPS coords within `ms` milliseconds, or null if no fix.
+ * Per spec: 3s timeout, fail silently (no error toast) if exceeded.
+ */
+function getGPSWithTimeout(ms) {
+    return new Promise((resolve) => {
+        let done = false;
+        const timer = setTimeout(() => {
+            if (!done) { done = true; resolve(null); }
+        }, ms);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => { if (!done) { done = true; clearTimeout(timer); resolve(pos.coords); } },
+            ()     => { if (!done) { done = true; clearTimeout(timer); resolve(null); } },
+            { timeout: ms, maximumAge: 10000, enableHighAccuracy: true }
+        );
+    });
+}
+
+/**
+ * Compresses a file and uploads both full-size and thumbnail to Firebase Storage.
+ * Returns { imageURL, thumbnailURL }.
+ * Reuses the same compression settings and Storage path pattern as handlePhoto.
+ */
+async function uploadQuickPinPhoto(file) {
+    const timestamp = Date.now();
+    const uid = state.currentUser.uid;
+
+    // Full-size (same as route pin photos)
+    const fullOpts = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
+    const compressed = await imageCompression(file, fullOpts);
+    const fullRef = ref(storage, `photos/${uid}/${timestamp}-full.jpg`);
+    const fullSnap = await uploadBytes(fullRef, compressed);
+    const imageURL = await getDownloadURL(fullSnap.ref);
+
+    // Thumbnail (100px, ~50KB)
+    const thumbOpts = { maxSizeMB: 0.05, maxWidthOrHeight: 100, useWebWorker: true };
+    const thumb = await imageCompression(file, thumbOpts);
+    const thumbRef = ref(storage, `photos/${uid}/${timestamp}-thumb.jpg`);
+    const thumbSnap = await uploadBytes(thumbRef, thumb);
+    const thumbnailURL = await getDownloadURL(thumbSnap.ref);
+
+    return { imageURL, thumbnailURL };
+}
+
+/**
+ * Populates the category <select> and wires the subcategory <select>.
+ * Called once when the quick pin modal opens.
+ */
+function populateQuickPinCategories() {
+    const catSelect = document.getElementById('quickPinCategory');
+    const subWrap   = document.getElementById('quickPinSubcategoryWrap');
+    const subSelect = document.getElementById('quickPinSubcategory');
+    if (!catSelect) return;
+
+    catSelect.innerHTML = '';
+    for (const cat in pinCategories) {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        catSelect.appendChild(opt);
+    }
+
+    const syncSubs = () => {
+        const subs = pinCategories[catSelect.value] || [];
+        if (subs.length > 0) {
+            subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+            subWrap.style.display = 'block';
+        } else {
+            subWrap.style.display = 'none';
+        }
+    };
+    catSelect.addEventListener('change', syncSubs);
+    syncSubs(); // seed on open
+}
+
+/**
+ * Opens the quick pin edit modal with the photo preview and "Uploading…" state.
+ * The Save button is disabled until the upload resolves.
+ */
+function openQuickPinModal(previewURL) {
+    const modal = document.getElementById('quickPinModal');
+    if (!modal) return;
+    document.getElementById('quickPinPreview').src = previewURL;
+    document.getElementById('quickPinTitle').value = '';
+    document.getElementById('quickPinUploadStatus').style.display = 'block';
+    document.getElementById('quickPinSaveBtn').disabled = true;
+    populateQuickPinCategories();
+    modal.style.display = 'flex';
+}
+
+/**
+ * Called after upload completes — enables the Save button.
+ */
+function quickPinUploadReady() {
+    document.getElementById('quickPinUploadStatus').style.display = 'none';
+    document.getElementById('quickPinSaveBtn').disabled = false;
+}
+
+/**
+ * Main handler for the quickPinCameraInput `change` event.
+ * Triggered when the user picks or takes a photo while NOT tracking.
+ *
+ * Flow (matching Android spec):
+ *   1. Request GPS in parallel with photo processing.
+ *   2. Wait up to 3s for a GPS fix.
+ *   3. If no fix: abort silently (no error toast), re-enable button.
+ *   4. If fix: open edit modal, upload photo in background, enable Save.
+ */
+export async function handleQuickPinPhoto(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file || !state.currentUser) {
+        if (event.target) event.target.value = '';
+        return;
+    }
+    event.target.value = ''; // reset so same file can be re-selected
+
+    const pictureBtn = document.getElementById('pictureBtn');
+    pictureBtn.innerHTML = '⏳';
+    pictureBtn.disabled = true;
+
+    // Start GPS request immediately (in parallel — don't block camera UI).
+    const gpsPromise = getGPSWithTimeout(3000);
+
+    // Show local preview right away using an object URL (instant, no upload yet).
+    const previewURL = URL.createObjectURL(file);
+
+    // Wait for GPS result.
+    const coords = await gpsPromise;
+
+    if (!coords) {
+        // No fix within 3s — abort silently per spec.
+        URL.revokeObjectURL(previewURL);
+        pictureBtn.innerHTML = '📸';
+        pictureBtn.disabled = false;
+        return;
+    }
+
+    // Store in-flight state so saveQuickPin() can access it.
+    _qp = { previewURL, coords, file, imageURL: null, thumbnailURL: null };
+
+    // Open modal (Save is disabled until upload finishes).
+    openQuickPinModal(previewURL);
+
+    // Re-enable button so user can interact with the modal.
+    pictureBtn.innerHTML = '📸';
+    pictureBtn.disabled = false;
+
+    // Upload in background while user edits title/category.
+    try {
+        const { imageURL, thumbnailURL } = await uploadQuickPinPhoto(file);
+        _qp.imageURL = imageURL;
+        _qp.thumbnailURL = thumbnailURL;
+        quickPinUploadReady();
+    } catch (err) {
+        console.error('Quick pin upload failed:', err);
+        cancelQuickPin();
+        toast('Upload failed. Please try again.', 'error');
+    }
+}
+
+/**
+ * Writes the quick pin to Firestore. Called by the modal Save button.
+ * Shape matches the Android spec exactly: route:[], isQuickPin:true,
+ * pin uses top-level lat/lng (Android schema).
+ */
+export async function saveQuickPin() {
+    if (!_qp || !_qp.imageURL || !state.currentUser) return;
+
+    const saveBtn = document.getElementById('quickPinSaveBtn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Saving…'; }
+
+    try {
+        const profileSnap = await getDoc(doc(db, 'publicProfiles', state.currentUser.uid));
+        const username = profileSnap.exists() ? (profileSnap.data().username || 'Anonymous') : 'Anonymous';
+
+        const title    = (document.getElementById('quickPinTitle')?.value || '').trim() || 'Quick Pin';
+        const category = document.getElementById('quickPinCategory')?.value || 'Other';
+        const subCat   = document.getElementById('quickPinSubcategory')?.value || null;
+
+        await addDoc(collection(db, 'publishedRoutes'), {
+            userId:    state.currentUser.uid,
+            username,
+            timestamp: serverTimestamp(),
+            route:     [],          // empty — no path for a quick pin
+            isQuickPin: true,
+            pins: [{
+                id:           'pin-' + Date.now(),
+                lat:          _qp.coords.latitude,   // Android top-level lat/lng schema
+                lng:          _qp.coords.longitude,
+                imageURL:     _qp.imageURL,
+                thumbnailURL: _qp.thumbnailURL,
+                title,
+                category,
+                ...(subCat ? { subCategory: subCat } : {})
+            }]
+        });
+
+        toast('⚡ Quick pin saved!', 'success');
+        cancelQuickPin(); // closes modal, revokes preview URL, clears _qp
+    } catch (err) {
+        console.error('saveQuickPin failed:', err);
+        toast('Could not save pin: ' + (err.message || err), 'error');
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Pin'; }
+    }
+}
+
+/**
+ * Closes the quick pin modal and cleans up in-flight state.
+ * Called by the Cancel/× button, or after a successful save.
+ */
+export function cancelQuickPin() {
+    const modal = document.getElementById('quickPinModal');
+    if (modal) modal.style.display = 'none';
+    if (_qp && _qp.previewURL) URL.revokeObjectURL(_qp.previewURL);
+    _qp = null;
 }
