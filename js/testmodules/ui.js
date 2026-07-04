@@ -1,13 +1,14 @@
+
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc } from './firebase.js'; 
 import { state, allTitles, allBadges } from './config.js';
-import { initializeMap, changeMapStyle, centerOnRoute, setupSectorVisuals } from './map.js';
+import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
 import { 
     toggleCommunityView, publishRoute, populatePublishedRoutesList, 
     loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, 
-    fetchAndDisplayMyStats, updateSwarmPulse,
+    fetchAndDisplayMyStats,
     handleMeetupSubmit, validateMeetupForm, toggleRouteLike, 
     openAchievementsModal, openEventBadgesModal, openCurrentChallenges,
     // Logic Helpers
@@ -136,11 +137,6 @@ const elements = {
  */
 export function initializeUI() {
     initializeMap();
-    // Add this right after initializeMap();
-    state.map.on('load', () => {
-        setupSectorVisuals();
-        updateSwarmPulse();
-    });
     state.map.on('dragstart', (e) => { if (e.originalEvent) resetFindMeState(); });
     state.map.on('zoomstart', (e) => { if (e.originalEvent) resetFindMeState(); });
     initializeAuthListener();
@@ -600,24 +596,6 @@ export function attachEventListeners() {
             handlePasswordReset();
         });
     }
-
-    let sectorsVisible = false;
-
-document.getElementById('toggleSectorsBtn').addEventListener('click', () => {
-    sectorsVisible = !sectorsVisible;
-    const visibility = sectorsVisible ? 'visible' : 'none';
-    const btn = document.getElementById('toggleSectorsBtn');
-
-    // Loop through our 4 sectors and flip the switch
-    ['RP-01', 'RP-02', 'RP-03', 'RP-04', 'RP-05'].forEach(id => {
-        if (state.map.getLayer(`layer-${id}`)) {
-            state.map.setLayoutProperty(`layer-${id}`, 'visibility', visibility);
-        }
-    });
-
-    btn.textContent = sectorsVisible ? '🗺️ Hide Sectors' : '🗺️ Show Sectors';
-    btn.classList.toggle('active', sectorsVisible);
-});
 
 // --- SQUADS NAVIGATION ---
 const hubSquadsBtn = document.getElementById('hubSquadsBtn');
