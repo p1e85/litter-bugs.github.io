@@ -1,11 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Litter Troopers - Map Tracker</title>
-
-
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4A7C59">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,10 +22,10 @@
     <script src='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js'></script>
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪲</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗑️</text></svg>">
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css' rel='stylesheet' />
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
-    <link rel="stylesheet" href="css/mapbetastyle.css">
+    <link rel="stylesheet" href="css/maptest.css">
 </head>
 <body>
 
@@ -67,16 +66,23 @@
         <div class="modal-content">
             <button class="close-btn">&times;</button>
             <h2>Menu</h2>
-            <button id="trackBtn" class="modal-button btn-secondary">🛰️ Start Tracking</button>
-            <button id="dataBtn" class="modal-button btn-secondary">💾 Data Management</button>
-            <hr>
-            <button id="infoBtn" class="modal-button btn-secondary">ℹ️ Info & Terms</button>
-            <button id="editProfileBtn" class="modal-button btn-secondary edit-profile">👤 Edit My Profile</button>
-            <a href="https://www.littertroopers.com" target="_blank" class="modal-button btn-secondary">🌐 Visit Website</a>
-            <a href="https://www.paypal.com/donate/?hosted_button_id=8HAXRDMMHHKQU" target="_blank" class="modal-button btn-support">☕ Support</a>
-            <hr>
-            <p>Publish your completed route for the community to see.</p>
-            <button id="publishBtn" class="modal-button btn-primary">🚀 Publish to Community</button>
+            <div class="menu-grid">
+                <button id="trackBtn" class="modal-button btn-secondary">🛰️ Start Tracking</button>
+                <button id="dataBtn" class="modal-button btn-secondary">💾 Data Management</button>
+                <hr>
+                <button id="infoBtn" class="modal-button btn-secondary">ℹ️ Info & Terms</button>
+                <button id="editProfileBtn" class="modal-button btn-secondary edit-profile">👤 Edit My Profile</button>
+                <button id="hubBtn" class="modal-button btn-secondary">🏙️ Community Hub</button>
+                <button id="btnAchievements" class="modal-button btn-secondary">🏆 My Achievements</button>
+                
+                <a href="https://www.littertroopers.com" target="_blank" class="modal-button btn-secondary">🌐 Visit Website</a>
+                <a href="https://www.paypal.com/donate/?hosted_button_id=8HAXRDMMHHKQU" target="_blank" class="modal-button btn-support">☕ Support</a>
+                <hr>
+                <p>Publish your completed route for the community to see.</p>
+                <button id="publishBtn" class="modal-button btn-primary">🚀 Publish to Community</button>
+                <!-- Admin-only: hidden by default, shown via checkAdminPermissions() -->
+                <button id="btnAdminPanelFull" class="modal-button" style="display:none; background-color:#dc3545; color:white; border-color:#dc3545; margin-top:8px; text-align:center; justify-content:center;">🛠️ Admin Panel</button>
+            </div>
         </div>
     </div>
 
@@ -96,25 +102,9 @@
                     <li><strong>Community View:</strong> Toggle the 'Community View' button to see all routes...</li>
                 </ol>
             </div>
-            <p class="tos-link-container">You can review the full <a href="https://www.littertroopers.com/tos.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> at any time.</p>
+            <p class="tos-link-container">You can review the full <a href="#" id="viewTermsLink">Terms of Use</a> at any time.</p>
         </div>
     </div>
-
-    <div id="welcomeModal" class="modal-overlay" style="display: none; z-index: 1000;">
-    <div class="modal-content" style="text-align: center; max-width: 400px;">
-        <div style="font-size: 3em; margin-bottom: 10px;">🪲</div>
-        <h2 style="color: #4A7C59; margin-bottom: 15px;">Welcome to Litter Troopers!</h2>
-        <p style="color: #555; margin-bottom: 20px;">Ready to help clean up the planet? Here is how to get started:</p>
-        
-        <div style="text-align: left; background: #f4f7f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <p style="margin: 10px 0;"><strong>1. 📍 Start Tracking:</strong> Tap the "Track Route" button when you start your walk.</p>
-            <p style="margin: 10px 0;"><strong>2. 🥤 Log Items:</strong> Tap the quick buttons to count trash as you pick it up.</p>
-            <p style="margin: 10px 0;"><strong>3. 📸 Publish:</strong> Hit stop, snap a photo of your full garbage bag, and publish your route!</p>
-        </div>
-
-        <button id="closeWelcomeBtn" class="modal-button primary" style="width: 100%; font-size: 1.1em;">Let's Go!</button>
-    </div>
-</div>
     
     <div id="termsModal" class="modal-overlay">
          <div class="modal-content">
@@ -142,6 +132,7 @@
                 <input type="text" id="usernameInput" placeholder="Public Username">
                 <input type="email" id="emailInput" placeholder="Email (for login)">
                 <input type="password" id="passwordInput" placeholder="Password (min. 6 characters)">
+                <a href="#" id="forgotPasswordLink" style="font-size: 0.8em; color: #4A7C59; text-decoration: none; margin-left: 5px; display: none;">Forgot Password?</a>
                 <div id="ageGateContainer" class="age-gate-container">
                     <input type="checkbox" id="ageCheckbox">
                     <label for="ageCheckbox">I certify that I am 18 years of age or older.</label>
@@ -149,6 +140,7 @@
                 <button id="authActionBtn" class="btn-primary" disabled>Sign Up</button>
             </form>
             <hr>
+            
             <button id="skipBtn" class="skip-button">Skip for now</button>
             <p id="authError" class="error-message"></p>
         </div>
@@ -173,8 +165,19 @@
             <button class="close-btn">&times;</button>
             <h2>Edit Your Public Profile</h2>
             <div class="profile-form">
-                <label for="bioInput">Short Bio</label>
-                <textarea id="bioInput" placeholder="Tell the community a little about yourself..." maxlength="150"></textarea>
+            <label for="bioInput">Short Bio</label>
+            <textarea id="bioInput" placeholder="Tell the community a little about yourself..." maxlength="150"></textarea>
+                <div class="profile-section" style="margin-bottom: 20px; text-align: left;">
+                    <label for="titleSelect" style="display: block; font-weight: bold; color: #4A7C59; margin-bottom: 5px;">
+                        🏆 My Trooper Title
+                    </label>
+                    <select id="titleSelect" class="modal-input" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                        <option value="">No Title Selected</option>
+                    </select>
+                    <small id="titleRequirement" style="display: block; margin-top: 5px; color: #888; font-style: italic;">
+                        Select a title to see how to unlock it.
+                    </small>
+                </div>
                 <label for="locationInput">Location</label>
                 <input type="text" id="locationInput" placeholder="e.g., Chicago, IL" maxlength="50">
                 <label for="coffeeLinkInput">"Buy Me a Coffee" Link</label>
@@ -203,29 +206,29 @@
     </div>
 
     <div id="summaryModal" class="modal-overlay">
-<div class="modal-content summary-modal">
-        <button class="close-btn">&times;</button>
-        <h2>Great Job!</h2>
-        <p>Here's a summary of your cleanup session:</p>
-        <div class="summary-stats">
-            <div><span class="stat-value" id="summaryDistance">0.0 mi</span><span class="stat-label">Distance</span></div>
-            <div><span class="stat-value" id="summaryPins">0</span><span class="stat-label">Items Pinned</span></div>
-            <div><span class="stat-value" id="summaryDuration">0m 0s</span><span class="stat-label">Duration</span></div>
-        </div>
-
-        <div class="summary-photo-section">
-            <button id="addCleanupPhotoBtn" class="modal-button btn-secondary">📸 Add Cleanup Photo</button>
-            <hr>
-            <p style="margin-bottom: 5px; font-style: italic;">Your Cleanup Photo:</p>
-            <div id="cleanupPhotoPreviewContainer" style="margin-top: 15px; display: none;">
-                
-                <img id="cleanupPhotoPreview" src="#" alt="Cleanup Photo Thumbnail" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid #ccc;">
+        <div class="modal-content summary-modal">
+            <button class="close-btn">&times;</button>
+            <h2>Great Job!</h2>
+            <p>Here's a summary of your cleanup session:</p>
+            <div class="summary-stats">
+                <div><span class="stat-value" id="summaryDistance">0.0 mi</span><span class="stat-label">Distance</span></div>
+                <div><span class="stat-value" id="summaryPins">0</span><span class="stat-label">Items Pinned</span></div>
+                <div><span class="stat-value" id="summaryDuration">0m 0s</span><span class="stat-label">Duration</span></div>
             </div>
-            <input type="file" id="cleanupCameraInput" accept="image/*" capture style="display: none;">
+
+            <div class="summary-photo-section">
+                <button id="addCleanupPhotoBtn" class="modal-button btn-secondary">📸 Add Cleanup Photo</button>
+                <hr>
+                <p style="margin-bottom: 5px; font-style: italic;">Your Cleanup Photo:</p>
+                <div id="cleanupPhotoPreviewContainer" style="margin-top: 15px; display: none;">
+                    
+                    <img id="cleanupPhotoPreview" src="#" alt="Cleanup Photo Thumbnail" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid #ccc;">
+                </div>
+                <input type="file" id="cleanupCameraInput" accept="image/*" capture style="display: none;">
+            </div>
+            <button id="shareBtn" class="modal-button btn-primary">📣 Share Your Cleanup!</button>
+            <button id="summaryOkBtn" class="ok-btn modal-button btn-secondary">Awesome!</button>
         </div>
-        <button id="shareBtn" class="modal-button btn-primary">📣 Share Your Cleanup!</button>
-        <button id="summaryOkBtn" class="ok-btn modal-button btn-secondary">Awesome!</button>
-    </div>
     </div>
 
     <div id="sessionsModal" class="modal-overlay">
@@ -290,31 +293,61 @@
             <button id="achievementOkBtn" class="ok-btn modal-button">Awesome!</button>
         </div>
     </div>
+
+    <div id="achievementsModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="achievementsTitle">🏆 Achievements</h3>
+            
+            <div id="achievementsList" class="achievements-grid" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                </div>
+
+            <button id="achievementListBackBtn" class="modal-button secondary" style="margin-top: 15px;">Back to Menu</button>
+        </div>
+    </div>
     
     <div id="meetupModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>Schedule a Meetup</h2>
-            <p class="modal-subtitle">Organize a public cleanup event at this location that other users can see and join.</p>
-            <p>Location: <strong id="meetupLocationName"></strong></p>
-            <div id="meetupForm" class="profile-form">
-                <input type="hidden" id="poiNameInput">
-                <label for="meetupTitleInput">Meetup Title</label>
-                <input type="text" id="meetupTitleInput" placeholder="e.g., Saturday Morning Cleanup" maxlength="50">
-                <label for="meetupDescriptionInput">Description</label>
-                <textarea id="meetupDescriptionInput" placeholder="e.g., Let's meet by the main entrance at 9 AM!" maxlength="200"></textarea>
-                <div class="safety-disclaimer">
-                    <strong>Safety First:</strong> You are organizing a public event. For your safety and the safety of others, always meet in well-lit, public places and be aware of your surroundings. Litter Troopers is a platform for connecting people; we are not responsible for any incidents that occur at user-organized meetups.
-                </div>
-                <div class="agreement-section">
-                    <input type="checkbox" id="safetyCheckbox">
-                    <label for="safetyCheckbox">I understand and agree to the safety guidelines.</label>
-                </div>
-                <p id="profanityWarning" class="error-message" style="display: none;">Please use appropriate language.</p>
-                <button id="createMeetupBtn" class="modal-button" disabled>Create Meetup</button>
+            <h3>Schedule Meetup</h3>
+            <p>Location: <span id="meetupLocationName"></span></p>
+            <input type="hidden" id="poiNameInput">
+    
+            <input type="hidden" id="meetupLat">
+            <input type="hidden" id="meetupLng">
+            
+            <input type="text" id="meetupTitleInput" placeholder="Event Title (e.g., Sunday Cleanup)" maxlength="50">
+            
+            <input type="datetime-local" id="meetupDateInput">
+            
+            <textarea id="meetupDescriptionInput" placeholder="Describe the plan..." rows="3" maxlength="200"></textarea>
+            <div class="safety-disclaimer">
+                <strong>Safety First:</strong> You are organizing a public event. For your safety and the safety of others, always meet in well-lit, public places and be aware of your surroundings. Litter Troopers is a platform for connecting people; we are not responsible for any incidents that occur at user-organized meetups.
             </div>
+            <div>
+                <input type="checkbox" id="safetyCheckbox">
+                <label for="safetyCheckbox">I agree to follow local safety guidelines.</label>
+            </div>
+            <hr>
+            <p id="profanityWarning">Please keep language clean.</p>
+            
+            <button id="createMeetupBtn" class="modal-button primary" disabled>Schedule</button>
+            
         </div>
     </div>
+
+<div id="eventsModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-btn">&times;</button>
+        <h2>📅 Local Cleanups</h2>
+        
+        <div id="eventsList" class="scrollable-list">
+            </div>
+        <button id="btnEventsBack" class="modal-button btn-secondary">
+            Back to Hub
+        </button>
+    </div>
+</div>
+    
     <div id="viewMeetupsModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
@@ -324,8 +357,527 @@
             <ul id="meetupsList" class="session-list"></ul>
         </div>
     </div>
+
+    <div id="hubModal" class="modal-overlay">
+        <div class="modal-content hub-modal">
+            <button class="close-btn">&times;</button>
+            <h2>Community Hub</h2>
+            <p class="modal-subtitle">Connect, challenge, and clean together.</p>
+
+            <!-- Pending squad invites strip. Hidden by default; populated &
+                 shown by ui.js whenever the user opens the hub. -->
+            <div id="hubInvitesStrip" style="display:none; background:#fff8e1; border:1px solid #ffd54f; border-radius:6px; padding:10px 12px; margin-bottom:14px;">
+                <strong style="color:#b8860b;">🎟️ You have pending squad invites</strong>
+                <div id="hubInvitesList" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;"></div>
+            </div>
+
+            <div class="hub-grid">
+                <div class="hub-card" id="hubChallengesBtn">
+                    <span class="hub-icon">🏆</span>
+                    <h3>Challenges</h3>
+                    <p>Join weekly goals and track progress.</p>
+                </div>
+
+                <div class="hub-card" id="hubEventsBtn">
+                    <div class="calendar-icon">
+                        <div class="cal-header"></div>
+                        <div class="cal-body" id="dynamicDateDay">1</div>
+                    </div>
+                    <h3>Local Events</h3>
+                    <p>Find or host cleanup meetups nearby.</p>
+                </div>
+
+                <div class="hub-card squad-btn-compact feed-btn-hero" id="hubFeedBtn">
+                    <span class="hub-icon">📸</span>
+                    <h3>Activity Feed</h3>
+                    <p>See the latest cleanups from around the world.</p>
+                </div>
+                <div class="hub-card squad-btn-compact" id="hubSquadsBtn">
+                    <span class="hub-icon">🛡️</span>
+                    <h3>Squads</h3>
+                    <p>Join a unit or invade</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="feedModal" class="modal-overlay">
+        <div class="modal-content feed-modal">
+            <button class="close-btn">&times;</button>
+            <h2>Community Activity</h2>
+            <p class="modal-subtitle">Real-time updates from fellow Troopers.</p>
+            
+            <div id="feedContainer" class="feed-container">
+                <div class="feed-loader">Scanning the globe for cleanups...</div>
+            </div>
+        </div>
+    </div>
+
+<div id="squadsModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('squadsModal')">&times;</button>
+        
+        <div class="admin-header">
+            <h3>🛡️ Squad Command</h3>
+            <p id="userSquadStatusText">Scanning tactical status...</p>
+        </div>
+
+        <div id="squadRegistryView">
+            <div class="menu-buttons-vertical" style="margin-bottom: 20px;">
+                <button id="btnCreateSquad" class="modal-button btn-primary" onclick="openCreateSquadForm()">➕ Form New Squad</button>
+            </div>
+
+            <h4 style="text-align: left; margin-bottom: 10px; font-size: 0.9rem; color: #666; text-transform: uppercase;">Local Units in Rogers Park</h4>
+            
+            <div id="localSquadsList" class="session-list" style="max-height: 350px; overflow-y: auto;">
+                <p style="text-align: center; padding: 20px; color: #999;">No squads found. Be the first to lead.</p>
+            </div>
+        </div>
+
+<div id="squadIntelView" style="display: none;">
+    <h2 id="intelSquadName">Squad Name</h2>
+    <h3 id="intelSquadCallsign" style="color: #4A7C59;">[CALLSIGN]</h3>
     
-    <script src="js/main.js" type="module"></script>
+    <div class="intel-section">
+        <h4>Mission Statement</h4>
+        <p id="intelSquadMission">Loading...</p>
+    </div>
+
+    <div class="intel-section">
+        <h4>Active Roster</h4>
+        <ul id="intelSquadRoster" class="roster-list">
+            </ul>
+    </div>
+
+    <!-- Action panel: shows context-aware buttons based on user's relationship
+         to this squad (member/non-member/has-request/has-invite/leader). All
+         visibility is set by JS in fetchSquadDetails. -->
+    <div id="intelActionPanel" class="intel-section" style="display:none;">
+        <h4>Actions</h4>
+        <div id="intelActionContent" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+
+    <!-- Leader-only: pending join requests for this squad. -->
+    <div id="intelJoinRequestsSection" class="intel-section" style="display:none;">
+        <h4>📥 Pending Join Requests <span id="intelJoinRequestCount" style="font-size:0.85em; color:#666;"></span></h4>
+        <div id="intelJoinRequestsList"></div>
+    </div>
+
+    <!-- Leader-only: outstanding invites this squad has sent. -->
+    <div id="intelInvitesSection" class="intel-section" style="display:none;">
+        <h4>📤 Outstanding Invites <span id="intelInvitesCount" style="font-size:0.85em; color:#666;"></span></h4>
+        <div id="intelInvitesList"></div>
+        <button id="intelInviteBtn" class="modal-button btn-secondary" style="margin-top:8px;">
+            🎟️ Invite a Trooper
+        </button>
+    </div>
+
+    <button class="modal-button btn-secondary" onclick="showSquadRegistry()">← Back to Registry</button>
+</div>
+
+<!-- Invite picker modal: typeahead search over publicProfiles. Opens from the
+     leader's "Invite a Trooper" button inside squad intel. -->
+<div id="invitePickerModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width:420px;">
+        <button class="close-btn" id="invitePickerClose">&times;</button>
+        <h3>🎟️ Invite a Trooper</h3>
+        <p style="font-size:0.85em; color:#666;">Search by username. Users already in a squad can't be invited.</p>
+        <input type="text" id="invitePickerSearch" placeholder="Start typing a username..."
+            autocomplete="off" autocapitalize="off"
+            style="width:100%; padding:10px; margin:8px 0; box-sizing:border-box;">
+        <div id="invitePickerResults" style="max-height:300px; overflow-y:auto;">
+            <p style="color:#888; font-size:0.85em; padding:10px;">Type to search…</p>
+        </div>
+    </div>
+</div>
+
+        <div id="squadCreateView" style="display: none;">
+    <button class="modal-button secondary" onclick="showSquadRegistry()" style="padding: 5px; font-size: 0.8rem; width: auto; margin-bottom: 15px;">
+        ← Back to Registry
+    </button>
+    
+    <h3>Form New Squad</h3>
+    
+    <div class="squad-form-container">
+        <div class="form-group">
+            <label>Squad Name</label>
+            <input type="text" id="newSquadName" placeholder="e.g. Rogers Park Rangers" maxlength="30">
+        </div>
+
+        <div class="form-row" style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+                <label>Callsign (4 Chars)</label>
+                <input type="text" id="newSquadCallsign" placeholder="RPR1" maxlength="4" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Home Sector</label>
+                <select id="newSquadHomeSector">
+                    <option value="RP-01">RP-01</option>
+                    <option value="RP-02">RP-02</option>
+                    <option value="RP-03">RP-03</option>
+                    <option value="RP-04">RP-04</option>
+                    <option value="RP-05">RP-05</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Squad Mission</label>
+            <textarea id="newSquadBio" rows="3" placeholder="Mission focus..." maxlength="150"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="newSquadMaxMembers">Max Members (2-50)</label>
+            <input type="number" id="newSquadMaxMembers" min="2" max="50" value="20"
+                style="width: 100%;">
+        </div>
+
+        <div class="form-group" style="display:flex; align-items:flex-start; gap:8px; padding:8px; background:#f7f7f5; border-radius:4px; margin-top:8px;">
+            <input type="checkbox" id="newSquadInviteOnly" style="margin-top:4px; flex-shrink:0;">
+            <label for="newSquadInviteOnly" style="margin:0; font-weight:normal; cursor:pointer;">
+                <strong>Make this squad invite-only</strong>
+                <div style="font-size:0.85em; color:#666; margin-top:2px;">
+                    If checked, users cannot request to join — only the leader can invite them. Leave unchecked to allow join requests.
+                </div>
+            </label>
+        </div>
+    </div>
+
+    <button id="btnFinalizeSquad" class="launch-btn" style="width: 100%;">
+        🚀 INITIALIZE SQUAD
+    </button>
+</div>
+
+    </div>
+</div>
+    
+    <div id="challengeMenuModal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center;">
+            <h3>🚀 Challenge Central</h3>
+            <p>Complete challenges to earn badges and climb the leaderboard!</p>
+            
+            <div class="menu-buttons-vertical">
+                <button id="btnCurrentChallenges" class="modal-button primary">⚡ Current Challenges</button>
+                <button id="btnPastChallenges" class="modal-button secondary btn-secondary">📜 Past Challenges</button>
+                
+                <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 5px 0;">
+                
+                <button id="btnViewEventBadges" class="modal-button btn-secondary">⚔️ Event Badges</button>
+            </div>
+            
+            <button class="close-btn">&times;</button>
+             <button id="btnchallengeMenuBack" class="modal-button secondary">Back to Hub</button>
+        </div>
+    </div>
+
+    <div id="activeChallengesModal" class="modal-overlay">
+        <div class="modal-content">
+            
+            <h3>⚡ Active Challenges</h3>
+            <p>Join a quest to earn badges!</p>
+            
+            <div id="activeChallengesList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                <p>Loading quests...</p>
+            </div>
+
+            <div style="margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 10px;">
+                <button id="btnBackFromCurrent" class="modal-button secondary">Back to Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pastChallengesModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>📜 Challenge History</h3>
+            
+            <div class="modal-tabs">
+                <button class="modal-tab active" id="tabCompleted">Completed</button>
+                <button class="modal-tab" id="tabUncompleted">Uncompleted</button>
+            </div>
+
+            <div id="pastChallengesContent" class="scrollable-list">
+            </div>
+            
+            <button id="btnPastChallengesBack" class="modal-button secondary">Back to Menu</button>
+        </div>
+    </div>
+
+    <!-- logTrashModal was incorrectly nested inside the old admin challenge modal;
+         hoisted up to top level. The admin challenge UI itself has been moved
+         into the Challenges tab of the unified Admin Panel below. -->
+    <div id="logTrashModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn">&times;</button>
+            <h2>Log Trash Items</h2>
+            <p>Enter the number of items you collected:</p>
+            <input type="number" id="trashCountInput" placeholder="e.g. 15" class="modal-input" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+            <button id="confirmTrashBtn" class="modal-button btn-primary">Confirm Log</button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         ADMIN PANEL (Phase 1: stats + pending events + pending squads)
+         Only visible to users with role === "admin". Firestore rules
+         enforce this at the data layer too — the UI is a convenience.
+         ============================================================ -->
+    <div id="adminPanelModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 720px; width: 95%;">
+            <button class="close-btn">&times;</button>
+            <h2>🛠️ Admin Panel</h2>
+
+            <!-- Tab buttons -->
+            <div class="admin-tab-bar">
+                <button class="admin-tab-btn active" data-tab="stats">📊 Stats</button>
+                <button class="admin-tab-btn" data-tab="pendingEvents">📅 Pending Events</button>
+                <button class="admin-tab-btn" data-tab="activeEvents">✅ Active Events</button>
+                <button class="admin-tab-btn" data-tab="pendingSquads">🛡️ Pending Squads</button>
+                <button class="admin-tab-btn" data-tab="activeSquads">⚔️ Active Squads</button>
+                <button class="admin-tab-btn" data-tab="users">👥 Users</button>
+                <button class="admin-tab-btn" data-tab="reports">🚩 Reports</button>
+                <button class="admin-tab-btn" data-tab="challenges">🎯 Challenges</button>
+                <button class="admin-tab-btn" data-tab="audit">🕓 Audit Log</button>
+            </div>
+
+            <!-- Tab bodies -->
+            <div class="admin-tab-body" data-tab="stats" style="display:block;">
+                <div id="adminStatsContent"><p>Loading stats…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="pendingEvents" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Events submitted by regular users awaiting your review.</p>
+                <div id="adminPendingEventsContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="activeEvents" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Currently scheduled meetups. Delete to remove from the map.</p>
+                <div id="adminActiveEventsContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="pendingSquads" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Squads awaiting your approval.</p>
+                <div id="adminPendingSquadsContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="activeSquads" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">All active squads. Deleting removes the squad and disbands members.</p>
+                <div id="adminActiveSquadsContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="users" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">All registered users. Search by username. Toggle Event Organizer (low-risk) or Admin (requires double-confirm).</p>
+                <div id="adminUsersContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="reports" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">User-submitted reports. <strong>Resolve</strong> = action taken. <strong>Dismiss</strong> = no violation. Content removal is manual.</p>
+                <div id="adminReportsContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="challenges" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Create and manage global quests that all users can join.</p>
+                <div id="adminChallengesContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="audit" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Record of recent admin actions across the panel. Requires the <code>adminActions</code> Firestore rule (see audit.js header).</p>
+                <div id="adminAuditContent"><p>Loading…</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT PIN MODAL — opened from the 🚩 button on community pin popups -->
+    <div id="reportPinModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 480px;">
+            <button class="close-btn" id="reportPinCloseBtn">&times;</button>
+            <h2>🚩 Report This Pin</h2>
+            <p style="color:#666; font-size:0.9em; margin-top:0;">Reports are reviewed by admins. False reports may affect your account.</p>
+
+            <div id="reportTargetPreview" style="background:#f7f7f5; border:1px solid #e0e0d8; border-radius:6px; padding:10px; margin:10px 0;"></div>
+
+            <label for="reportReasonSelect" style="display:block; margin-top:10px; font-weight:600;">Reason</label>
+            <select id="reportReasonSelect" style="width:100%; padding:8px; margin-top:4px;">
+                <option value="inappropriate">Inappropriate content</option>
+                <option value="contains-person">Photo of a person (TOS violation)</option>
+                <option value="spam">Spam or promotional</option>
+                <option value="not-litter">Not actually litter / misleading</option>
+                <option value="offensive">Offensive title or category</option>
+                <option value="other">Other</option>
+            </select>
+
+            <label for="reportDetailsInput" style="display:block; margin-top:10px; font-weight:600;">Additional details (optional)</label>
+            <textarea id="reportDetailsInput" rows="3" maxlength="500" placeholder="Anything else the admin should know…"
+                style="width:100%; padding:8px; margin-top:4px; box-sizing:border-box; resize:vertical;"></textarea>
+
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
+                <button id="reportCancelBtn" class="modal-button btn-secondary" style="width:auto; padding:8px 16px;">Cancel</button>
+                <button id="reportSubmitBtn" class="modal-button btn-danger" style="width:auto; padding:8px 16px;">Submit Report</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Admin Panel styles — scoped so they don't leak into the rest of the app */
+
+        /* Modal sizing: on mobile go (almost) full-screen so the user gets all
+           the space available. On desktop cap the width. */
+        #adminPanelModal .modal-content {
+            max-width: 720px;
+            width: 95%;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+        }
+        @media (max-width: 600px) {
+            #adminPanelModal .modal-content {
+                width: 100%;
+                max-width: 100%;
+                max-height: 100vh;
+                height: 100vh;
+                border-radius: 0;
+                padding: 12px;
+            }
+        }
+
+        /* Tab bar: scrolls horizontally on narrow screens instead of wrapping.
+           Wrapping the 8 tabs onto 2-3 lines ate too much vertical space. */
+        .admin-tab-bar {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex-wrap: nowrap;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+        .admin-tab-bar::-webkit-scrollbar { height: 4px; }
+        .admin-tab-bar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+        .admin-tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 1em;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.15s ease;
+            flex-shrink: 0; /* don't squash tabs in the scroll bar */
+            white-space: nowrap;
+        }
+        .admin-tab-btn:hover { color: #4A7C59; }
+        .admin-tab-btn.active {
+            color: #4A7C59;
+            font-weight: 600;
+            border-bottom-color: #4A7C59;
+        }
+        @media (max-width: 600px) {
+            .admin-tab-btn { padding: 8px 10px; font-size: 0.9em; }
+        }
+
+        /* Tab body fills remaining height & scrolls vertically */
+        .admin-tab-body {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        /* Stats grid: 5 across on wide, wraps automatically. On mobile we want
+           2 columns minimum so the cards aren't enormous. */
+        .admin-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+        @media (max-width: 600px) {
+            .admin-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+        }
+
+        .admin-stat-card {
+            background: #f7f7f5;
+            border: 1px solid #e0e0d8;
+            border-radius: 6px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+        .admin-stat-card.admin-stat-attention {
+            background: #fff8e1;
+            border-color: #ffd54f;
+        }
+        .admin-stat-label {
+            font-size: 0.7em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        .admin-stat-value {
+            font-size: 1.6em;
+            font-weight: 600;
+            color: #4A7C59;
+            line-height: 1.1;
+        }
+        .admin-stat-attention .admin-stat-value { color: #b8860b; }
+
+        /* Queue cards (events, squads, reports). Stack vertically on mobile so
+           the action buttons get full width and aren't crammed at the bottom. */
+        .admin-queue-card {
+            background: #fff;
+            border: 1px solid #e0e0d8;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .admin-queue-card h4 { margin: 0 0 4px 0; color: #4A7C59; font-size: 1em; }
+        .admin-queue-meta { margin: 0 0 4px 0; font-size: 0.85em; color: #666; line-height: 1.35; }
+        .admin-queue-desc { margin: 4px 0 0 0; font-size: 0.9em; color: #444; white-space: pre-wrap; word-wrap: break-word; }
+        .admin-queue-card-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+        .admin-queue-card-actions button {
+            width: auto !important;
+            padding: 6px 14px !important;
+            font-size: 0.9em !important;
+        }
+        @media (max-width: 600px) {
+            .admin-queue-card-actions {
+                justify-content: stretch;
+            }
+            .admin-queue-card-actions button {
+                flex: 1;
+            }
+        }
+
+        /* User rows */
+        .admin-user-row {
+            background: #fff;
+            border: 1px solid #e0e0d8;
+            border-radius: 4px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .admin-user-row strong { font-size: 0.95em; }
+        .admin-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: 600;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .admin-badge-admin { background: #dc3545; color: white; }
+        .admin-badge-organizer { background: #4A7C59; color: white; }
+        .admin-badge-past { background: #888; color: white; }
+    </style>
+
+    <script src="js/maintest.js" type="module"></script>
 
 </body>
 </html>
