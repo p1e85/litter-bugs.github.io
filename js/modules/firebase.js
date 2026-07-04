@@ -1,15 +1,15 @@
 // Import the functions you need from the SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
-    getFirestore, doc, getDoc, setDoc, updateDoc, collection, 
-    addDoc, getDocs, query, orderBy, where, deleteDoc, limit, onSnapshot 
+    getFirestore, doc, getDoc, setDoc, updateDoc, collection, collectionGroup,
+    addDoc, getDocs, query, orderBy, where, deleteDoc, limit, onSnapshot, serverTimestamp, Timestamp, arrayUnion, arrayRemove, runTransaction, deleteField, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { 
     getStorage, ref, uploadBytes, getDownloadURL 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import { 
     getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-    signOut, onAuthStateChanged, deleteUser 
+    signOut, onAuthStateChanged, deleteUser, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Your web app's Firebase configuration
@@ -43,6 +43,7 @@ export {
     setDoc,
     updateDoc,
     collection,
+    collectionGroup,
     addDoc,
     getDocs,
     query,
@@ -51,6 +52,7 @@ export {
     deleteDoc,
     limit,
     onSnapshot,
+    getCountFromServer,
     // Storage Functions
     ref,
     uploadBytes,
@@ -60,5 +62,12 @@ export {
     signInWithEmailAndPassword,
     signOut,
     onAuthStateChanged,
-    deleteUser
+    deleteUser,
+    serverTimestamp,
+    Timestamp,
+    arrayUnion,
+    arrayRemove,
+    runTransaction,
+    sendPasswordResetEmail,
+    deleteField
 };
