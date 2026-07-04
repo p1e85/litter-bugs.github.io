@@ -3,7 +3,7 @@ import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc 
 import { state, allTitles, allBadges } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
-import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState } from './tracking.js';
+import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState, handleQuickPinPhoto, saveQuickPin, cancelQuickPin } from './tracking.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
 import { 
     toggleCommunityView, publishRoute, populatePublishedRoutesList, 
@@ -206,8 +206,27 @@ export function attachEventListeners() {
     elements.findMeBtn.addEventListener('click', findMe);
     elements.trackBtn.addEventListener('click', toggleTracking);
     
-    elements.pictureBtn.addEventListener('click', () => elements.cameraInput.click());
+    // pictureBtn routes to different behavior based on tracking state:
+    //  - During tracking: triggers the regular route-photo cameraInput
+    //  - When NOT tracking (but logged in): triggers the quick pin camera
+    elements.pictureBtn.addEventListener('click', () => {
+        if (state.isTracking) {
+            elements.cameraInput.click();
+        } else {
+            document.getElementById('quickPinCameraInput')?.click();
+        }
+    });
     elements.cameraInput.addEventListener('change', handlePhoto);
+
+    // Quick pin camera and modal wiring
+    const quickPinInput = document.getElementById('quickPinCameraInput');
+    if (quickPinInput) quickPinInput.addEventListener('change', handleQuickPinPhoto);
+    document.getElementById('quickPinSaveBtn')?.addEventListener('click', saveQuickPin);
+    document.getElementById('quickPinCancelBtn')?.addEventListener('click', cancelQuickPin);
+    // Also close on overlay click (matches all other modals)
+    document.getElementById('quickPinModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'quickPinModal') cancelQuickPin();
+    });
     
     elements.changeStyleBtn.addEventListener('click', changeMapStyle);
     
@@ -670,12 +689,16 @@ export function updateLoggedInStatusUI(isLoggedIn, username = '') {
         if (elements.publishBtn) elements.publishBtn.style.display = 'block';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'block';
         if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'block';
+        // Enable Quick Pin — pictureBtn is usable whenever logged in (not just during tracking)
+        if (elements.pictureBtn) elements.pictureBtn.disabled = false;
     } else {
         if (loggedInContent) loggedInContent.style.display = 'none';
         if (guestContent) guestContent.style.display = 'block';
         if (elements.publishBtn) elements.publishBtn.style.display = 'none';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'none';
         if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'none';
+        // Disable when logged out — Quick Pin requires an account
+        if (elements.pictureBtn && !state.isTracking) elements.pictureBtn.disabled = true;
     }
 }
 
