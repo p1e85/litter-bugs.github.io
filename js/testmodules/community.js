@@ -1,7 +1,8 @@
+
 import { 
     db, serverTimestamp, Timestamp, collection, getDocs, query, orderBy, addDoc, doc, getDoc, where, setDoc, deleteDoc, updateDoc, onSnapshot, limit, storage, ref, uploadBytes, getDownloadURL, runTransaction, deleteField 
 } from './firebase.js';
-import { state, allBadges, allTitles, profanityList, RP_SECTORS } from './config.js';
+import { state, allBadges, allTitles, profanityList } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore, calculateRouteDistance } from './utils.js';
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
@@ -1454,19 +1455,6 @@ export async function checkForTitleMilestones(userId, routeCoords) {
         // 2. ROUTE MILESTONES
         if (totalRoutes >= 10) await grantTitle(userId, 'litter_warrior');
 
-        // 3. GEOGRAPHIC MILESTONES (Rogers Park)
-        const [startLon, startLat] = routeCoords[0];
-        const sectorId = getSectorFromCoords(startLon, startLat);
-
-        if (sectorId) {
-            // Track how many routes this user has done in RP
-            const rpCount = (data.rpRoutesCount || 0) + 1;
-            await updateDoc(profileRef, { rpRoutesCount: rpCount });
-
-            // Unlock Pioneer after 5 routes in Rogers Park
-            if (rpCount >= 5) await grantTitle(userId, 'rp_pioneer');
-        }
-
         // --- 4. TIME-BASED MILESTONES ---
         const now = new Date();
         const hour = now.getHours(); // 0-23 format
@@ -1492,73 +1480,6 @@ export async function checkForTitleMilestones(userId, routeCoords) {
     }
 }
 
-function getSectorFromCoords(lon, lat) {
-// The "West Side" (RP-05) now capped at Howard Street (42.0190)
-    // New slope calculation for the Ridge curb between Howard and Devon
-    const ridgeBoundary = -87.6765 + ((lat - 41.9975) * ((-87.6833 - -87.6765) / (42.0190 - 41.9975)));
-    
-    // Checks if the user is South of Howard, but North of Devon
-    if (lat >= 41.9975 && lat <= 42.0190 && lon >= ridgeBoundary && lon <= -87.6750) {
-        return 'RP-05';
-    }
-
-    // 2. Check the other rectangular sectors (RP-01 thru RP-04)
-    for (const [id, bounds] of Object.entries(RP_SECTORS)) {
-        if (id === 'RP-05') continue; // Skip since we checked it above
-        if (lat >= bounds.minLat && lat <= bounds.maxLat &&
-            lon >= bounds.minLon && lon <= bounds.maxLon) {
-            return id;
-        }
-    }
-    return null;
-}
-
-/**
- * Updates the visual "Pulse" of sectors based on recent cleanup activity.
- */
-export async function updateSwarmPulse() {
-    try {
-        const publishedRoutesRef = collection(db, "publishedRoutes");
-        const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
-        
-        const q = query(publishedRoutesRef, where("timestamp", ">=", twoDaysAgo));
-        const querySnapshot = await getDocs(q);
-
-        const activityLog = { 'RP-01': 0, 'RP-02': 0, 'RP-03': 0, 'RP-04': 0, 'RP-05': 0 };
-
-        // FIX: Ensure we are iterating the snapshot correctly
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            // Normalize the route through the same converter the map uses, so we
-            // handle web ({lng,lat}), legacy ([lng,lat]), and Android shapes uniformly.
-            // The old code assumed [lng,lat] arrays only, which silently produced
-            // undefined coords for all web-published routes — activity counts were 0.
-            const route = convertRouteFromFirestore(data.route);
-            if (route && route.length > 0) {
-                const [lon, lat] = route[0];
-                if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
-                const sectorId = getSectorFromCoords(lon, lat); 
-                if (sectorId && activityLog.hasOwnProperty(sectorId)) {
-                    activityLog[sectorId]++;
-                }
-            }
-        });
-
-        // Apply the "Glow" to the map layers
-        Object.entries(activityLog).forEach(([id, count]) => {
-            const layerId = `layer-${id}`;
-            if (state.map.getLayer(layerId)) {
-                // 3+ cleanups = heavy glow, 1-2 = medium, 0 = subtle
-                const opacity = count >= 3 ? 0.5 : (count > 0 ? 0.3 : 0.15);
-                state.map.setPaintProperty(layerId, 'fill-opacity', opacity);
-            }
-        });
-
-        console.log("🔥 Swarm Pulse updated:", activityLog);
-    } catch (err) {
-        console.error("❌ Swarm Pulse error:", err);
-    }
-}
 
 // Add this to your community.js
 export async function initializeSquad() {
