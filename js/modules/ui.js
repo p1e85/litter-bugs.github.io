@@ -2,6 +2,7 @@ import { state } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState, handleQuickPinPhoto, saveQuickPin, cancelQuickPin } from './tracking.js';
+import { openMyProfileModal } from './profile.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
 import {
     toggleCommunityView,
@@ -59,7 +60,8 @@ const elements = {
     infoBtn: document.getElementById('infoBtn'),
     authActionBtn: document.getElementById('authActionBtn'),
     managePublicationsBtn: document.getElementById('managePublicationsBtn'),
-    editProfileBtn: document.getElementById('editProfileBtn'),
+    editProfileBtn: document.getElementById('editProfileBtn'),  // inside myProfileModal now
+    myProfileBtn: document.getElementById('myProfileBtn'),
     saveProfileBtn: document.getElementById('saveProfileBtn'),
     deleteAccountBtn: document.getElementById('deleteAccountBtn'),
     safetyModalOkBtn: document.getElementById('safetyModalOkBtn'),
@@ -200,7 +202,7 @@ function attachEventListeners() {
     // Not tracking (but logged in) → quick pin camera.
     if (elements.pictureBtn) {
         elements.pictureBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // prevent bubble to window modal-close handler
+            e.stopPropagation();
             if (state.isTracking) {
                 elements.cameraInput.click();
             } else {
@@ -209,6 +211,15 @@ function attachEventListeners() {
         });
     }
     if (elements.cameraInput) elements.cameraInput.addEventListener('change', handlePhoto);
+
+    // My Profile button
+    if (elements.myProfileBtn) {
+        elements.myProfileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            elements.menuModal.style.display = 'none';
+            openMyProfileModal();
+        });
+    }
 
     // Quick pin camera input and modal buttons
     const quickPinInput = document.getElementById('quickPinCameraInput');
@@ -424,6 +435,7 @@ export function updateLoggedInStatusUI(isLoggedIn, username = '') {
         if (elements.publishBtn) elements.publishBtn.style.display = 'block';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'block';
         if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'block';
+        if (elements.myProfileBtn) elements.myProfileBtn.disabled = false;
         // Enable Quick Pin — 📸 button works whenever logged in, not just during tracking
         if (elements.pictureBtn) elements.pictureBtn.disabled = false;
     } else {
@@ -432,6 +444,7 @@ export function updateLoggedInStatusUI(isLoggedIn, username = '') {
         if (elements.publishBtn) elements.publishBtn.style.display = 'none';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'none';
         if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'none';
+        if (elements.myProfileBtn) elements.myProfileBtn.disabled = true;
         // Disable Quick Pin on logout (tracking won't be active either)
         if (elements.pictureBtn) elements.pictureBtn.disabled = true;
     }
