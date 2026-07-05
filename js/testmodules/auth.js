@@ -108,34 +108,50 @@ export async function handleSignUp() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const userId = userCredential.user.uid;
 
-        // 1. Create a private user document for sensitive info
+        // 1. users/{uid} — per spec 1.3 (exact shape required by Cloud Functions)
         await setDoc(doc(db, "users", userId), {
             email: userCredential.user.email,
-            totalPins: 0,
-            totalDistance: 0,
-            totalRoutes: 0,
-            unlockedTitles: ['beta_trooper'] // Set initial array here too for safety
+            createdAt: new Date(),
+            fcmToken: "",        // cleared on logout; set if/when push notifications added
+            isSuspended: false,
+            role: ""
         });
 
-        // 2. Create a public profile document
+        // 2. publicProfiles/{uid} — per spec 1.3 (ALL fields required for XP,
+        //    squad system, leaderboard, My Profile to work correctly from day 1)
         await setDoc(doc(db, "publicProfiles", userId), {
-            username,
-            bio: "New recruit in the Litter Troopers squad!", // Updated name
+            username: username.trim(),
+            email: userCredential.user.email,
+            bio: "",
             location: "",
             buyMeACoffeeLink: "",
             badges: {},
             totalPins: 0,
-            totalDistance: 0,
+            totalDistance: 0,   // METERS — convert to miles for display
             totalRoutes: 0,
-            unlockedTitles: ['beta_trooper'], // Matches the private doc
-            selectedTitle: "" // Default empty
+            selectedTitle: "",
+            unlockedTitles: ['beta_trooper'],
+            // Squad fields — empty until user joins a squad
+            squadId: "",
+            squadCallsign: "",
+            squadRole: "",
+            // XP fields — written by Cloud Functions only after this point.
+            // NEVER write xp/level/xpToday/xpTodayDate again after signup.
+            xp: 0,
+            level: 1,
+            xpToday: 0,
+            xpTodayDate: "",
+            showLevel: true,    // user can toggle on My Profile
+            // Permissions & flags
+            role: "",
+            isSuspended: false,
+            isApprovedEventOrganizer: false,
+            createdAt: new Date()
         });
 
-        // 3. --- REWARD HOOK ---
-        // This ensures the grant logic (and potential alert) fires correctly
+        // 3. Grant the beta trooper title
         await grantTitle(userId, 'beta_trooper');
 
-        // Optional: Close modal after success
         if (elements.authModal) elements.authModal.style.display = 'none';
 
     } catch (error) {
