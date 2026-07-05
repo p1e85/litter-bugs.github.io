@@ -166,25 +166,15 @@
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>Edit Your Public Profile</h2>
+            <h2>⚙️ Settings</h2>
             <div class="profile-form">
-            <label for="bioInput">Short Bio</label>
-            <textarea id="bioInput" placeholder="Tell the community a little about yourself..." maxlength="150"></textarea>
-                <div class="profile-section" style="margin-bottom: 20px; text-align: left;">
-                    <label for="titleSelect" style="display: block; font-weight: bold; color: #4A7C59; margin-bottom: 5px;">
-                        🏆 My Trooper Title
-                    </label>
-                    <select id="titleSelect" class="modal-input" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-                        <option value="">No Title Selected</option>
-                    </select>
-                    <small id="titleRequirement" style="display: block; margin-top: 5px; color: #888; font-style: italic;">
-                        Select a title to see how to unlock it.
-                    </small>
-                </div>
+                <label for="bioInput">Short Bio</label>
+                <textarea id="bioInput" placeholder="Tell the community a little about yourself..." maxlength="150"></textarea>
                 <label for="locationInput">Location</label>
                 <input type="text" id="locationInput" placeholder="e.g., Chicago, IL" maxlength="50">
                 <label for="coffeeLinkInput">"Buy Me a Coffee" Link</label>
                 <input type="url" id="coffeeLinkInput" placeholder="https://www.buymeacoffee.com/yourname">
+                <small style="color:#888; font-size:0.82em;">To change your display title, open 👤 My Profile.</small>
                 <button id="saveProfileBtn" class="modal-button btn-primary">Save Profile</button>
                 <hr>
                 <button id="deleteAccountBtn" class="modal-button btn-danger">Permanently Delete Account</button>
