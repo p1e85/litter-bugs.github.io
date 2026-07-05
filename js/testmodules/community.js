@@ -6,6 +6,7 @@ import { state, allBadges, allTitles, profanityList } from './config.js';
 import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFirestore, convertPinsFromFirestore, calculateRouteDistance } from './utils.js';
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
+import { checkXpDelta, getLevelBadgeHTML, renderProfileXpSection } from './xp.js';
 
 // utils.calculateRouteDistance returns METERS; convert to miles when needed.
 const METERS_TO_MILES = 0.000621371;
@@ -257,6 +258,10 @@ export async function publishRoute() {
         const badgesBefore = beforeSnap.exists() ? Object.keys(beforeSnap.data().badges || {}) : [];
         const username = beforeSnap.exists() ? beforeSnap.data().username : "Anonymous";
 
+        // Snapshot XP + level BEFORE the write for the post-publish XP delta check.
+        const xpBefore    = beforeSnap.exists() ? (beforeSnap.data().xp    ?? 0) : 0;
+        const levelBefore = beforeSnap.exists() ? (beforeSnap.data().level  ?? 1) : 1;
+
         // calculateRouteDistance returns METERS; store both for safety.
         const distanceMeters = calculateRouteDistance(state.routeCoordinates);
         const distanceMiles = distanceMeters * METERS_TO_MILES;
@@ -321,6 +326,10 @@ export async function publishRoute() {
                 showPopup(newBadges[0]);
             }
         });
+
+        // Non-blocking XP check: waits 3s, reads updated profile, shows XP toast
+        // or level-up overlay if XP increased. Silent if delta === 0.
+        checkXpDelta(state.currentUser.uid, xpBefore, levelBefore);
     } catch (error) {
         console.error("Error publishing route:", error);
         alert("There was an error publishing your route.");
@@ -459,10 +468,17 @@ export async function fetchAndDisplayLeaderboard(metric) {
                 ? `${((profileData.totalDistance || 0) * 0.000621371).toFixed(2)} mi` 
                 : (profileData.totalPins || 0);
 
+            // Level badge: only when showLevel !== false AND level > 1 (spec rule)
+            const badgeHTML = getLevelBadgeHTML(
+                profileData.level ?? 1,
+                profileData.showLevel !== false,
+                20
+            );
+
             li.innerHTML = `
                 <span class="leaderboard-rank">${rank}.</span>
                 <span class="leaderboard-name">
-                    <a href="#" class="leaderboard-profile-link">${profileData.username}</a>
+                    <a href="#" class="leaderboard-profile-link">${profileData.username}</a>${badgeHTML}
                 </span>
                 <span class="leaderboard-score">${score}</span>
             `;
@@ -491,6 +507,13 @@ export async function fetchAndDisplayMyStats() {
             return;
         }
         const profileData = publicProfileSnap.data();
+
+        // XP / Level section — rendered first so it's the first thing the user sees.
+        // The uid param enables the show-level toggle write (the only permitted client write).
+        const xpDiv = document.createElement('div');
+        renderProfileXpSection(xpDiv, profileData, state.currentUser.uid);
+        myStatsContainer.appendChild(xpDiv);
+
         const distanceMiles = ((profileData.totalDistance || 0) * 0.000621371).toFixed(2);
         let statsHTML = `
             <div class="my-stats-grid">
@@ -510,7 +533,10 @@ export async function fetchAndDisplayMyStats() {
         }
         if (earnedBadgesCount === 0) statsHTML += '<p class="no-badges-message">You haven\'t earned any badges yet. Keep cleaning!</p>';
         statsHTML += `</div></div>`;
-        myStatsContainer.innerHTML = statsHTML;
+
+        const statsDiv = document.createElement('div');
+        statsDiv.innerHTML = statsHTML;
+        myStatsContainer.appendChild(statsDiv);
     } catch (error) {
         console.error("Error fetching your stats:", error);
         myStatsContainer.innerHTML = '<p class="login-prompt">Could not load your stats.</p>';
