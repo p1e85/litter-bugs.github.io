@@ -3,6 +3,8 @@ import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners } from './commun
 import { pinCategories } from './config.js';
 import { showPublicProfile } from './ui.js';
 import { openReportPinModal } from './reports.js';
+import { getLevelBadgeHTML } from './xp.js';
+import { db, doc, getDoc } from './firebase.js';
 
 /**
  * Initializes the Mapbox map, geocoder, and initial event listeners.
@@ -206,7 +208,7 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                 </p>
                 ${pinInfo.brand ? `<p style="margin: 5px 0 0; font-style: italic; color: #555;">Brand: ${pinInfo.brand}</p>` : ''}
                 <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                    <small>By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
+                    <small class="pin-author-line">By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
                     <button class="report-pin-btn" title="Report this pin"
                         style="background:none; border:none; cursor:pointer; font-size:1.1em; padding:2px 6px;">
                         🚩 Report
@@ -285,6 +287,21 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                 e.stopPropagation();
                 openReportPinModal(pinInfo, routeInfo);
             });
+            // Lazy-load author's level badge. One profile read per popup open.
+            // Only shows if showLevel === true AND level > 1 (spec rule).
+            if (routeInfo.userId) {
+                getDoc(doc(db, 'publicProfiles', routeInfo.userId))
+                    .then(snap => {
+                        if (!snap.exists()) return;
+                        const p = snap.data();
+                        const badge = getLevelBadgeHTML(p.level ?? 1, p.showLevel !== false, 18);
+                        if (!badge) return;
+                        // Inject badge after the profile link inside the pin-author-line
+                        const authorEl = popup.getElement().querySelector('.pin-author-line');
+                        if (authorEl) authorEl.insertAdjacentHTML('beforeend', badge);
+                    })
+                    .catch(() => {}); // non-critical
+            }
         }
     });
     return popup;
