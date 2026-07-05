@@ -390,14 +390,7 @@ export async function loadProfileForEditing() {
             document.getElementById('bioInput').value = profileData.bio || '';
             document.getElementById('locationInput').value = profileData.location || '';
             document.getElementById('coffeeLinkInput').value = profileData.buyMeACoffeeLink || '';
-
-            // --- TITLE LOGIC ---
-            const titleSelect = document.getElementById('titleSelect');
-            if (titleSelect) {
-                titleSelect.value = profileData.selectedTitle || '';
-                // Manually trigger the "Requirement" text update
-                titleSelect.dispatchEvent(new Event('change'));
-            }
+            // Note: selectedTitle is no longer in this form — it lives in My Profile.
         }
     } catch (error) {
         console.error("Error loading profile:", error);
@@ -410,17 +403,14 @@ export async function saveProfile() {
     const bio = document.getElementById('bioInput').value;
     const location = document.getElementById('locationInput').value;
     const coffeeLink = document.getElementById('coffeeLinkInput').value;
-    
-    // Get the key (e.g., 'og_9') from the dropdown
-    const selectedTitle = document.getElementById('titleSelect').value;
 
     try {
         const publicProfileRef = doc(db, "publicProfiles", state.currentUser.uid);
         await updateDoc(publicProfileRef, { 
             bio, 
             location, 
-            buyMeACoffeeLink: coffeeLink,
-            selectedTitle: selectedTitle // SAVE THE KEY
+            buyMeACoffeeLink: coffeeLink
+            // selectedTitle intentionally omitted — managed in My Profile only
         });
         alert("Profile updated successfully!");
         document.getElementById('profileModal').style.display = 'none';
