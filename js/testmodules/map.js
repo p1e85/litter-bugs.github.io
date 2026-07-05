@@ -44,6 +44,32 @@ export function initializeMap() {
     state.map.on('load', () => {
         initializeMapLayers();
         setupPoiClickListeners(); // From community.js
+
+        // Silent initial centering (spec §2.2): if location permission is already
+        // granted, ease the camera to the user's area on open. Conditions:
+        //   - find-me must be OFF (we don't override an active find-me session)
+        //   - not currently tracking a route
+        //   - no timeout — if geolocation is slow we just stay on Chicago
+        // We use maximumAge:60000 (accept a 1-minute-old cached fix) and
+        // enableHighAccuracy:false so this is instant and battery-free.
+        // If permission hasn't been granted yet, getCurrentPosition will call the
+        // error callback immediately with PERMISSION_DENIED — no prompt shown.
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    // Only center if find-me is still off and we're not tracking
+                    if (state.findMeState === 0 && !state.isTracking) {
+                        state.map.easeTo({
+                            center: [pos.coords.longitude, pos.coords.latitude],
+                            zoom: 12,
+                            duration: 800
+                        });
+                    }
+                },
+                () => { /* Permission denied or unavailable — stay on Chicago. Silent. */ },
+                { enableHighAccuracy: false, maximumAge: 60000, timeout: 5000 }
+            );
+        }
     });
 
     state.map.on('zoom', toggleMarkerVisibility);
