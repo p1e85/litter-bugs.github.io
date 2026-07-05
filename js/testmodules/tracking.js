@@ -5,6 +5,7 @@ import { createAndAddMarker, updateUserPinsSource } from './map.js';
 import { calculateRouteDistance } from './utils.js';
 import { clearCurrentSession } from './data.js';
 import { toast } from './toast.js';
+import { checkXpDelta } from './xp.js';
 
 let locationWatcher = null;
 
@@ -510,6 +511,12 @@ export async function saveQuickPin() {
         const profileSnap = await getDoc(doc(db, 'publicProfiles', state.currentUser.uid));
         const username = profileSnap.exists() ? (profileSnap.data().username || 'Anonymous') : 'Anonymous';
 
+        // Snapshot XP + level BEFORE the write. After the write, Cloud Function
+        // runs async and updates these fields. checkXpDelta reads the delta 3s later.
+        // Per spec: never write these fields ourselves — read-only.
+        const xpBefore    = profileSnap.exists() ? (profileSnap.data().xp    ?? 0) : 0;
+        const levelBefore = profileSnap.exists() ? (profileSnap.data().level  ?? 1) : 1;
+
         const title    = (document.getElementById('quickPinTitle')?.value || '').trim() || 'Quick Pin';
         const category = document.getElementById('quickPinCategory')?.value || 'Other';
         const subCat   = document.getElementById('quickPinSubcategory')?.value || null;
@@ -534,6 +541,11 @@ export async function saveQuickPin() {
 
         toast('⚡ Quick pin saved!', 'success');
         cancelQuickPin(); // closes modal, revokes preview URL, clears _qp
+
+        // Non-blocking XP check. Per spec: wait 3s, read updated profile,
+        // show toast if delta > 0, or level-up overlay if level increased.
+        // If delta === 0 (anti-farming gate), nothing is shown.
+        checkXpDelta(state.currentUser.uid, xpBefore, levelBefore);
     } catch (err) {
         console.error('saveQuickPin failed:', err);
         toast('Could not save pin: ' + (err.message || err), 'error');
