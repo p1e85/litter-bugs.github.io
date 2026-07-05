@@ -70,7 +70,7 @@
             <button id="dataBtn" class="modal-button btn-secondary">💾 Data Management</button>
             <hr>
             <button id="infoBtn" class="modal-button btn-secondary">ℹ️ Info &amp; Terms</button>
-            <button id="editProfileBtn" class="modal-button btn-secondary edit-profile">👤 Edit My Profile</button>
+            <button id="myProfileBtn" class="modal-button btn-secondary" disabled>👤 My Profile</button>
             <a href="https://www.littertroopers.com" target="_blank" class="modal-button btn-secondary">🌐 Visit Website</a>
             <a href="https://www.paypal.com/donate/?hosted_button_id=8HAXRDMMHHKQU" target="_blank" class="modal-button btn-support">☕ Support</a>
             <hr>
@@ -354,6 +354,15 @@
                 <select id="quickPinSubcategory" style="width:100%; padding:8px;"></select>
             </div>
             <button id="quickPinSaveBtn" class="modal-button btn-primary" disabled>Save Pin</button>
+        </div>
+    </div>
+
+    <!-- MY PROFILE MODAL — populated by profile.js openMyProfileModal() -->
+    <div id="myProfileModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <div id="myProfileContent">
+                <div style="padding:60px 20px; text-align:center; color:#888;">Loading…</div>
+            </div>
         </div>
     </div>
 
