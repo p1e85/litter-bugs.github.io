@@ -12,7 +12,7 @@
 
 import {
     db, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-    query, where, getCountFromServer
+    query, where, getCountFromServer, functions, httpsCallable
 } from './firebase.js';
 import { state } from './config.js';
 import { renderReportsTab } from './reports.js';
@@ -499,11 +499,44 @@ async function renderStatsTab() {
             <p style="color:#666; font-size:0.9em;">Computing…</p>
         </div>
 
-        <p style="text-align:center; margin-top:14px;">
+        <div style="display:flex; gap:8px; justify-content:center; margin-top:14px; flex-wrap:wrap;">
             <button id="adminStatsRefreshBtn" class="modal-button btn-secondary" style="width:auto; padding:6px 16px;">🔄 Refresh</button>
-        </p>
+            <button id="adminBootstrapBtn" class="modal-button" style="width:auto; padding:6px 16px; background:#1A1A2E; color:white; border-color:#1A1A2E;">📊 Bootstrap Landing Stats</button>
+        </div>
+        <div id="adminBootstrapResult" style="display:none; margin-top:10px; padding:10px; background:#E8F5E9; border-radius:6px; font-size:0.85em; color:#333;"></div>
     `;
     document.getElementById('adminStatsRefreshBtn')?.addEventListener('click', renderStatsTab);
+
+    // Bootstrap Stats — calls the `bootstrapAppStats` Cloud Function (admin-only,
+    // does a full rescan of publishedRoutes and publicProfiles, rewrites config/appStats).
+    document.getElementById('adminBootstrapBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('adminBootstrapBtn');
+        const resultEl = document.getElementById('adminBootstrapResult');
+        btn.disabled = true;
+        btn.textContent = '⏳ Bootstrapping…';
+        resultEl.style.display = 'none';
+        try {
+            const bootstrapFn = httpsCallable(functions, 'bootstrapAppStats');
+            const result = await bootstrapFn();
+            const d = result.data || {};
+            resultEl.innerHTML = `
+                ✅ <strong>Landing page stats updated!</strong><br>
+                ${d.totalPins   != null ? `📍 ${d.totalPins.toLocaleString()} pins &nbsp;` : ''}
+                ${d.totalMiles  != null ? `🚶 ${(typeof d.totalMiles === 'number' ? d.totalMiles.toFixed(1) : d.totalMiles)} mi &nbsp;` : ''}
+                ${d.totalRoutes != null ? `🗺️ ${d.totalRoutes.toLocaleString()} routes &nbsp;` : ''}
+                ${d.totalUsers  != null ? `👥 ${d.totalUsers.toLocaleString()} users` : ''}
+            `;
+            resultEl.style.display = 'block';
+        } catch (err) {
+            resultEl.innerHTML = `❌ Bootstrap failed: ${err.message || err}`;
+            resultEl.style.background = '#FFE8E8';
+            resultEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '📊 Bootstrap Landing Stats';
+        }
+    });
+
     // Fire the top-users computation asynchronously so the stats grid renders first.
     renderTopUsers();
 }
