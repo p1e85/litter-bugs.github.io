@@ -14,10 +14,13 @@ import {
     query,
     where,
     getDocs,
-    deleteDoc
+    deleteDoc,
+    sendPasswordResetEmail
 } from './firebase.js';
 import { state } from './config.js';
-import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
+import { checkAdminPermissions, updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
+import * as ui from './ui.js';
+import { grantTitle } from './community.js';
 
 /**
  * Sets up the listener that responds to changes in the user's login state.
@@ -26,50 +29,56 @@ import { updateAuthModalUI, updateLoggedInStatusUI } from './ui.js';
  */
 export function initializeAuthListener() {
     onAuthStateChanged(auth, async (user) => {
-        //console.log('--- onAuthStateChanged listener fired ---');
         if (user) {
-            //console.log('Listener detected user:', user.uid);
             state.currentUser = user;
+            
             try {
-                // Check for and create user profile documents if they don't exist
+                // 1. Check for private user docs
                 const userDocRef = doc(db, "users", user.uid);
                 const userDocSnap = await getDoc(userDocRef);
                 if (userDocSnap.exists() && userDocSnap.data().totalPins === undefined) {
                     await updateDoc(userDocRef, { totalPins: 0, totalDistance: 0, totalRoutes: 0 });
                 }
 
+                // 2. Fetch the Public Profile (Where the 'role' lives)
                 const publicProfileRef = doc(db, "publicProfiles", user.uid);
                 const publicProfileSnap = await getDoc(publicProfileRef);
+                
                 let username;
+                let userProfileData = {}; // Store data here
 
                 if (publicProfileSnap.exists()) {
-                    username = publicProfileSnap.data().username;
+                    userProfileData = publicProfileSnap.data(); // Get the actual data
+                    username = userProfileData.username;
+                    
+                    // ✅ CORRECT PLACE: Now that we have the data, check for Admin
+                    ui.checkAdminPermissions(userProfileData);
+
                 } else {
-                    //console.log("User profile missing! Creating a default one.");
+                    // Create default profile if missing
                     const defaultUsername = user.email.split('@')[0];
-                    await setDoc(publicProfileRef, {
+                    userProfileData = {
                         username: defaultUsername,
                         bio: "This user is new to Litter Bugs!",
                         location: "",
-                        buyMeACoffeeLink: "",
                         badges: {},
-                        totalPins: 0,
-                        totalDistance: 0,
-                        totalRoutes: 0
-                    });
+                        role: "user" // Default role
+                    };
+                    
+                    await setDoc(publicProfileRef, userProfileData);
                     username = defaultUsername;
                 }
-                // Update the UI to reflect the logged-in state
+                
+                // Update UI
                 updateLoggedInStatusUI(true, username);
 
             } catch (error) {
-                //console.error("Error fetching or updating user profile:", error);
-                updateLoggedInStatusUI(false); // Fallback to logged-out state on error
+                console.error("Error fetching user profile:", error);
+                updateLoggedInStatusUI(false); 
             }
         } else {
-            //console.log('Listener detected NO user (logged out).');
+            // Logged Out
             state.currentUser = null;
-            // Update the UI to reflect the logged-out state
             updateLoggedInStatusUI(false);
         }
     });
@@ -98,24 +107,53 @@ export async function handleSignUp() {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const userId = userCredential.user.uid;
-        // Create a private user document for sensitive info
+
+        // 1. users/{uid} — per spec 1.3 (exact shape required by Cloud Functions)
         await setDoc(doc(db, "users", userId), {
             email: userCredential.user.email,
-            totalPins: 0,
-            totalDistance: 0,
-            totalRoutes: 0
+            createdAt: new Date(),
+            fcmToken: "",        // cleared on logout; set if/when push notifications added
+            isSuspended: false,
+            role: ""
         });
-        // Create a public profile document
+
+        // 2. publicProfiles/{uid} — per spec 1.3 (ALL fields required for XP,
+        //    squad system, leaderboard, My Profile to work correctly from day 1)
         await setDoc(doc(db, "publicProfiles", userId), {
-            username,
-            bio: "This user is new to Litter Bugs!",
+            username: username.trim(),
+            email: userCredential.user.email,
+            bio: "",
             location: "",
             buyMeACoffeeLink: "",
             badges: {},
             totalPins: 0,
-            totalDistance: 0,
-            totalRoutes: 0
+            totalDistance: 0,   // METERS — convert to miles for display
+            totalRoutes: 0,
+            selectedTitle: "",
+            unlockedTitles: ['beta_trooper'],
+            // Squad fields — empty until user joins a squad
+            squadId: "",
+            squadCallsign: "",
+            squadRole: "",
+            // XP fields — written by Cloud Functions only after this point.
+            // NEVER write xp/level/xpToday/xpTodayDate again after signup.
+            xp: 0,
+            level: 1,
+            xpToday: 0,
+            xpTodayDate: "",
+            showLevel: true,    // user can toggle on My Profile
+            // Permissions & flags
+            role: "",
+            isSuspended: false,
+            isApprovedEventOrganizer: false,
+            createdAt: new Date()
         });
+
+        // 3. Grant the beta trooper title
+        await grantTitle(userId, 'beta_trooper');
+
+        if (elements.authModal) elements.authModal.style.display = 'none';
+
     } catch (error) {
         authError.textContent = error.message;
     }
@@ -194,6 +232,27 @@ export async function handleAccountDeletion() {
             alert("This is a sensitive operation. Please log out and log back in to delete your account.");
         } else {
             alert("An error occurred while deleting your account.");
+        }
+    }
+}
+
+export async function handlePasswordReset() {
+    const email = document.getElementById('emailInput').value.trim();
+    
+    if (!email) {
+        alert("Please enter your email address first.");
+        return;
+    }
+
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert("Reset link sent! Check your inbox (and spam folder).");
+    } catch (error) {
+        console.error("Reset Error:", error.code);
+        if (error.code === 'auth/user-not-found') {
+            alert("No account found with this email.");
+        } else {
+            alert("Error sending reset link. Please try again.");
         }
     }
 }
