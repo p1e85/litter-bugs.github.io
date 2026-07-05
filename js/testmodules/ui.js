@@ -1,3 +1,4 @@
+
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc } from './firebase.js'; 
 import { state, allTitles, allBadges } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
@@ -1083,36 +1084,9 @@ export async function showPublicProfile(userId) {
     }
 }
 
-export function populateTitleDropdown(unlockedTitles = []) {
-    const titleSelect = document.getElementById('titleSelect');
-    const requirementText = document.getElementById('titleRequirement');
-    
-    if (!titleSelect) return;
-
-    // 1. Clear the dropdown
-    titleSelect.innerHTML = '<option value="">No Title Selected</option>';
-
-    // 2. Only add titles that are in the user's unlockedTitles array
-    // If the array is empty, they only see "No Title Selected"
-    Object.keys(allTitles).forEach(key => {
-        if (unlockedTitles.includes(key)) {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = allTitles[key].name;
-            titleSelect.appendChild(option);
-        }
-    });
-
-    // 3. Update requirement text on change
-    titleSelect.onchange = (e) => {
-        const selectedKey = e.target.value;
-        if (selectedKey && allTitles[selectedKey]) {
-            requirementText.textContent = `Active Title: ${allTitles[selectedKey].name}`;
-        } else {
-            requirementText.textContent = "Select from your unlocked titles.";
-        }
-    };
-}
+// populateTitleDropdown was removed — title selection moved to My Profile (profile.js).
+// Kept as a no-op export so any lingering call sites don't throw a module error.
+export function populateTitleDropdown() {}
 
 // Switches between the three "screens" in the Squads Modal
 export function switchSquadView(viewName) {
