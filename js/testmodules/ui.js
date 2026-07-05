@@ -1,4 +1,3 @@
-
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc } from './firebase.js'; 
 import { state, allTitles, allBadges } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
@@ -16,12 +15,14 @@ import {
 } from './community.js';
 import { openAdminPanel, showAdminTab } from './admin.js';
 import { closeReportPinModal, submitPendingReport } from './reports.js';
+import { openMyProfileModal } from './profile.js';
 
 // --- DOM Element Selection ---
 const elements = {
     // Admin Elements
     // NOTE: Old btnAdminPanel + adminChallengeModal + form fields removed.
     // Challenge creation is now in the Challenges tab of the unified Admin Panel.
+    myProfileBtn: document.getElementById('myProfileBtn'),
     
     // General Modals
     termsModal: document.getElementById('termsModal'),
@@ -64,7 +65,6 @@ const elements = {
     infoBtn: document.getElementById('infoBtn'),
     authActionBtn: document.getElementById('authActionBtn'),
     managePublicationsBtn: document.getElementById('managePublicationsBtn'),
-    editProfileBtn: document.getElementById('editProfileBtn'),
     saveProfileBtn: document.getElementById('saveProfileBtn'),
     deleteAccountBtn: document.getElementById('deleteAccountBtn'),
     safetyModalOkBtn: document.getElementById('safetyModalOkBtn'),
@@ -313,24 +313,15 @@ export function attachEventListeners() {
     });
 
     // --- PROFILE ---
-    elements.editProfileBtn.addEventListener('click', async () => {
-        if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
-        try {
-            // Fetch the user's profile to see what titles they own
-            const docSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
-            const userData = docSnap.data() || {};
-        
-            // Pass the user's unlocked titles to the dropdown (default to empty array if none)
-            const myTitles = userData.unlockedTitles || []; 
-        
-            populateTitleDropdown(myTitles);
-            loadProfileForEditing();
-        
-            elements.profileModal.style.display = 'flex';
-        } catch (err) {
-            console.error("Error opening profile:", err);
-        }
-    });
+    // myProfileBtn opens the new My Profile modal.
+    // The Edit Profile button now lives INSIDE that modal (profile.js).
+    if (elements.myProfileBtn) {
+        elements.myProfileBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent overlay-close handler
+            elements.menuModal.style.display = 'none';
+            openMyProfileModal();
+        });
+    }
     elements.saveProfileBtn.addEventListener('click', saveProfile);
 
     // --- LEADERBOARD ---
@@ -688,7 +679,8 @@ export function updateLoggedInStatusUI(isLoggedIn, username = '') {
         if (elements.authModal) elements.authModal.style.display = 'none';
         if (elements.publishBtn) elements.publishBtn.style.display = 'block';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'block';
-        if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'block';
+        // Enable My Profile button (disabled when logged out)
+        if (elements.myProfileBtn) elements.myProfileBtn.disabled = false;
         // Enable Quick Pin — pictureBtn is usable whenever logged in (not just during tracking)
         if (elements.pictureBtn) elements.pictureBtn.disabled = false;
     } else {
@@ -696,7 +688,8 @@ export function updateLoggedInStatusUI(isLoggedIn, username = '') {
         if (guestContent) guestContent.style.display = 'block';
         if (elements.publishBtn) elements.publishBtn.style.display = 'none';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'none';
-        if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'none';
+        // Disable My Profile when logged out
+        if (elements.myProfileBtn) elements.myProfileBtn.disabled = true;
         // Disable when logged out — Quick Pin requires an account
         if (elements.pictureBtn && !state.isTracking) elements.pictureBtn.disabled = true;
     }
