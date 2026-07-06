@@ -270,10 +270,12 @@
             <div class="leaderboard-tabs">
                 <button class="leaderboard-tab" id="myStatsBtn">My Stats</button>
                 <button class="leaderboard-tab active" data-metric="totalPins">Most Pins</button>
-                <button class="leaderboard-tab" data-metric="totalDistance">Most Distance</button>
+                <button class="leaderboard-tab" data-metric="totalDistance">Distance</button>
+                <button class="leaderboard-tab" id="squadsLeaderboardBtn">🛡️ Squads</button>
             </div>
             <ol id="leaderboardList" class="leaderboard-list"></ol>
-            <div id="myStatsContainer" class="my-stats-container" style="display: none;"></div>
+            <div id="myStatsContainer" class="my-stats-container" style="display:none;"></div>
+            <div id="squadsLeaderboardContainer" style="display:none;"></div>
         </div>
     </div>
 
@@ -921,6 +923,50 @@
             </div>
         </div>
     </div>
+
+    <style>
+    /* ---- Leaderboard card styles ---- */
+    .lb-list { list-style:none; padding:0; margin:0; }
+    .lb-card {
+        display:flex; align-items:center; gap:12px;
+        padding:12px 10px; border-radius:8px; margin-bottom:6px;
+        background:#fff; border:1px solid #EEE;
+        cursor:pointer; transition:background 0.15s;
+    }
+    .lb-card:hover { background:#F7F9F7; }
+    .lb-card.lb-rank-1 { background:#FFFDE7; border-color:#FFD700; }
+    .lb-card.lb-rank-2 { background:#F5F5F5; border-color:#B0BEC5; }
+    .lb-card.lb-rank-3 { background:#FBE9E7; border-color:#FF8A65; }
+    .lb-card.lb-me     { background:#E8F5E9; border-color:#4A7C59; }
+    .lb-rank-emoji { font-size:1.4em; width:28px; text-align:center; flex-shrink:0; }
+    .lb-rank-num   { font-size:0.9em; font-weight:700; color:#888; width:24px; text-align:center; flex-shrink:0; }
+    .lb-avatar {
+        width:38px; height:38px; border-radius:50%; flex-shrink:0;
+        background:#4A7C59; color:white; font-weight:700; font-size:1em;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .lb-info { flex:1; min-width:0; }
+    .lb-name-row { display:flex; align-items:center; gap:4px; }
+    .lb-username { font-weight:700; color:#333; font-size:0.95em; }
+    .lb-title    { font-size:0.75em; color:#888; margin-top:1px; }
+    .lb-score    { font-size:1.1em; font-weight:700; color:#4A7C59; flex-shrink:0; }
+
+    /* Squad leaderboard cards */
+    .lb-squad-card {
+        display:flex; align-items:center; gap:12px;
+        padding:12px 10px; border-radius:8px; margin-bottom:6px;
+        background:#fff; border:1px solid #EEE;
+    }
+    .lb-squad-card.lb-rank-1 { background:#FFFDE7; border-color:#FFD700; }
+    .lb-squad-callsign {
+        font-size:1em; font-weight:900; color:#4A7C59;
+        min-width:44px; text-align:center;
+    }
+    .lb-squad-info { flex:1; min-width:0; }
+    .lb-squad-name { font-weight:700; font-size:0.95em; color:#333; }
+    .lb-squad-meta { font-size:0.78em; color:#888; margin-top:1px; }
+    .lb-squad-score { font-size:1.1em; font-weight:700; color:#4A7C59; flex-shrink:0; }
+    </style>
 
     <script src="js/maintest.js" type="module"></script>
 
