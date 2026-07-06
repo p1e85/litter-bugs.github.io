@@ -1,25 +1,32 @@
-import { state } from './config.js';
+
+import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc } from './firebase.js'; 
+import { state, allTitles, allBadges } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
-import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion } from './auth.js';
+import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState, handleQuickPinPhoto, saveQuickPin, cancelQuickPin } from './tracking.js';
-import { openMyProfileModal } from './profile.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
-import {
-    toggleCommunityView,
-    publishRoute,
-    populatePublishedRoutesList,
-    loadProfileForEditing,
-    saveProfile,
-    fetchAndDisplayLeaderboard,
+import { 
+    toggleCommunityView, publishRoute, populatePublishedRoutesList, 
+    loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard,
+    fetchSquadsLeaderboard, 
     fetchAndDisplayMyStats,
-    showPublicProfile,
-    handleMeetupSubmit,
-    validateMeetupForm
+    handleMeetupSubmit, validateMeetupForm, toggleRouteLike, 
+    openAchievementsModal, openEventBadgesModal, openCurrentChallenges,
+    // Logic Helpers
+    getUserQuests, joinChallenge, getAdminChallenges, deleteChallenge, createNewChallenge, fetchAndDisplayAllEvents , initializeSquad, fetchLocalSquads, fetchSquadDetails
 } from './community.js';
+import { openAdminPanel, showAdminTab } from './admin.js';
+import { closeReportPinModal, submitPendingReport } from './reports.js';
+import { openMyProfileModal } from './profile.js';
 
 // --- DOM Element Selection ---
 const elements = {
-    // Modals
+    // Admin Elements
+    // NOTE: Old btnAdminPanel + adminChallengeModal + form fields removed.
+    // Challenge creation is now in the Challenges tab of the unified Admin Panel.
+    myProfileBtn: document.getElementById('myProfileBtn'),
+    
+    // General Modals
     termsModal: document.getElementById('termsModal'),
     authModal: document.getElementById('authModal'),
     dataModal: document.getElementById('dataModal'),
@@ -32,17 +39,17 @@ const elements = {
     safetyModal: document.getElementById('safetyModal'),
     summaryModal: document.getElementById('summaryModal'),
     leaderboardModal: document.getElementById('leaderboardModal'),
-    achievementModal: document.getElementById('achievementModal'),
     meetupModal: document.getElementById('meetupModal'),
     viewMeetupsModal: document.getElementById('viewMeetupsModal'),
     menuModal: document.getElementById('menuModal'),
-    communityChallengeBtn: document.getElementById('communityChallengeBtn'),
-    challengeModal: document.getElementById('challengeModal'),
-    addChallengeBtn: document.getElementById('addChallengeBtn'),
-    currentChallengesTab: document.getElementById('currentChallengesTab'),
-    pastChallengesTab: document.getElementById('pastChallengesTab'),
-    welcomeModal: document.getElementById('welcomeModal'),
-    closeWelcomeBtn: document.getElementById('closeWelcomeBtn'),
+    eventsModal: document.getElementById('eventsModal'),
+    
+    // Challenge System Modals
+    challengeMenuModal: document.getElementById('challengeMenuModal'),
+    activeChallengesModal: document.getElementById('activeChallengesModal'),
+    pastChallengesModal: document.getElementById('pastChallengesModal'),
+    achievementsModal: document.getElementById('achievementsModal'), // The List Modal
+    achievementModal: document.getElementById('achievementModal'), // The Popup Modal
 
     // Buttons
     agreeBtn: document.getElementById('agreeBtn'),
@@ -60,8 +67,6 @@ const elements = {
     infoBtn: document.getElementById('infoBtn'),
     authActionBtn: document.getElementById('authActionBtn'),
     managePublicationsBtn: document.getElementById('managePublicationsBtn'),
-    editProfileBtn: document.getElementById('editProfileBtn'),  // inside myProfileModal now
-    myProfileBtn: document.getElementById('myProfileBtn'),
     saveProfileBtn: document.getElementById('saveProfileBtn'),
     deleteAccountBtn: document.getElementById('deleteAccountBtn'),
     safetyModalOkBtn: document.getElementById('safetyModalOkBtn'),
@@ -74,8 +79,18 @@ const elements = {
     shareBtn: document.getElementById('shareBtn'),
     menuBtn: document.getElementById('menuBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
-
-    // Inputs & Forms
+    btnPastChallengesBack: document.getElementById('btnPastChallengesBack'),
+    
+    // Hub Navigation
+    hubModal: document.getElementById('hubModal'),
+    hubBtn: document.getElementById('hubBtn'),
+    hubChallengesBtn: document.getElementById('hubChallengesBtn'),
+    hubEventsBtn: document.getElementById('hubEventsBtn'),
+    hubFeedBtn: document.getElementById('hubFeedBtn'),
+    feedModal: document.getElementById('feedModal'),
+    feedContainer: document.getElementById('feedContainer'),
+    
+    // Inputs
     cameraInput: document.getElementById('cameraInput'),
     termsCheckbox: document.getElementById('termsCheckbox'),
     ageCheckbox: document.getElementById('ageCheckbox'),
@@ -85,339 +100,565 @@ const elements = {
     safetyCheckbox: document.getElementById('safetyCheckbox'),
     meetupTitleInput: document.getElementById('meetupTitleInput'),
     meetupDescriptionInput: document.getElementById('meetupDescriptionInput'),
-
-    // Links & Other
+    meetupDateInput: document.getElementById('meetupDateInput'),
     viewTermsLink: document.getElementById('viewTermsLink'),
+    
+    // Lists & Containers
     leaderboardTabs: document.querySelectorAll('.leaderboard-tab'),
     leaderboardList: document.getElementById('leaderboardList'),
+    publicChallengeList: document.getElementById('publicChallengeList'),
+    pastChallengesContent: document.getElementById('pastChallengesContent'),
+    achievementsList: document.getElementById('achievementsList'),
+    achievementsTitle: document.getElementById('achievementsTitle'),
+    
+    // Specific Navigation Buttons
+    communityChallengeBtn: document.getElementById('communityChallengeBtn'), 
+    btnAchievements: document.getElementById('btnAchievements'), // Main Menu Button
+    btnViewEventBadges: document.getElementById('btnViewEventBadges'), // Challenge Hub Button
+    achievementListBackBtn: document.getElementById('achievementListBackBtn'), // Dynamic Back Button
+    
+    btnCurrentChallenges: document.getElementById('btnCurrentChallenges'),
+    btnPastChallenges: document.getElementById('btnPastChallenges'),
+    btnBackToMenu: document.querySelector('#pastChallengesModal .ok-btn'), // History Back
+    btnBackFromCurrent: document.getElementById('btnBackFromCurrent'), // Current Back
+    btnchallengeMenuBack: document.getElementById('btnchallengeMenuBack'),
+    
+    // Tabs
+    tabCompleted: document.getElementById('tabCompleted'),
+    tabUncompleted: document.getElementById('tabUncompleted'),
+    
+    // LOG TRASH ITEMS (NEW)
+    logTrashBtn: document.getElementById('logTrashBtn'),
+    logTrashModal: document.getElementById('logTrashModal'),
+    trashCountInput: document.getElementById('trashCountInput'),
+    confirmTrashBtn: document.getElementById('confirmTrashBtn')
 };
 
-// --- Initializer ---
-
+/**
+ * Main initializer for the entire UI.
+ */
 export function initializeUI() {
     initializeMap();
-    
     state.map.on('dragstart', (e) => { if (e.originalEvent) resetFindMeState(); });
     state.map.on('zoomstart', (e) => { if (e.originalEvent) resetFindMeState(); });
-
     initializeAuthListener();
     attachEventListeners();
-
     if (sessionStorage.getItem('termsAccepted')) {
         elements.termsModal.style.display = 'none';
         document.getElementById('userStatus').style.display = 'flex';
     } else {
         elements.termsModal.style.display = 'flex';
     }
+
+    const dateElement = document.getElementById('dynamicDateDay');
+    if (dateElement) {
+        dateElement.textContent = new Date().getDate(); 
+    }
+    
 }
 
-function attachEventListeners() {
-    // --- Auth Flow & Terms ---
-    if (elements.termsCheckbox) elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
+export function attachEventListeners() {
+    
+    // --- AUTHENTICATION ---
+    if (elements.loginBtn) {
+        elements.loginBtn.addEventListener('click', () => {
+            const email = prompt("Enter email:");
+            const password = prompt("Enter password:");
+            if (email && password) loginUser(email, password);
+        });
+    }
+
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', handleLogOut);
+    }
+    
+    elements.termsCheckbox.addEventListener('change', () => elements.agreeBtn.disabled = !elements.termsCheckbox.checked);
+    
     elements.agreeBtn.addEventListener('click', () => {
         elements.termsModal.style.display = 'none';
         sessionStorage.setItem('termsAccepted', 'true');
         document.getElementById('userStatus').style.display = 'flex';
-        
-        if (!localStorage.getItem('lt_has_seen_welcome')) {
-            elements.welcomeModal.style.display = 'flex';
-            localStorage.setItem('lt_has_seen_welcome', 'true');
-        } else if (!state.currentUser) {
-            elements.authModal.style.display = 'flex';
-        }
+        if (!state.currentUser) elements.authModal.style.display = 'flex';
     });
 
-    elements.closeWelcomeBtn.addEventListener('click', () => {
-        elements.welcomeModal.style.display = 'none';
-        if (!state.currentUser) {
-            elements.authModal.style.display = 'flex';
-        }
-    });
-    if (elements.loginSignupBtn) elements.loginSignupBtn.addEventListener('click', () => elements.authModal.style.display = 'flex');
-    if (elements.skipBtn) elements.skipBtn.addEventListener('click', () => elements.authModal.style.display = 'none');
+    elements.loginSignupBtn.addEventListener('click', () => elements.authModal.style.display = 'flex');
+    elements.skipBtn.addEventListener('click', () => elements.authModal.style.display = 'none');
     
-    if (elements.authModal) {
-        elements.authModal.addEventListener('click', (e) => {
-            if (e.target.id === 'switchAuthModeLink') {
-                e.preventDefault();
-                state.isSignUpMode = !state.isSignUpMode;
-                updateAuthModalUI();
-            }
-        });
-    }
+    elements.authModal.addEventListener('click', (e) => {
+        if (e.target.id === 'switchAuthModeLink') {
+            e.preventDefault();
+            state.isSignUpMode = !state.isSignUpMode;
+            updateAuthModalUI();
+        }
+    });
 
-    if (elements.authActionBtn) {
-        elements.authActionBtn.addEventListener('click', async (event) => { 
-            event.preventDefault();
-            if (state.isSignUpMode) await handleSignUp();
-            else await handleLogIn();
-        });
-    }
+    elements.authActionBtn.addEventListener('click', async (event) => { 
+        event.preventDefault();
+        if (state.isSignUpMode) await handleSignUp();
+        else await handleLogIn();
+    });
 
-    if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', handleLogOut);
-    if (elements.emailInput) elements.emailInput.addEventListener('input', validateSignUpForm);
-    if (elements.passwordInput) elements.passwordInput.addEventListener('input', validateSignUpForm);
-    if (elements.usernameInput) elements.usernameInput.addEventListener('input', validateSignUpForm);
-    if (elements.ageCheckbox) elements.ageCheckbox.addEventListener('change', validateSignUpForm);
-    if (elements.deleteAccountBtn) elements.deleteAccountBtn.addEventListener('click', handleAccountDeletion);
+    elements.emailInput.addEventListener('input', validateSignUpForm);
+    elements.passwordInput.addEventListener('input', validateSignUpForm);
+    elements.usernameInput.addEventListener('input', validateSignUpForm);
+    elements.ageCheckbox.addEventListener('change', validateSignUpForm);
+    elements.deleteAccountBtn.addEventListener('click', handleAccountDeletion);
 
-    // --- Community Challenge Modal Listeners ---
-    if (elements.addChallengeBtn) {
-        elements.addChallengeBtn.addEventListener('click', () => {
-            alert('Add New Challenge modal will go here.'); document.getElementById('addChallengeModal').style.display = 'flex';
-        });
-    }
+    // --- MAP & TRACKING ---
+    elements.findMeBtn.addEventListener('click', findMe);
+    elements.trackBtn.addEventListener('click', toggleTracking);
+    
+    // pictureBtn routes to different behavior based on tracking state:
+    //  - During tracking: triggers the regular route-photo cameraInput
+    //  - When NOT tracking (but logged in): triggers the quick pin camera
+    elements.pictureBtn.addEventListener('click', () => {
+        if (state.isTracking) {
+            elements.cameraInput.click();
+        } else {
+            document.getElementById('quickPinCameraInput')?.click();
+        }
+    });
+    elements.cameraInput.addEventListener('change', handlePhoto);
 
-    if (elements.communityChallengeBtn) {
-        elements.communityChallengeBtn.addEventListener('click', () => {
-            elements.challengeModal.style.display = 'flex';
-            elements.menuModal.style.display = 'none';
-        });
-    }
-
-    if (elements.currentChallengesTab) {
-        elements.currentChallengesTab.addEventListener('click', () => {
-            document.getElementById('currentChallengesContent').style.display = 'block';
-            document.getElementById('pastChallengesContent').style.display = 'none';
-            elements.currentChallengesTab.classList.add('active');
-            elements.pastChallengesTab.classList.remove('active');
-        });
-    }
-
-    if (elements.pastChallengesTab) {
-        elements.pastChallengesTab.addEventListener('click', () => {
-            document.getElementById('currentChallengesContent').style.display = 'none';
-            document.getElementById('pastChallengesContent').style.display = 'block';
-            elements.currentChallengesTab.classList.remove('active');
-            elements.pastChallengesTab.classList.add('active');
-        });
-    }
-
-    // --- Main Controls ---
-    if (elements.findMeBtn) elements.findMeBtn.addEventListener('click', findMe);
-    if (elements.trackBtn) elements.trackBtn.addEventListener('click', toggleTracking);
-
-    // QUICK PIN: pictureBtn routes based on tracking state.
-    // During tracking → existing route-photo camera.
-    // Not tracking (but logged in) → quick pin camera.
-    if (elements.pictureBtn) {
-        elements.pictureBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (state.isTracking) {
-                elements.cameraInput.click();
-            } else {
-                document.getElementById('quickPinCameraInput')?.click();
-            }
-        });
-    }
-    if (elements.cameraInput) elements.cameraInput.addEventListener('change', handlePhoto);
-
-    // My Profile button
-    if (elements.myProfileBtn) {
-        elements.myProfileBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            elements.menuModal.style.display = 'none';
-            openMyProfileModal();
-        });
-    }
-
-    // Quick pin camera input and modal buttons
+    // Quick pin camera and modal wiring
     const quickPinInput = document.getElementById('quickPinCameraInput');
     if (quickPinInput) quickPinInput.addEventListener('change', handleQuickPinPhoto);
     document.getElementById('quickPinSaveBtn')?.addEventListener('click', saveQuickPin);
     document.getElementById('quickPinCancelBtn')?.addEventListener('click', cancelQuickPin);
+    // Also close on overlay click (matches all other modals)
     document.getElementById('quickPinModal')?.addEventListener('click', (e) => {
         if (e.target.id === 'quickPinModal') cancelQuickPin();
     });
-
-    if (elements.changeStyleBtn) elements.changeStyleBtn.addEventListener('click', changeMapStyle);
-    if (elements.communityBtn) elements.communityBtn.addEventListener('click', toggleCommunityView);
-    if (elements.menuBtn) elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
-    if (elements.infoBtn) elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
     
-    if (elements.viewTermsLink) {
-        elements.viewTermsLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            elements.infoModal.style.display = 'none';
-            elements.termsModal.style.display = 'flex';
-        });
-    }
-
-    if (elements.safetyModalOkBtn) {
-        elements.safetyModalOkBtn.addEventListener('click', () => {
-            elements.safetyModal.style.display = 'none';
-            startTracking();
-        });
-    }
-
-    if (elements.summaryOkBtn) {
-        elements.summaryOkBtn.addEventListener('click', () => { 
-            elements.summaryModal.style.display = 'none';
-            const preview = document.getElementById('cleanupPhotoPreviewContainer');
-            if(preview) preview.style.display = 'none';
-            const img = document.getElementById('cleanupPhotoPreview');
-            if(img) img.src = '#';
-        });
-    }
-
-    // --- Data Management ---
-    if (elements.dataBtn) {
-        elements.dataBtn.addEventListener('click', () => {
-            const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
+    elements.changeStyleBtn.addEventListener('click', changeMapStyle);
+    
+    // --- MAIN MENU NAVIGATION ---
+    elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
+    
+    // 2. Main Menu: Achievements
+    if (elements.btnAchievements) {
+        elements.btnAchievements.addEventListener('click', () => {
             elements.menuModal.style.display = 'none';
-            if (elements.centerOnRouteBtn) elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
-            elements.dataModal.style.display = 'flex';
+            elements.achievementsModal.style.display = 'flex';
+            
+            openAchievementsModal(); // Calls the code above
+            
+            // Back Button logic...
+            if (elements.achievementListBackBtn) {
+                const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
+                elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
+                elements.achievementListBackBtn = newBackBtn; 
+
+                newBackBtn.addEventListener('click', () => {
+                    elements.achievementsModal.style.display = 'none';
+                    elements.menuModal.style.display = 'flex';
+                });
+            }
         });
     }
-    if (elements.saveBtn) elements.saveBtn.addEventListener('click', saveSession);
-    if (elements.loadBtn) elements.loadBtn.addEventListener('click', () => {
+
+    // 3. Community Map View
+    elements.communityBtn.addEventListener('click', toggleCommunityView);
+    
+    // 4. Info / Settings
+    elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
+    elements.viewTermsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        elements.infoModal.style.display = 'none';
+        elements.termsModal.style.display = 'flex';
+    });
+
+    // --- DATA & SAVING ---
+    elements.safetyModalOkBtn.addEventListener('click', () => {
+        elements.safetyModal.style.display = 'none';
+        startTracking();
+    });
+
+    elements.summaryOkBtn.addEventListener('click', () => { 
+        elements.summaryModal.style.display = 'none';
+        document.getElementById('cleanupPhotoPreviewContainer').style.display = 'none';
+        document.getElementById('cleanupPhotoPreview').src = '#';
+    });
+
+    elements.dataBtn.addEventListener('click', () => {
+        const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
+        elements.menuModal.style.display = 'none';
+        elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
+        elements.dataModal.style.display = 'flex';
+    });
+
+    elements.saveBtn.addEventListener('click', saveSession);
+    
+    elements.loadBtn.addEventListener('click', () => {
         elements.dataModal.style.display = 'none';
         loadSession();
     });
-    if (elements.exportBtn) elements.exportBtn.addEventListener('click', exportGeoJSON);
     
-    if (elements.centerOnRouteBtn) {
-        elements.centerOnRouteBtn.addEventListener('click', () => {
-            if (elements.centerOnRouteBtn.classList.contains('disabled')) {
-                alert("Please load a route first to use this feature.");
-            } else {
-                centerOnRoute();
-                elements.dataModal.style.display = 'none';
-            }
-        });
-    }
+    elements.exportBtn.addEventListener('click', exportGeoJSON);
     
-    if (elements.publishBtn) elements.publishBtn.addEventListener('click', publishRoute);
-
-    // --- Profile ---
-    if (elements.managePublicationsBtn) {
-        elements.managePublicationsBtn.addEventListener('click', () => {
-            if (!state.currentUser) { alert("You must be logged in to manage your publications."); return; }
+    elements.centerOnRouteBtn.addEventListener('click', () => {
+        if (elements.centerOnRouteBtn.classList.contains('disabled')) {
+            alert("Please load a route first to use this feature.");
+        } else {
+            centerOnRoute();
             elements.dataModal.style.display = 'none';
-            populatePublishedRoutesList();
-            elements.publishedRoutesModal.style.display = 'flex';
-        });
-    }
-    if (elements.editProfileBtn) {
-        elements.editProfileBtn.addEventListener('click', () => {
-            if (!state.currentUser) { alert("You must be logged in to edit your profile."); return; }
-            elements.menuModal.style.display = 'none'; 
-            loadProfileForEditing();
-            elements.profileModal.style.display = 'flex';
-        });
-    }
-    if (elements.saveProfileBtn) elements.saveProfileBtn.addEventListener('click', saveProfile);
+        }
+    });
 
-    // --- Leaderboard & Stats ---
-    if (elements.leaderboardBtn) {
-        elements.leaderboardBtn.addEventListener('click', () => {
-            elements.leaderboardModal.style.display = 'flex';
-            document.getElementById('leaderboardList').style.display = 'block';
-            document.getElementById('myStatsContainer').style.display = 'none';
-            elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
-            const tab = document.querySelector('.leaderboard-tab[data-metric="totalPins"]');
-            if(tab) tab.classList.add('active');
-            fetchAndDisplayLeaderboard('totalPins');
+    elements.publishBtn.addEventListener('click', publishRoute);
+    
+    elements.managePublicationsBtn.addEventListener('click', () => {
+        if (!state.currentUser) { alert("You must be logged in to manage your publications."); return; }
+        elements.dataModal.style.display = 'none';
+        populatePublishedRoutesList();
+        elements.publishedRoutesModal.style.display = 'flex';
+    });
+
+    // --- PROFILE ---
+    // myProfileBtn opens the new My Profile modal.
+    // The Edit Profile button now lives INSIDE that modal (profile.js).
+    if (elements.myProfileBtn) {
+        elements.myProfileBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent overlay-close handler
+            elements.menuModal.style.display = 'none';
+            openMyProfileModal();
         });
     }
+    elements.saveProfileBtn.addEventListener('click', saveProfile);
 
-    if (elements.leaderboardTabs) {
-        elements.leaderboardTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                const isMyStats = tab.id === 'myStatsBtn';
-                const list = document.getElementById('leaderboardList');
-                const stats = document.getElementById('myStatsContainer');
-                if (list) list.style.display = isMyStats ? 'none' : 'block';
-                if (stats) stats.style.display = isMyStats ? 'block' : 'none';
-                if (isMyStats) { fetchAndDisplayMyStats(); }
-                else { fetchAndDisplayLeaderboard(tab.dataset.metric); }
-            });
+    // --- LEADERBOARD ---
+    elements.leaderboardBtn.addEventListener('click', () => {
+        elements.leaderboardModal.style.display = 'flex';
+        _leaderboardShowTab('totalPins');
+    });
+
+    elements.leaderboardTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            if (tab.id === 'myStatsBtn') _leaderboardShowTab('myStats');
+            else if (tab.id === 'squadsLeaderboardBtn') _leaderboardShowTab('squads');
+            else _leaderboardShowTab(tab.dataset.metric);
         });
-    }
+    });
 
-    if (elements.leaderboardList) {
-        elements.leaderboardList.addEventListener('click', (e) => {
-            if (e.target && e.target.classList.contains('leaderboard-profile-link')) {
-                e.preventDefault();
-                const userId = e.target.closest('li').dataset.userid;
-                if (userId) {
-                    elements.leaderboardModal.style.display = 'none';
-                    showPublicProfile(userId);
-                }
+    // Clicking a user row on any leaderboard → open their public profile
+    document.getElementById('leaderboardModal')?.addEventListener('click', (e) => {
+        const link = e.target.closest('.lb-profile-link');
+        if (link) {
+            e.preventDefault();
+            const uid = link.dataset.uid;
+            if (uid) {
+                elements.leaderboardModal.style.display = 'none';
+                showPublicProfile(uid);
             }
-        });
-    }
+        }
+    });
 
-    // --- Cleanup Photo ---
+    // --- CLEANUP PHOTOS ---
     const addCleanupPhotoBtn = document.getElementById('addCleanupPhotoBtn');
     const cleanupCameraInput = document.getElementById('cleanupCameraInput');
     const photoPreviewContainer = document.getElementById('cleanupPhotoPreviewContainer');
     const photoPreview = document.getElementById('cleanupPhotoPreview');
 
     if (addCleanupPhotoBtn) { 
-        addCleanupPhotoBtn.addEventListener('click', () => cleanupCameraInput.click());
+        addCleanupPhotoBtn.addEventListener('click', () => {
+            cleanupCameraInput.click(); 
+        });
     }
-
-    if (cleanupCameraInput) { 
+    if (cleanupCameraInput) {
         cleanupCameraInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
-                const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280 };
-                let compressedFile;
-                try {
-                    if (typeof imageCompression !== 'undefined') {
-                        compressedFile = await imageCompression(file, options);
-                    } else {
-                        compressedFile = file;
-                    }
-                } catch (error) {
-                    console.error("Compression error:", error);
-                    compressedFile = file;
-                }
-                state.cleanupPhoto = compressedFile; 
-                const objectURL = URL.createObjectURL(compressedFile);
-                if (photoPreview) photoPreview.src = objectURL;
-                if (photoPreviewContainer) photoPreviewContainer.style.display = 'flex';
+                state.cleanupPhoto = file; 
+                const objectURL = URL.createObjectURL(file);
+                photoPreview.src = objectURL;
+                photoPreviewContainer.style.display = 'flex';
                 event.target.value = '';
             } else {
                 state.cleanupPhoto = null;
-                if (photoPreview) photoPreview.src = '#';
-                if (photoPreviewContainer) photoPreviewContainer.style.display = 'none';
+                photoPreview.src = '#';
+                photoPreviewContainer.style.display = 'none';
             }
         });
     }
 
-    // --- Meetups ---
-    if (elements.safetyCheckbox) elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
-    if (elements.meetupTitleInput) elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
-    if (elements.meetupDescriptionInput) elements.meetupDescriptionInput.addEventListener('input', validateMeetupForm);
-    if (elements.createMeetupBtn) elements.createMeetupBtn.addEventListener('click', handleMeetupSubmit);
+    // --- MEETUPS ---
+    elements.safetyCheckbox.addEventListener('change', validateMeetupForm);
+    elements.meetupTitleInput.addEventListener('input', validateMeetupForm);
+    elements.meetupDescriptionInput.addEventListener('input', validateMeetupForm);
+    elements.createMeetupBtn.addEventListener('click', handleMeetupSubmit);
+    elements.shareBtn.addEventListener('click', shareCleanupResults);
+    elements.meetupDateInput.addEventListener('change', validateMeetupForm);
 
-    // --- General ---
-    if (elements.shareBtn) elements.shareBtn.addEventListener('click', shareCleanupResults);
+    // --- HUB NAVIGATION (Feed/Events) ---
+    elements.hubBtn.addEventListener('click', async () => {
+        elements.menuModal.style.display = 'none';
+        elements.hubModal.style.display = 'flex';
+        // Refresh pending squad invites strip whenever the hub opens. Lazy
+        // import avoids loading squads.js until needed.
+        try {
+            const squadsMod = await import('./squads.js');
+            await renderHubInvitesStrip(squadsMod);
+        } catch (err) {
+            console.warn('Could not load pending invites:', err);
+        }
+    });
+    if (elements.hubChallengesBtn) {
+        elements.hubChallengesBtn.addEventListener('click', () => {
+            elements.hubModal.style.display = 'none'; 
+            elements.challengeMenuModal.style.display = 'flex'; 
+        });
+    }
+    elements.hubEventsBtn.addEventListener('click', () => {
+        elements.hubModal.style.display = 'none';
+        elements.eventsModal.style.display = 'flex';
+        fetchAndDisplayAllEvents();
+    });
+    elements.hubFeedBtn.addEventListener('click', () => {
+        elements.hubModal.style.display = 'none';
+        elements.feedModal.style.display = 'flex';
+        loadActivityFeed();
+    });
+
+    // --- CHALLENGE MENU NAVIGATION ---
+
+    // 1. EVENT BADGES (Challenge Menu -> Event Rewards)
+    if (elements.btnViewEventBadges) {
+        elements.btnViewEventBadges.addEventListener('click', () => {
+            elements.challengeMenuModal.style.display = 'none'; // Close Hub
+            elements.achievementsModal.style.display = 'flex';  // Open List
+            
+            // Call the Specific Function for Events
+            openEventBadgesModal(); 
+            
+            // DYNAMIC BACK BUTTON: Returns to Challenge Hub
+            if (elements.achievementListBackBtn) {
+                // Clone node to strip old listeners
+                const newBackBtn = elements.achievementListBackBtn.cloneNode(true);
+                elements.achievementListBackBtn.parentNode.replaceChild(newBackBtn, elements.achievementListBackBtn);
+                elements.achievementListBackBtn = newBackBtn; 
+
+                newBackBtn.addEventListener('click', () => {
+                    elements.achievementsModal.style.display = 'none';
+                    elements.challengeMenuModal.style.display = 'flex'; // <--- Go back to Challenge Hub
+                });
+            }
+        });
+    }
+
+    // 2. Current Challenges
+    if (elements.btnCurrentChallenges) {
+        elements.btnCurrentChallenges.addEventListener('click', () => {
+            elements.challengeMenuModal.style.display = 'none';
+            elements.activeChallengesModal.style.display = 'flex';
+            
+            // Call the correct function from community.js!
+            openCurrentChallenges(); 
+        });
+    }
     
-    addAllModalCloseListeners();
+    // Back from Current -> Hub
+    if (elements.btnBackFromCurrent) {
+        elements.btnBackFromCurrent.addEventListener('click', (e) => {
+            e.stopPropagation();
+            elements.activeChallengesModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+
+    // 3. Challenge Menu BACK Button (The Fix!)
+    if (elements.btnchallengeMenuBack) {
+        elements.btnchallengeMenuBack.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Close the Challenge Menu
+            elements.challengeMenuModal.style.display = 'none';
+            // Return to the Community Hub
+            elements.hubModal.style.display = 'flex';
+        });
+    }
+
+    // 4. Past Challenges
+    elements.btnPastChallenges.addEventListener('click', () => {
+        elements.challengeMenuModal.style.display = 'none';
+        elements.pastChallengesModal.style.display = 'flex';
+        elements.tabCompleted.classList.add('active');
+        elements.tabUncompleted.classList.remove('active');
+        loadPastChallenges('completed'); 
+    });
+
+    // Back from History -> Hub
+    if (elements.btnBackToMenu) {
+        elements.btnBackToMenu.addEventListener('click', () => {
+            elements.pastChallengesModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+
+    // 5. History Tabs
+    elements.tabCompleted.addEventListener('click', () => {
+        elements.tabCompleted.classList.add('active');
+        elements.tabUncompleted.classList.remove('active');
+        loadPastChallenges('completed');
+    });
+
+    elements.tabUncompleted.addEventListener('click', () => {
+        elements.tabUncompleted.classList.add('active');
+        elements.tabCompleted.classList.remove('active');
+        loadPastChallenges('uncompleted');
+    });
+
+    // 6. Admin Panel
+    // NOTE: The old "Admin: Create Challenge" button (btnAdminPanel) and its modal
+    // (adminChallengeModal) were removed. Challenge creation now lives in the
+    // Challenges tab of the unified Admin Panel (see admin.js renderChallengesTab).
+
+
+    // --- NEW ADMIN PANEL (Phase 1) ---
+    // Opens the multi-tab admin panel (stats / pending events / pending squads).
+    // The button is added to maptest.html in the menuModal and only displayed
+    // to admins via checkAdminPermissions().
+    const btnAdminPanelFull = document.getElementById('btnAdminPanelFull');
+    if (btnAdminPanelFull) {
+        btnAdminPanelFull.addEventListener('click', async (e) => {
+            // Stop the click bubbling to the window-level handler that closes any
+            // .modal-overlay clicked. Without this, the click opens the admin
+            // panel and then immediately closes it on the same bubbling click.
+            e.stopPropagation();
+            elements.menuModal.style.display = 'none';
+            await openAdminPanel();
+        });
+    }
+    // Tab switching inside the admin panel
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => showAdminTab(btn.dataset.tab));
+    });
+    // Close button for admin panel
+    const adminPanelCloseBtn = document.querySelector('#adminPanelModal .close-btn');
+    if (adminPanelCloseBtn) {
+        adminPanelCloseBtn.addEventListener('click', () => {
+            document.getElementById('adminPanelModal').style.display = 'none';
+        });
+    }
+
+    // --- REPORT PIN MODAL (Phase 2) ---
+    // The modal itself is opened from map.js via openReportPinModal() when the
+    // user clicks 🚩 on a community pin. Here we just wire the close/submit buttons.
+    const reportCloseBtn = document.getElementById('reportPinCloseBtn');
+    if (reportCloseBtn) reportCloseBtn.addEventListener('click', closeReportPinModal);
+    const reportCancelBtn = document.getElementById('reportCancelBtn');
+    if (reportCancelBtn) reportCancelBtn.addEventListener('click', closeReportPinModal);
+    const reportSubmitBtn = document.getElementById('reportSubmitBtn');
+    if (reportSubmitBtn) reportSubmitBtn.addEventListener('click', submitPendingReport);
+
+    // --- LOCAL EVENTS BACK BUTTON ---
+    const btnEventsBack = document.getElementById('btnEventsBack');
+    if (btnEventsBack) {
+        btnEventsBack.addEventListener('click', () => {
+            // Close the Events Modal
+            elements.eventsModal.style.display = 'none';
+            // Return to the Community Hub
+            elements.hubModal.style.display = 'flex';
+        });
+    }
+
+    if (elements.btnPastChallengesBack) {
+        elements.btnPastChallengesBack.addEventListener('click', () => {
+            elements.pastChallengesModal.style.display = 'none';
+            elements.challengeMenuModal.style.display = 'flex';
+        });
+    }
+    
+    // --- LOG TRASH (NEW BUTTONS) ---
+    if (elements.logTrashBtn) {
+        elements.logTrashBtn.addEventListener('click', () => {
+            elements.logTrashModal.style.display = 'flex';
+            elements.trashCountInput.value = ''; 
+            elements.trashCountInput.focus();
+        });
+    }
+
+    if (elements.confirmTrashBtn) {
+        elements.confirmTrashBtn.addEventListener('click', () => {
+            const count = parseInt(elements.trashCountInput.value);
+            if (count > 0) {
+                // We add these to the 'state' temporarily, or we could just alert for now.
+                // Since we are using "1 Pin = 1 Item" for the main logic, 
+                // this button is likely for "Bulk Logging" if you decided to keep it.
+                // If you opted for "1 Pin = 1 Item" only, you might not need this listener logic connected to DB yet.
+                alert(`Logged ${count} items! (This will be saved when you stop tracking).`);
+                
+                // Optional: Push dummy pins to count as items?
+                // For now, just close modal.
+                elements.logTrashModal.style.display = 'none';
+            } else {
+                alert("Please enter a valid number.");
+            }
+        });
+    }
+
+    const forgotLink = document.getElementById('forgotPasswordLink');
+    if (forgotLink) {
+        forgotLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            handlePasswordReset();
+        });
+    }
+
+// --- SQUADS NAVIGATION ---
+const hubSquadsBtn = document.getElementById('hubSquadsBtn');
+if (hubSquadsBtn) {
+    hubSquadsBtn.addEventListener('click', () => {
+        openModal('squadsModal');
+        // Ensure it always opens to the list, not a half-filled form
+        if (typeof switchSquadView === 'function') {
+            switchSquadView('registry');
+        }
+        // Load the data
+        if (typeof fetchLocalSquads === 'function') {
+            fetchLocalSquads(); 
+        }
+    });
 }
+
+const btnFinalizeSquad = document.getElementById('btnFinalizeSquad');
+if (btnFinalizeSquad) {
+    btnFinalizeSquad.addEventListener('click', () => {
+         // Safety check
+         if (typeof initializeSquad === 'function') {
+            initializeSquad();
+        } else {
+            console.error("initializeSquad function missing");
+        }
+    });
+}
+    
+//    document.getElementById('hubSquadsBtn').addEventListener('click', () => {
+//    openModal('squadsModal');
+//   fetchLocalSquads(); // Refresh list every time it opens
+//});
+
+document.getElementById('btnFinalizeSquad').addEventListener('click', initializeSquad);
+    
+    // Generic Close Listeners
+    addAllModalCloseListeners();
+
+    
+} //********************end event listern**************
 
 function addAllModalCloseListeners() {
     const allModals = Object.values(elements).filter(el => el && el.classList && el.classList.contains('modal-overlay'));
     allModals.forEach(modal => {
         const closeBtn = modal.querySelector('.close-btn');
-        if (closeBtn) closeBtn.addEventListener('click', () => modal.style.display = 'none');
-        const okBtn = modal.querySelector('.ok-btn');
-        if (okBtn) okBtn.addEventListener('click', () => modal.style.display = 'none');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => modal.style.display = 'none');
+        }
+        // NOTE: We don't auto-close on generic .ok-btn anymore because we have specific logic for them now
     });
-
     window.addEventListener('click', (event) => {
         if (event.target.classList.contains('modal-overlay')) {
             event.target.style.display = 'none';
         }
     });
 }
-
-// --- UI Update Functions ---
 
 export function updateLoggedInStatusUI(isLoggedIn, username = '') {
     const userStatus = document.getElementById('userStatus');
@@ -434,19 +675,19 @@ export function updateLoggedInStatusUI(isLoggedIn, username = '') {
         if (elements.authModal) elements.authModal.style.display = 'none';
         if (elements.publishBtn) elements.publishBtn.style.display = 'block';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'block';
-        if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'block';
+        // Enable My Profile button (disabled when logged out)
         if (elements.myProfileBtn) elements.myProfileBtn.disabled = false;
-        // Enable Quick Pin — 📸 button works whenever logged in, not just during tracking
+        // Enable Quick Pin — pictureBtn is usable whenever logged in (not just during tracking)
         if (elements.pictureBtn) elements.pictureBtn.disabled = false;
     } else {
         if (loggedInContent) loggedInContent.style.display = 'none';
         if (guestContent) guestContent.style.display = 'block';
         if (elements.publishBtn) elements.publishBtn.style.display = 'none';
         if (elements.managePublicationsBtn) elements.managePublicationsBtn.style.display = 'none';
-        if (elements.editProfileBtn) elements.editProfileBtn.style.display = 'none';
+        // Disable My Profile when logged out
         if (elements.myProfileBtn) elements.myProfileBtn.disabled = true;
-        // Disable Quick Pin on logout (tracking won't be active either)
-        if (elements.pictureBtn) elements.pictureBtn.disabled = true;
+        // Disable when logged out — Quick Pin requires an account
+        if (elements.pictureBtn && !state.isTracking) elements.pictureBtn.disabled = true;
     }
 }
 
@@ -454,20 +695,28 @@ export function updateAuthModalUI() {
     const authForm = document.getElementById('authForm');
     const authTitle = document.getElementById('authTitle');
     const authSubtitle = document.getElementById('authSubtitle');
+    const forgotLink = document.getElementById('forgotPasswordLink'); // Get the link
+
     document.getElementById('authError').textContent = '';
 
     if (state.isSignUpMode) {
-        authTitle.textContent = 'Create a Litter Bugs Account';
+        authTitle.textContent = 'Create a Litter Troopers Account';
         authSubtitle.innerHTML = 'Or <a href="#" id="switchAuthModeLink">log in to an existing account.</a>';
         elements.authActionBtn.textContent = 'Sign Up';
         authForm.classList.add('signup-mode');
         authForm.classList.remove('login-mode');
+        
+        // Hide on Sign Up
+        if (forgotLink) forgotLink.style.display = 'none'; 
     } else {
-        authTitle.textContent = 'Log In to Litter Bugs';
+        authTitle.textContent = 'Log In to Litter Troopers';
         authSubtitle.innerHTML = 'Or <a href="#" id="switchAuthModeLink">create a new account.</a>';
         elements.authActionBtn.textContent = 'Log In';
         authForm.classList.add('login-mode');
         authForm.classList.remove('signup-mode');
+        
+        // Show on Login
+        if (forgotLink) forgotLink.style.display = 'inline-block'; 
     }
     validateSignUpForm();
 }
@@ -482,5 +731,520 @@ function validateSignUpForm() {
         elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid && isUsernameValid && isAgeChecked);
     } else {
         elements.authActionBtn.disabled = !(isEmailValid && isPasswordValid);
+    }
+}
+
+// --- ACTIVITY FEED (User View + Admin Controls) ---
+async function loadActivityFeed() {
+    const container = elements.feedContainer; // Ensure this exists in your DOM elements
+    if (!container) return;
+
+    container.innerHTML = '<div class="feed-loader">Loading latest cleanups...</div>';
+
+    try {
+        // 1. STRICT ADMIN CHECK
+        let isAdmin = false;
+        if (state.currentUser) {
+            try {
+                const profileRef = doc(db, "publicProfiles", state.currentUser.uid);
+                const profileSnap = await getDoc(profileRef);
+                if (profileSnap.exists()) {
+                    const role = profileSnap.data().role;
+                    if (role === 'admin') {
+                        isAdmin = true;
+                    }
+                }
+            } catch (e) {
+                console.warn("Admin check failed:", e);
+            }
+        }
+
+        console.log("Current User Admin Status:", isAdmin); // <--- CHECK THIS IN CONSOLE
+
+        const q = query(
+            collection(db, "publishedRoutes"), 
+            orderBy("timestamp", "desc"), 
+            limit(20)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        container.innerHTML = '';
+
+        if (querySnapshot.empty) {
+            container.innerHTML = '<p>No cleanups shared yet. Be the first!</p>';
+            return;
+        }
+
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const routeId = docSnap.id; 
+
+            // Skip broken data
+            if (typeof data.distance === 'undefined' && typeof data.distanceMiles === 'undefined') return; 
+
+            const date = data.timestamp?.toDate().toLocaleDateString() || "Recently";
+            const photoUrl = data.cleanupPhotoURL || 'https://placehold.co/400x300?text=No+Photo';
+            const likeCount = data.likeCount || 0;
+            const likedBy = data.likedBy || [];
+            const isLiked = state.currentUser && likedBy.includes(state.currentUser.uid);
+            const likeBtnClass = isLiked ? 'like-btn active' : 'like-btn';
+            
+            // 2. PERMISSION LOGIC
+            const isOwner = state.currentUser && (data.userId === state.currentUser.uid);
+            
+            // SHOW BUTTON IF: You are Admin OR You are Owner
+            const canDelete = isAdmin || isOwner;
+
+            const card = document.createElement('div');
+            card.className = 'feed-card';
+            
+            card.innerHTML = `
+                <div class="feed-header">
+                    <div class="feed-avatar">${data.username?.charAt(0).toUpperCase() || 'T'}</div>
+                    <div class="feed-user-info">
+                        <h4>${data.username || 'Anonymous Trooper'}</h4>
+                        <span>${date}</span>
+                    </div>
+                    ${canDelete ? `<button class="delete-post-btn" style="margin-left:auto; background:none; border:none; cursor:pointer; font-size:1.2em;" title="Delete Post">🗑️</button>` : ''}
+                </div>
+                <img src="${photoUrl}" class="feed-photo" loading="lazy">
+                <div class="feed-body">
+                    <div class="feed-stats">
+                        <span>📍 <strong>${data.pins?.length || 0}</strong> Items</span>
+                        <span>📏 <strong>${data.distanceMiles || '0.00 mi'}</strong></span>
+                    </div>
+                    <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
+                    <div class="feed-actions">
+                         <button class="${likeBtnClass}">
+                           👍 <span class="like-count">${likeCount}</span>
+                         </button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+
+            // --- LISTENERS ---
+
+            // Like Listener
+            const likeBtn = card.querySelector('.like-btn');
+            likeBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                // Ensure toggleRouteLike is imported!
+                const result = await toggleRouteLike(routeId); 
+                if (result) {
+                    likeBtn.querySelector('.like-count').textContent = result.likeCount;
+                    likeBtn.classList.toggle('active', result.isLiked);
+                }
+            });
+
+            // Delete Listener
+            if (canDelete) {
+                const delBtn = card.querySelector('.delete-post-btn');
+                delBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const warning = isAdmin && !isOwner 
+                        ? "⚠️ ADMIN ACTION: Delete this user's post?" 
+                        : "Are you sure you want to delete your post?";
+
+                    if (confirm(warning)) {
+                        try {
+                            await deleteDoc(doc(db, "publishedRoutes", routeId));
+                            card.remove(); 
+                        } catch (err) {
+                            console.error("Error deleting post:", err);
+                            alert("Failed to delete post. Check permissions.");
+                        }
+                    }
+                });
+            }
+        });
+    } catch (error) {
+        console.error("Error loading feed:", error);
+        container.innerHTML = '<p>Failed to load feed. Check your connection.</p>';
+    }
+}
+
+async function loadAdminChallengeList() {
+    // Deprecated: kept as a no-op for now in case anything else still calls it.
+    // The challenges admin UI moved into the Challenges tab of the unified
+    // Admin Panel (admin.js renderChallengesTab / loadChallengeListInPanel).
+}
+
+
+// --- PAST CHALLENGES (History Logic) ---
+async function loadPastChallenges(filterType) {
+    const listContainer = elements.pastChallengesContent;
+    if (!listContainer) return;
+
+    listContainer.innerHTML = "<p>Loading history...</p>";
+
+    try {
+        if (!state.currentUser) {
+            listContainer.innerHTML = "<p>Please login to see history.</p>";
+            return;
+        }
+
+        const myQuests = await getUserQuests(state.currentUser.uid);
+        const questIds = Object.keys(myQuests);
+
+        if (questIds.length === 0) {
+            listContainer.innerHTML = "<p>No challenge history found.</p>";
+            return;
+        }
+
+        const allChallenges = await getAdminChallenges();
+        
+        listContainer.innerHTML = ""; 
+        let count = 0;
+
+        for (const [chalId, userProgress] of Object.entries(myQuests)) {
+            const originalData = allChallenges.find(c => c.id === chalId) || {};
+            const title = originalData.title || userProgress.title || "Unknown Quest";
+            const goal = originalData.goal_miles || "??";
+            
+            const isCompleted = userProgress.status === 'completed';
+            const isExpired = userProgress.status === 'expired'; 
+            
+            let showIt = false;
+            if (filterType === 'completed' && isCompleted) showIt = true;
+            if (filterType === 'uncompleted' && !isCompleted) showIt = true;
+
+            if (showIt) {
+                count++;
+                const card = document.createElement('div');
+                card.className = "hub-card";
+                card.style.marginBottom = "10px";
+                card.style.textAlign = "left";
+                
+                const borderColor = isCompleted ? "#FFD700" : (isExpired ? "#ccc" : "#4A7C59");
+                const statusText = isCompleted ? "🏆 COMPLETED" : (isExpired ? "⌛ EXPIRED" : "🏃 IN PROGRESS");
+                const statusColor = isCompleted ? "#B8860B" : (isExpired ? "#999" : "#4A7C59");
+
+                let dateStr = "";
+                if (userProgress.completed_at) {
+                    dateStr = `Done: ${new Date(userProgress.completed_at.seconds * 1000).toLocaleDateString()}`;
+                } else if (userProgress.joined_at) {
+                    dateStr = `Joined: ${new Date(userProgress.joined_at.seconds * 1000).toLocaleDateString()}`;
+                }
+
+                card.style.borderLeft = `5px solid ${borderColor}`;
+                
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h4 style="margin:0;">${title}</h4>
+                            <small style="color:#666;">${dateStr}</small>
+                        </div>
+                        <div style="text-align:right;">
+                            <strong style="color:${statusColor}; display:block;">${statusText}</strong>
+                            <span style="font-size:0.9em;">${userProgress.progress.toFixed(1)} / ${goal} mi</span>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            }
+        }
+
+        if (count === 0) {
+            listContainer.innerHTML = `<p style="color:#888;">No ${filterType} challenges found.</p>`;
+        }
+
+    } catch (e) {
+        console.error("Error loading past challenges:", e);
+        listContainer.innerHTML = "<p>Error loading content.</p>";
+    }
+}
+
+// --- PUBLIC PROFILE FUNCTION (Debug & Smart Lookup Version) ---
+export async function showPublicProfile(userId) {
+    const modal = document.getElementById('publicProfileModal');
+    if (modal) modal.style.display = 'flex';
+
+    // 1. Verify Imports
+    if (!allBadges) {
+        console.error("CRITICAL ERROR: 'allBadges' is undefined. Please check that 'config.js' exports 'allBadges'.");
+        if (document.getElementById('profileAchievements')) {
+            document.getElementById('profileAchievements').innerHTML = '<p style="color:red">Config Error: Badges not loaded.</p>';
+        }
+        return;
+    }
+
+    const nameEl = document.getElementById('profileUsername');
+    const locEl = document.getElementById('profileLocation');
+    const bioEl = document.getElementById('profileBio');
+    const statsEl = document.getElementById('profileStats');
+    const badgesEl = document.getElementById('profileAchievements');
+    const supportBtn = document.getElementById('profileSupportBtn');
+
+    // Loading State
+    if (nameEl) nameEl.textContent = "Loading...";
+    if (statsEl) statsEl.innerHTML = "";
+    if (badgesEl) badgesEl.innerHTML = "";
+
+    try {
+        const docSnap = await getDoc(doc(db, "publicProfiles", userId));
+        
+        if (!docSnap.exists()) {
+            if (nameEl) nameEl.textContent = "User not found";
+            return;
+        }
+
+        const data = docSnap.data();
+
+        // 2. Basic Info
+        if (nameEl) nameEl.textContent = data.username || "Anonymous Trooper";
+        if (locEl) locEl.textContent = data.location || "Unknown Location";
+        if (bioEl) bioEl.textContent = data.bio || "No bio provided.";
+
+        // 3. Stats
+        if (statsEl) {
+            statsEl.innerHTML = `
+                <div class="stat-card">
+                    <span class="stat-value">${data.totalPins || 0}</span>
+                    <span class="stat-label">Items</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${(data.totalDistance || 0).toFixed(1)}</span>
+                    <span class="stat-label">Miles</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${data.totalRoutes || 0}</span>
+                    <span class="stat-label">Routes</span>
+                </div>
+            `;
+        }
+
+        // 4. Support Button
+        if (supportBtn) {
+            supportBtn.style.display = data.buyMeACoffeeLink ? "block" : "none";
+            if (data.buyMeACoffeeLink) {
+                const newBtn = supportBtn.cloneNode(true);
+                supportBtn.parentNode.replaceChild(newBtn, supportBtn);
+                newBtn.addEventListener('click', () => window.open(data.buyMeACoffeeLink, '_blank'));
+            }
+        }
+
+        // 5. Badges (Smart Lookup Fix)
+        if (badgesEl) {
+            const userBadges = data.badges || {}; 
+            const badgeKeys = Object.keys(userBadges);
+            
+            console.log("User's Badges (Keys):", badgeKeys); // Debug Log
+
+            if (badgeKeys.length === 0) {
+                badgesEl.innerHTML = '<p style="color:#888; width:100%; text-align:center;">No badges yet.</p>';
+            } else {
+                let badgesHTML = '';
+                
+                badgeKeys.forEach(key => {
+                    // Debug: Check what we are looking for
+                    // console.log(`Looking up badge key: "${key}"`);
+
+                    // A. Direct Lookup
+                    let config = allBadges[key]; 
+                    
+                    // B. Smart Fallback: If direct lookup fails, try to find by Name
+                    if (!config) {
+                        // console.warn(`Direct lookup failed for "${key}". Trying to find by name...`);
+                        const allKeys = Object.keys(allBadges);
+                        const match = allKeys.find(k => allBadges[k].name === key || allBadges[k].title === key);
+                        if (match) config = allBadges[match];
+                    }
+                    
+                    // C. Determine Icon & Name
+                    // If we found config, use it. If not, try to read from user data. If all else fails, show Trophy.
+                    const icon = config ? config.icon : (userBadges[key].icon || '🏆');
+                    const name = config ? config.name : (userBadges[key].name || key);
+                    
+                    // Count Logic
+                    const count = userBadges[key].count || 1;
+                    const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-top:2px;">x${count}</span>` : '';
+
+                    badgesHTML += `
+                        <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:90px; text-align:center; display:flex; flex-direction:column; align-items:center; margin:5px;">
+                            <div style="font-size:2.5em; line-height:1;">${icon}</div>
+                            <div style="font-size:0.75em; font-weight:bold; margin-top:5px; line-height:1.2;">${name}</div>
+                            ${countBadge}
+                        </div>
+                    `;
+                });
+                
+                badgesEl.innerHTML = `<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;">${badgesHTML}</div>`;
+            }
+        }
+
+    } catch (err) {
+        console.error("Error loading profile:", err);
+        if (nameEl) nameEl.textContent = "Error loading profile";
+    }
+}
+
+// populateTitleDropdown was removed — title selection moved to My Profile (profile.js).
+// Kept as a no-op export so any lingering call sites don't throw a module error.
+export function populateTitleDropdown() {}
+
+// Switches between the three "screens" in the Squads Modal
+export function switchSquadView(viewName) {
+    const views = {
+        'registry': document.getElementById('squadRegistryView'),
+        'intel': document.getElementById('squadIntelView'),
+        'create': document.getElementById('squadCreateView')
+    };
+
+    // Hide all, then show the requested one
+    Object.values(views).forEach(view => { if(view) view.style.display = 'none'; });
+    if (views[viewName]) views[viewName].style.display = 'block';
+}
+
+// Global-access wrappers for your HTML onclicks
+window.openCreateSquadForm = () => switchSquadView('create');
+window.showSquadRegistry = () => switchSquadView('registry');
+
+// Modal Utility Functions
+export function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+        // Optional: play a subtle sound or trigger an animation here
+    }
+}
+
+export function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Make them available to HTML onclicks
+window.openModal = openModal;
+window.closeModal = closeModal;
+
+// Add to the bottom of ui.js where your other window wrappers are
+window.viewSquadIntel = (squadId) => {
+    // 1. Switch the view to the Intel screen
+    switchSquadView('intel');
+    
+    // 2. Trigger the data pull for this specific squad
+    if (typeof fetchSquadDetails === 'function') {
+        fetchSquadDetails(squadId);
+    }
+};
+
+// --- ADMIN PERMISSIONS ---
+// Toggles visibility of admin-only buttons based on the user's profile.
+// Called from auth.js whenever the auth state changes.
+export function checkAdminPermissions(userProfile) {
+    const isAdmin = !!(userProfile && userProfile.role === 'admin');
+
+    // Cache for the admin module so it doesn't need to re-read on every call.
+    state.isAdmin = isAdmin;
+
+    // The old btnAdminPanel (in Challenge Central) was removed - challenge admin
+    // lives in the Admin Panel's Challenges tab now.
+
+    // Full admin panel button (in the main menu modal).
+    const btnAdminPanelFull = document.getElementById('btnAdminPanelFull');
+    if (btnAdminPanelFull) btnAdminPanelFull.style.display = isAdmin ? 'flex' : 'none';
+}
+
+
+// --- HUB: PENDING SQUAD INVITES STRIP (Phase 5B) -----------------------------
+// Renders the user's outstanding squad invites at the top of the Community Hub
+// modal. Inline accept / decline. The strip auto-hides when there are no invites.
+async function renderHubInvitesStrip(squadsMod) {
+    const strip = document.getElementById('hubInvitesStrip');
+    const list = document.getElementById('hubInvitesList');
+    if (!strip || !list) return;
+
+    if (!state.currentUser) {
+        strip.style.display = 'none';
+        return;
+    }
+
+    const invites = await squadsMod.fetchMyInvites();
+    if (!invites || invites.length === 0) {
+        strip.style.display = 'none';
+        return;
+    }
+
+    list.innerHTML = invites.map(inv => `
+        <div data-squad-id="${escapeAttr(inv.squadId)}" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:4px;">
+            <div style="min-width:0;">
+                <strong>[${escapeAttr(inv.squadCallsign || '???')}] ${escapeAttr(inv.squadName || '(unknown)')}</strong>
+                <div style="font-size:0.8em; color:#666;">From: ${escapeAttr(inv.invitedByName || 'Unknown')}</div>
+            </div>
+            <div style="display:flex; gap:4px; flex-shrink:0;">
+                <button class="modal-button btn-primary hub-invite-accept-btn" style="padding:4px 10px; font-size:0.85em;">Accept</button>
+                <button class="modal-button btn-secondary hub-invite-decline-btn" style="padding:4px 10px; font-size:0.85em;">Decline</button>
+            </div>
+        </div>
+    `).join('');
+    strip.style.display = 'block';
+
+    list.querySelectorAll('.hub-invite-accept-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const row = e.target.closest('[data-squad-id]');
+            const squadId = row.dataset.squadId;
+            if (!confirm('Accept invite to this squad?')) return;
+            btn.disabled = true; btn.textContent = '…';
+            const ok = await squadsMod.acceptInvite(squadId);
+            if (ok) await renderHubInvitesStrip(squadsMod);
+            else { btn.disabled = false; btn.textContent = 'Accept'; }
+        });
+    });
+    list.querySelectorAll('.hub-invite-decline-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const row = e.target.closest('[data-squad-id]');
+            const squadId = row.dataset.squadId;
+            if (!confirm('Decline this invite?')) return;
+            btn.disabled = true; btn.textContent = '…';
+            const ok = await squadsMod.declineInvite(squadId);
+            if (ok) await renderHubInvitesStrip(squadsMod);
+            else { btn.disabled = false; btn.textContent = 'Decline'; }
+        });
+    });
+}
+
+function escapeAttr(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ---------------------------------------------------------------------------
+// LEADERBOARD TAB SWITCHER (private to ui.js)
+// Manages the three containers: leaderboardList, myStatsContainer, squadsLeaderboardContainer
+// ---------------------------------------------------------------------------
+function _leaderboardShowTab(tabKey) {
+    // Sync active tab styling
+    document.querySelectorAll('.leaderboard-tab').forEach(t => {
+        const matches =
+            (tabKey === 'myStats'  && t.id === 'myStatsBtn') ||
+            (tabKey === 'squads'   && t.id === 'squadsLeaderboardBtn') ||
+            (t.dataset.metric === tabKey);
+        t.classList.toggle('active', matches);
+    });
+
+    const listEl    = document.getElementById('leaderboardList');
+    const statsEl   = document.getElementById('myStatsContainer');
+    const squadsEl  = document.getElementById('squadsLeaderboardContainer');
+
+    if (tabKey === 'myStats') {
+        if (listEl)   listEl.style.display   = 'none';
+        if (squadsEl) squadsEl.style.display  = 'none';
+        if (statsEl)  statsEl.style.display   = 'block';
+        fetchAndDisplayMyStats();
+    } else if (tabKey === 'squads') {
+        if (listEl)   listEl.style.display   = 'none';
+        if (statsEl)  statsEl.style.display  = 'none';
+        if (squadsEl) squadsEl.style.display  = 'block';
+        fetchSquadsLeaderboard();
+    } else {
+        if (statsEl)  statsEl.style.display  = 'none';
+        if (squadsEl) squadsEl.style.display  = 'none';
+        if (listEl)   listEl.style.display    = 'block';
+        fetchAndDisplayLeaderboard(tabKey);
     }
 }
