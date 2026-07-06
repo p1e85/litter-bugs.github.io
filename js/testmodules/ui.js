@@ -7,7 +7,8 @@ import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
 import { 
     toggleCommunityView, publishRoute, populatePublishedRoutesList, 
-    loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard, 
+    loadProfileForEditing, saveProfile, fetchAndDisplayLeaderboard,
+    fetchSquadsLeaderboard, 
     fetchAndDisplayMyStats,
     handleMeetupSubmit, validateMeetupForm, toggleRouteLike, 
     openAchievementsModal, openEventBadgesModal, openCurrentChallenges,
@@ -328,32 +329,26 @@ export function attachEventListeners() {
     // --- LEADERBOARD ---
     elements.leaderboardBtn.addEventListener('click', () => {
         elements.leaderboardModal.style.display = 'flex';
-        document.getElementById('leaderboardList').style.display = 'block';
-        document.getElementById('myStatsContainer').style.display = 'none';
-        elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
-        document.querySelector('.leaderboard-tab[data-metric="totalPins"]').classList.add('active');
-        fetchAndDisplayLeaderboard('totalPins');
+        _leaderboardShowTab('totalPins');
     });
 
     elements.leaderboardTabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            elements.leaderboardTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const isMyStats = tab.id === 'myStatsBtn';
-            document.getElementById('leaderboardList').style.display = isMyStats ? 'none' : 'block';
-            document.getElementById('myStatsContainer').style.display = isMyStats ? 'block' : 'none';
-            if (isMyStats) { fetchAndDisplayMyStats(); }
-            else { fetchAndDisplayLeaderboard(tab.dataset.metric); }
+            if (tab.id === 'myStatsBtn') _leaderboardShowTab('myStats');
+            else if (tab.id === 'squadsLeaderboardBtn') _leaderboardShowTab('squads');
+            else _leaderboardShowTab(tab.dataset.metric);
         });
     });
 
-    elements.leaderboardList.addEventListener('click', (e) => {
-        if (e.target && e.target.classList.contains('leaderboard-profile-link')) {
+    // Clicking a user row on any leaderboard → open their public profile
+    document.getElementById('leaderboardModal')?.addEventListener('click', (e) => {
+        const link = e.target.closest('.lb-profile-link');
+        if (link) {
             e.preventDefault();
-            const userId = e.target.closest('li').dataset.userid;
-            if (userId) {
+            const uid = link.dataset.uid;
+            if (uid) {
                 elements.leaderboardModal.style.display = 'none';
-                showPublicProfile(userId);
+                showPublicProfile(uid);
             }
         }
     });
@@ -1216,4 +1211,40 @@ function escapeAttr(s) {
     return String(s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ---------------------------------------------------------------------------
+// LEADERBOARD TAB SWITCHER (private to ui.js)
+// Manages the three containers: leaderboardList, myStatsContainer, squadsLeaderboardContainer
+// ---------------------------------------------------------------------------
+function _leaderboardShowTab(tabKey) {
+    // Sync active tab styling
+    document.querySelectorAll('.leaderboard-tab').forEach(t => {
+        const matches =
+            (tabKey === 'myStats'  && t.id === 'myStatsBtn') ||
+            (tabKey === 'squads'   && t.id === 'squadsLeaderboardBtn') ||
+            (t.dataset.metric === tabKey);
+        t.classList.toggle('active', matches);
+    });
+
+    const listEl    = document.getElementById('leaderboardList');
+    const statsEl   = document.getElementById('myStatsContainer');
+    const squadsEl  = document.getElementById('squadsLeaderboardContainer');
+
+    if (tabKey === 'myStats') {
+        if (listEl)   listEl.style.display   = 'none';
+        if (squadsEl) squadsEl.style.display  = 'none';
+        if (statsEl)  statsEl.style.display   = 'block';
+        fetchAndDisplayMyStats();
+    } else if (tabKey === 'squads') {
+        if (listEl)   listEl.style.display   = 'none';
+        if (statsEl)  statsEl.style.display  = 'none';
+        if (squadsEl) squadsEl.style.display  = 'block';
+        fetchSquadsLeaderboard();
+    } else {
+        if (statsEl)  statsEl.style.display  = 'none';
+        if (squadsEl) squadsEl.style.display  = 'none';
+        if (listEl)   listEl.style.display    = 'block';
+        fetchAndDisplayLeaderboard(tabKey);
+    }
 }
