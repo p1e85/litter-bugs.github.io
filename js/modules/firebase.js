@@ -11,6 +11,9 @@ import {
     getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
     signOut, onAuthStateChanged, deleteUser, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+    getFunctions, httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -28,6 +31,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
+const functions = getFunctions(app);
 
 console.log("Firebase Initialized!");
 
@@ -37,6 +41,8 @@ export {
     db,
     auth,
     storage,
+    functions,
+    httpsCallable,
     // Firestore Functions
     doc,
     getDoc,
