@@ -631,6 +631,8 @@
                 <button class="admin-tab-btn" data-tab="reports">🚩 Reports</button>
                 <button class="admin-tab-btn" data-tab="challenges">🎯 Challenges</button>
                 <button class="admin-tab-btn" data-tab="audit">🕓 Audit Log</button>
+                <button class="admin-tab-btn" data-tab="mail">📧 Mail</button>
+                <button class="admin-tab-btn" data-tab="mail">📧 Mail</button>
             </div>
 
             <!-- Tab bodies -->
@@ -668,6 +670,14 @@
             <div class="admin-tab-body" data-tab="audit" style="display:none;">
                 <p style="color:#666; font-size:0.9em;">Record of recent admin actions across the panel. Requires the <code>adminActions</code> Firestore rule (see audit.js header).</p>
                 <div id="adminAuditContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="mail" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Mailing list signups and beta waitlist from the landing page. Emails are stored in Firestore — copy or export as needed.</p>
+                <div id="adminMailContent"><p>Loading…</p></div>
+            </div>
+            <div class="admin-tab-body" data-tab="mail" style="display:none;">
+                <p style="color:#666; font-size:0.9em;">Mailing list and beta waitlist signups from littertroopers.com.</p>
+                <div id="adminMailContent"><p>Loading…</p></div>
             </div>
         </div>
     </div>
