@@ -452,6 +452,7 @@ export async function switchAdminTab(tabName) {
         case 'reports': await renderReportsTab(); break;
         case 'challenges': await renderChallengesTab(); break;
         case 'audit': await renderAuditLogTab(); break;
+        case 'mail': await renderMailTab(); break;
         default: console.warn('Unknown admin tab:', tabName);
     }
 }
@@ -1402,6 +1403,140 @@ function emptyState(icon, title, body) {
             <div style="font-size:0.9em; line-height:1.5; max-width:400px; margin:0 auto;">${body}</div>
         </div>
     `;
+}
+
+// --- MAIL TAB ---------------------------------------------------------------
+
+/**
+ * Shows mailingList and betaWaitlist collections.
+ * Per-entry: copy-email button + delete (with confirm).
+ * Section-level: "Copy All N Emails" button.
+ */
+async function renderMailTab() {
+    const container = document.getElementById('adminMailContent');
+    if (!container) return;
+    container.innerHTML = '<p>Loading…</p>';
+
+    const COLLECTIONS = [
+        { id: 'mailingList',  label: '📬 Mailing List',  emailField: 'email' },
+        { id: 'betaWaitlist', label: '🚀 Beta Waitlist', emailField: 'email' }
+    ];
+
+    let html = '';
+
+    for (const col of COLLECTIONS) {
+        let rows = [];
+        try {
+            const snap = await getDocs(collection(db, col.id));
+            snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+            rows.sort((a, b) => {
+                const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+                const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+                return tb - ta;
+            });
+        } catch (err) {
+            html += `<p style="color:#b00;">Could not load ${col.label}: ${err.message}</p>`;
+            continue;
+        }
+
+        const emails = rows.map(r => r[col.emailField] || r.email || '').filter(Boolean);
+
+        html += `
+            <div style="margin-bottom:20px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                    <h4 style="margin:0; color:#333;">${col.label} <span style="color:#888; font-weight:normal; font-size:0.9em;">(${rows.length})</span></h4>
+                    ${emails.length > 0 ? `<button class="modal-button btn-secondary mail-copy-all-btn" data-col="${col.id}" style="width:auto; padding:5px 12px; font-size:0.85em;">📋 Copy All ${emails.length} Emails</button>` : ''}
+                </div>
+                ${rows.length === 0 ? `<p style="color:#888; font-size:0.9em;">No signups yet.</p>` : `
+                <div style="max-height:280px; overflow-y:auto; border:1px solid #eee; border-radius:6px;">
+                    ${rows.map(r => {
+                        const email = escapeHtml(r[col.emailField] || r.email || '(no email)');
+                        const date = r.createdAt && r.createdAt.toDate
+                            ? r.createdAt.toDate().toLocaleDateString()
+                            : '';
+                        return `
+                            <div class="mail-row" data-id="${r.id}" data-col="${col.id}" data-email="${email}"
+                                style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; border-bottom:1px solid #f0f0f0;">
+                                <div style="min-width:0;">
+                                    <div style="font-size:0.9em; font-weight:500; color:#333; word-break:break-all;">${email}</div>
+                                    ${date ? `<div style="font-size:0.75em; color:#aaa;">${date}</div>` : ''}
+                                </div>
+                                <div style="display:flex; gap:6px; flex-shrink:0;">
+                                    <button class="mail-copy-btn" title="Copy email"
+                                        style="background:none; border:1px solid #ddd; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:0.8em;">📋</button>
+                                    <button class="mail-delete-btn" title="Delete entry"
+                                        style="background:none; border:1px solid #ddd; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:0.8em; color:#dc3545;">🗑️</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>`}
+            </div>
+        `;
+
+        // Stash emails on the section for the "Copy All" button
+        // (stored as data on the container element after rendering)
+        setTimeout(() => {
+            const colDiv = container.querySelector(`[data-col="${col.id}"].mail-copy-all-btn`);
+            if (colDiv) colDiv._emails = emails;
+        }, 0);
+    }
+
+    html += `<p style="text-align:center; margin-top:4px;">
+        <button id="adminMailRefreshBtn" class="modal-button btn-secondary" style="width:auto; padding:5px 14px; font-size:0.85em;">🔄 Refresh</button>
+    </p>`;
+
+    container.innerHTML = html;
+
+    // Store emails arrays on the Copy All buttons
+    container.querySelectorAll('.mail-copy-all-btn').forEach(btn => {
+        const colId = btn.dataset.col;
+        const col = COLLECTIONS.find(c => c.id === colId);
+        if (!col) return;
+        const allRows = container.querySelectorAll(`.mail-row[data-col="${colId}"]`);
+        const emails = [...allRows].map(r => r.dataset.email).filter(Boolean);
+        btn.addEventListener('click', () => {
+            navigator.clipboard.writeText(emails.join('\n'))
+                .then(() => toast(`Copied ${emails.length} emails to clipboard.`, 'success'))
+                .catch(() => toast('Clipboard copy failed.', 'error'));
+        });
+    });
+
+    // Per-row: copy email
+    container.querySelectorAll('.mail-copy-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const row = e.target.closest('.mail-row');
+            const email = row?.dataset.email || '';
+            navigator.clipboard.writeText(email)
+                .then(() => toast(`Copied: ${email}`, 'success', 2000))
+                .catch(() => toast('Clipboard copy failed.', 'error'));
+        });
+    });
+
+    // Per-row: delete
+    container.querySelectorAll('.mail-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const row = e.target.closest('.mail-row');
+            const id = row?.dataset.id;
+            const colId = row?.dataset.col;
+            const email = row?.dataset.email || id;
+            if (!id || !colId) return;
+            if (!confirm(`Delete "${email}" from the list? This cannot be undone.`)) return;
+            btn.disabled = true;
+            try {
+                await deleteDoc(doc(db, colId, id));
+                row.style.transition = 'opacity 0.2s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 220);
+                toast('Entry deleted.', 'info');
+            } catch (err) {
+                toast('Could not delete: ' + err.message, 'error');
+                btn.disabled = false;
+            }
+        });
+    });
+
+    document.getElementById('adminMailRefreshBtn')?.addEventListener('click', renderMailTab);
 }
 
 // --- HELPER -----------------------------------------------------------------
