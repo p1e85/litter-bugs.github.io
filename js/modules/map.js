@@ -1,6 +1,10 @@
 import { state, mapStyles, ZOOM_THRESHOLD } from './config.js';
-import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners, showPublicProfile } from './community.js';
+import { fetchAndDisplayCommunityRoutes, setupPoiClickListeners } from './community.js';
 import { pinCategories } from './config.js';
+import { showPublicProfile } from './ui.js';
+import { openReportPinModal } from './reports.js';
+import { getLevelBadgeHTML } from './xp.js';
+import { db, doc, getDoc } from './firebase.js';
 
 /**
  * Initializes the Mapbox map, geocoder, and initial event listeners.
@@ -41,11 +45,19 @@ export function initializeMap() {
         initializeMapLayers();
         setupPoiClickListeners(); // From community.js
 
-        // Silent initial centering: if permission already granted, ease to user's
-        // area at zoom 12. No prompt triggered. Falls back to Chicago silently.
+        // Silent initial centering (spec §2.2): if location permission is already
+        // granted, ease the camera to the user's area on open. Conditions:
+        //   - find-me must be OFF (we don't override an active find-me session)
+        //   - not currently tracking a route
+        //   - no timeout — if geolocation is slow we just stay on Chicago
+        // We use maximumAge:60000 (accept a 1-minute-old cached fix) and
+        // enableHighAccuracy:false so this is instant and battery-free.
+        // If permission hasn't been granted yet, getCurrentPosition will call the
+        // error callback immediately with PERMISSION_DENIED — no prompt shown.
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
+                    // Only center if find-me is still off and we're not tracking
                     if (state.findMeState === 0 && !state.isTracking) {
                         state.map.easeTo({
                             center: [pos.coords.longitude, pos.coords.latitude],
@@ -103,11 +115,14 @@ function initializeMapLayers() {
 export function changeMapStyle() {
     state.currentStyleIndex = (state.currentStyleIndex + 1) % mapStyles.length;
     state.map.setStyle(mapStyles[state.currentStyleIndex].url);
+    
     state.map.once('style.load', () => {
+        // --- 1. Restore the standard stuff ---
         initializeMapLayers();
         state.userMarkers.forEach(marker => marker.addTo(state.map));
         state.communityMarkers.forEach(marker => marker.addTo(state.map));
         toggleMarkerVisibility();
+        
         if (state.isCommunityViewOn) {
             fetchAndDisplayCommunityRoutes();
         }
@@ -135,7 +150,7 @@ export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
     // Guard: reject pins with missing or malformed coords. Without this, a single bad
     // pin throws inside Mapbox's setLngLat() and breaks the forEach loop in
     // displaySessionData/fetchAndDisplayCommunityRoutes -- so every subsequent pin in
-    // the same session also fails to render. Returning null instead lets the rest load.
+    // the same session also fails to render.
     if (!pinInfo || !pinInfo.coords) {
         console.warn('Skipping pin with missing coords:', pinInfo);
         return null;
@@ -149,7 +164,6 @@ export function createAndAddMarker(pinInfo, type, routeInfo = {}) {
         console.warn('Skipping pin with invalid coords:', pinInfo);
         return null;
     }
-    // Normalize {lng,lat} object -> [lng,lat] array (defensive; utils should already do this)
     const lngLat = isValidArray ? coords : [coords.lng, coords.lat];
 
     const el = document.createElement('div');
@@ -219,7 +233,13 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                     Category: ${pinInfo.category || 'N/A'} ${pinInfo.subCategory ? `(${pinInfo.subCategory})` : ''}
                 </p>
                 ${pinInfo.brand ? `<p style="margin: 5px 0 0; font-style: italic; color: #555;">Brand: ${pinInfo.brand}</p>` : ''}
-                <small>By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
+                <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <small class="pin-author-line">By: <a href="#" class="profile-link" data-userid="${routeInfo.userId}">${routeInfo.username || 'A user'}</a></small>
+                    <button class="report-pin-btn" title="Report this pin"
+                        style="background:none; border:none; cursor:pointer; font-size:1.1em; padding:2px 6px;">
+                        🚩 Report
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -252,9 +272,7 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                     pin.brand = document.getElementById(`brand-${pinInfo.id}`).value;
                 }
                 popup.remove();
-                // NOTE: This only updates in-memory state. Use Save Session (or Publish)
-                // to persist edits to the cloud. Auto-save for loaded sessions is in testmodules.
-                alert("Pin updated. Save or re-publish the session to keep these changes.");
+                alert("Pin updated! Remember to save your session.");
             });
 
             // "Delete" button listener
@@ -289,6 +307,27 @@ function createPinPopup(pinInfo, type, routeInfo = {}) {
                 e.preventDefault();
                 showPublicProfile(routeInfo.userId);
             });
+            // Add click listener for the 🚩 Report button
+            popup.getElement().querySelector('.report-pin-btn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openReportPinModal(pinInfo, routeInfo);
+            });
+            // Lazy-load author's level badge. One profile read per popup open.
+            // Only shows if showLevel === true AND level > 1 (spec rule).
+            if (routeInfo.userId) {
+                getDoc(doc(db, 'publicProfiles', routeInfo.userId))
+                    .then(snap => {
+                        if (!snap.exists()) return;
+                        const p = snap.data();
+                        const badge = getLevelBadgeHTML(p.level ?? 1, p.showLevel !== false, 18);
+                        if (!badge) return;
+                        // Inject badge after the profile link inside the pin-author-line
+                        const authorEl = popup.getElement().querySelector('.pin-author-line');
+                        if (authorEl) authorEl.insertAdjacentHTML('beforeend', badge);
+                    })
+                    .catch(() => {}); // non-critical
+            }
         }
     });
     return popup;
