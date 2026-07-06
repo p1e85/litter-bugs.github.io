@@ -1,4 +1,3 @@
-
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc } from './firebase.js'; 
 import { state, allTitles, allBadges } from './config.js';
 import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
@@ -160,14 +159,6 @@ export function initializeUI() {
 export function attachEventListeners() {
     
     // --- AUTHENTICATION ---
-    if (elements.loginBtn) {
-        elements.loginBtn.addEventListener('click', () => {
-            const email = prompt("Enter email:");
-            const password = prompt("Enter password:");
-            if (email && password) loginUser(email, password);
-        });
-    }
-
     if (elements.logoutBtn) {
         elements.logoutBtn.addEventListener('click', handleLogOut);
     }
@@ -413,10 +404,10 @@ export function attachEventListeners() {
         elements.eventsModal.style.display = 'flex';
         fetchAndDisplayAllEvents();
     });
-    elements.hubFeedBtn.addEventListener('click', () => {
+    elements.hubFeedBtn.addEventListener('click', async () => {
         elements.hubModal.style.display = 'none';
         elements.feedModal.style.display = 'flex';
-        loadActivityFeed();
+        await loadActivityFeed();
     });
 
     // --- CHALLENGE MENU NAVIGATION ---
@@ -477,13 +468,15 @@ export function attachEventListeners() {
     }
 
     // 4. Past Challenges
-    elements.btnPastChallenges.addEventListener('click', () => {
-        elements.challengeMenuModal.style.display = 'none';
-        elements.pastChallengesModal.style.display = 'flex';
-        elements.tabCompleted.classList.add('active');
-        elements.tabUncompleted.classList.remove('active');
-        loadPastChallenges('completed'); 
-    });
+    if (elements.btnPastChallenges) {
+        elements.btnPastChallenges.addEventListener('click', () => {
+            elements.challengeMenuModal.style.display = 'none';
+            elements.pastChallengesModal.style.display = 'flex';
+            elements.tabCompleted.classList.add('active');
+            elements.tabUncompleted.classList.remove('active');
+            loadPastChallenges('completed'); 
+        });
+    }
 
     // Back from History -> Hub
     if (elements.btnBackToMenu) {
@@ -494,17 +487,21 @@ export function attachEventListeners() {
     }
 
     // 5. History Tabs
-    elements.tabCompleted.addEventListener('click', () => {
-        elements.tabCompleted.classList.add('active');
-        elements.tabUncompleted.classList.remove('active');
-        loadPastChallenges('completed');
-    });
+    if (elements.tabCompleted) {
+        elements.tabCompleted.addEventListener('click', () => {
+            elements.tabCompleted.classList.add('active');
+            elements.tabUncompleted.classList.remove('active');
+            loadPastChallenges('completed');
+        });
+    }
 
-    elements.tabUncompleted.addEventListener('click', () => {
-        elements.tabUncompleted.classList.add('active');
-        elements.tabCompleted.classList.remove('active');
-        loadPastChallenges('uncompleted');
-    });
+    if (elements.tabUncompleted) {
+        elements.tabUncompleted.addEventListener('click', () => {
+            elements.tabUncompleted.classList.add('active');
+            elements.tabCompleted.classList.remove('active');
+            loadPastChallenges('uncompleted');
+        });
+    }
 
     // 6. Admin Panel
     // NOTE: The old "Admin: Create Challenge" button (btnAdminPanel) and its modal
@@ -630,13 +627,6 @@ if (btnFinalizeSquad) {
         }
     });
 }
-    
-//    document.getElementById('hubSquadsBtn').addEventListener('click', () => {
-//    openModal('squadsModal');
-//   fetchLocalSquads(); // Refresh list every time it opens
-//});
-
-document.getElementById('btnFinalizeSquad').addEventListener('click', initializeSquad);
     
     // Generic Close Listeners
     addAllModalCloseListeners();
@@ -816,7 +806,7 @@ async function loadActivityFeed() {
                     <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
                     <div class="feed-actions">
                          <button class="${likeBtnClass}">
-                           👍 <span class="like-count">${likeCount}</span>
+                            👍 <span class="like-count">${likeCount}</span>
                          </button>
                     </div>
                 </div>
@@ -1232,12 +1222,12 @@ function _leaderboardShowTab(tabKey) {
     const squadsEl  = document.getElementById('squadsLeaderboardContainer');
 
     if (tabKey === 'myStats') {
-        if (listEl)   listEl.style.display   = 'none';
+        if (listEl)   listEl.style.display    = 'none';
         if (squadsEl) squadsEl.style.display  = 'none';
         if (statsEl)  statsEl.style.display   = 'block';
         fetchAndDisplayMyStats();
     } else if (tabKey === 'squads') {
-        if (listEl)   listEl.style.display   = 'none';
+        if (listEl)   listEl.style.display    = 'none';
         if (statsEl)  statsEl.style.display  = 'none';
         if (squadsEl) squadsEl.style.display  = 'block';
         fetchSquadsLeaderboard();
