@@ -423,158 +423,63 @@ export async function saveProfile() {
 export async function fetchAndDisplayLeaderboard(metric) {
     const leaderboardList = document.getElementById('leaderboardList');
     if (!leaderboardList) return;
-    leaderboardList.innerHTML = '<li style="padding:16px; text-align:center; color:#888;">Loading…</li>';
-
-    const RANK_EMOJI = { 1: '🥇', 2: '🥈', 3: '🥉' };
-
+    leaderboardList.innerHTML = '<li>Loading...</li>';
+    
     try {
+        const profilesRef = collection(db, "publicProfiles");
+
+        // 🛡️ THE FIX: Added 'where(metric, ">", 0)' 
+        // This ignores anyone with 0 pins or 0 distance.
         const q = query(
-            collection(db, "publicProfiles"),
-            where(metric, ">", 0),
-            orderBy(metric, "desc"),
+            profilesRef, 
+            where(metric, ">", 0), 
+            orderBy(metric, "desc"), 
             limit(10)
         );
-        const snap = await getDocs(q);
 
-        if (snap.empty) {
-            leaderboardList.innerHTML = '<li style="padding:20px; text-align:center; color:#888;">No active Troopers yet. Be the first!</li>';
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            leaderboardList.innerHTML = '<li>No active Troopers yet. Be the first!</li>';
             return;
         }
 
-        const currentUid = state.currentUser?.uid;
-        leaderboardList.className = 'lb-list';
         leaderboardList.innerHTML = '';
         let rank = 1;
 
-        snap.forEach(d => {
-            const p = d.data();
-            const uid = d.id;
-            const isMe = uid === currentUid;
-
-            const score = metric === 'totalDistance'
-                ? `${((p.totalDistance || 0) * 0.000621371).toFixed(1)} mi`
-                : (p[metric] || 0).toLocaleString();
-
-            const initial = (p.username || '?')[0].toUpperCase();
-            const rankDisplay = RANK_EMOJI[rank]
-                ? `<span class="lb-rank-emoji">${RANK_EMOJI[rank]}</span>`
-                : `<span class="lb-rank-num">${rank}</span>`;
-
-            // Level badge — respects showLevel && level > 1
-            const badge = (p.showLevel !== false && (p.level ?? 1) > 1)
-                ? `<span style="
-                    display:inline-flex; align-items:center; justify-content:center;
-                    width:18px; height:18px; border-radius:50%;
-                    background:radial-gradient(circle at 40% 35%,#FFD700,#FF8C00);
-                    color:white; font-weight:700; font-size:10px; line-height:1;
-                    vertical-align:middle; margin-left:3px; flex-shrink:0;
-                  ">${p.level}</span>`
-                : '';
-
-            const titleLine = (p.selectedTitle && allTitles[p.selectedTitle])
-                ? `<div class="lb-title">${allTitles[p.selectedTitle].name}</div>`
-                : '';
-
+        querySnapshot.forEach(doc => {
+            const profileData = doc.data();
             const li = document.createElement('li');
-            li.className = `lb-card${rank === 1 ? ' lb-rank-1' : rank === 2 ? ' lb-rank-2' : rank === 3 ? ' lb-rank-3' : ''}${isMe ? ' lb-me' : ''}`;
-            li.dataset.uid = uid;
+            li.dataset.userid = doc.id;
+            
+            li.classList.toggle('current-user-entry', state.currentUser && doc.id === state.currentUser.uid);
+            
+            const score = metric === 'totalDistance' 
+                ? `${((profileData.totalDistance || 0) * 0.000621371).toFixed(2)} mi` 
+                : (profileData.totalPins || 0);
+
+            // Level badge: only when showLevel !== false AND level > 1 (spec rule)
+            const badgeHTML = getLevelBadgeHTML(
+                profileData.level ?? 1,
+                profileData.showLevel !== false,
+                20
+            );
+
             li.innerHTML = `
-                ${rankDisplay}
-                <div class="lb-avatar">${initial}</div>
-                <div class="lb-info">
-                    <div class="lb-name-row">
-                        <span class="lb-username">${escLb(p.username || 'Unknown')}</span>
-                        ${badge}
-                        ${isMe ? '<span style="font-size:0.72em; color:#4A7C59; margin-left:4px;">(you)</span>' : ''}
-                    </div>
-                    ${titleLine}
-                </div>
-                <div class="lb-score">${score}</div>
+                <span class="leaderboard-rank">${rank}.</span>
+                <span class="leaderboard-name">
+                    <a href="#" class="leaderboard-profile-link">${profileData.username}</a>${badgeHTML}
+                </span>
+                <span class="leaderboard-score">${score}</span>
             `;
-            // Whole card is clickable → profile viewer
-            li.addEventListener('click', () => {
-                document.getElementById('leaderboardModal').style.display = 'none';
-                showPublicProfile(uid);
-            });
             leaderboardList.appendChild(li);
             rank++;
         });
 
     } catch (error) {
         console.error("Error fetching leaderboard:", error);
-        leaderboardList.innerHTML = '<li style="padding:16px; text-align:center; color:#888;">Could not load leaderboard.</li>';
+        leaderboardList.innerHTML = '<li>Could not load leaderboard data.</li>';
     }
-}
-
-/**
- * Squads leaderboard — ranked by totalPins, shows callsign, name, member count.
- * Rendered into #squadsLeaderboardContainer.
- */
-export async function fetchSquadsLeaderboard() {
-    const container = document.getElementById('squadsLeaderboardContainer');
-    if (!container) return;
-    container.innerHTML = '<p style="padding:16px; text-align:center; color:#888;">Loading…</p>';
-
-    const RANK_EMOJI = { 1: '🥇', 2: '🥈', 3: '🥉' };
-
-    try {
-        const q = query(
-            collection(db, "squads"),
-            where("totalPins", ">", 0),
-            orderBy("totalPins", "desc"),
-            limit(10)
-        );
-        const snap = await getDocs(q);
-
-        if (snap.empty) {
-            container.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">No squads have logged pins yet. Yours could be first!</p>';
-            return;
-        }
-
-        const currentUid = state.currentUser?.uid;
-        let html = '<ul class="lb-list">';
-        let rank = 1;
-
-        snap.forEach(d => {
-            const sq = d.data();
-            const memberCount = sq.memberCount
-                || (sq.members && typeof sq.members === 'object' && !Array.isArray(sq.members)
-                    ? Object.keys(sq.members).length : 0);
-            const isMySquad = sq.members &&
-                typeof sq.members === 'object' &&
-                !Array.isArray(sq.members) &&
-                currentUid && sq.members[currentUid];
-            const rankEmoji = RANK_EMOJI[rank] || rank;
-
-            html += `
-                <li class="lb-squad-card${rank === 1 ? ' lb-rank-1' : ''}${isMySquad ? ' lb-me' : ''}">
-                    <div class="lb-rank-emoji">${rankEmoji}</div>
-                    <div class="lb-squad-callsign">[${escLb(sq.callsign || '?')}]</div>
-                    <div class="lb-squad-info">
-                        <div class="lb-squad-name">${escLb(sq.squadName || '(unnamed)')}</div>
-                        <div class="lb-squad-meta">
-                            ${memberCount} member${memberCount === 1 ? '' : 's'}
-                            ${sq.homeSector ? ` · ${escLb(sq.homeSector)}` : ''}
-                            ${isMySquad ? ' · <span style="color:#4A7C59; font-weight:600;">Your Squad</span>' : ''}
-                        </div>
-                    </div>
-                    <div class="lb-squad-score">${(sq.totalPins || 0).toLocaleString()} pins</div>
-                </li>
-            `;
-            rank++;
-        });
-        html += '</ul>';
-        container.innerHTML = html;
-
-    } catch (err) {
-        console.error('fetchSquadsLeaderboard failed:', err);
-        container.innerHTML = '<p style="padding:16px; text-align:center; color:#888;">Could not load squads leaderboard.</p>';
-    }
-}
-
-function escLb(s) {
-    if (s == null) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 export async function fetchAndDisplayMyStats() {
@@ -2240,4 +2145,31 @@ function openInvitePicker(squadId, squadData) {
                         // Refresh squad detail in the background so the new invite appears
                         await fetchSquadDetails(squadId);
                     } else {
-                        btn.disabled =
+                        btn.disabled = false;
+                        btn.textContent = 'Invite';
+                    }
+                });
+            });
+        }, 250);
+    };
+
+    input.removeEventListener('input', input._inviteInputHandler);
+    input._inviteInputHandler = handleInput;
+    input.addEventListener('input', handleInput);
+
+    // Close handlers (idempotent)
+    const closeBtn = document.getElementById('invitePickerClose');
+    if (closeBtn && !closeBtn._wired) {
+        closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+        closeBtn._wired = true;
+    }
+}
+
+// Tiny inline escaper for squad-detail content (separate from elsewhere; avoids
+// importing a helper across modules just for this).
+function escapeIntelHtml(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
