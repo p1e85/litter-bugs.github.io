@@ -295,15 +295,6 @@ export function attachEventListeners() {
     });
     
     elements.exportBtn.addEventListener('click', exportGeoJSON);
-    
-    elements.centerOnRouteBtn.addEventListener('click', () => {
-        if (elements.centerOnRouteBtn.classList.contains('disabled')) {
-            alert("Please load a route first to use this feature.");
-        } else {
-            centerOnRoute();
-            elements.dataModal.style.display = 'none';
-        }
-    });
 
     elements.publishBtn.addEventListener('click', publishRoute);
     
