@@ -440,3 +440,19 @@ button.close-btn:hover { color: var(--color-text-dark); }
     font-size: 1.2em;
     color: #666;
 }
+
+/* Modal overflow fix: tall modals (Settings, Edit Profile, etc.) scroll
+   internally instead of getting cut off on short screens. */
+.modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+    .modal-content {
+        /* dvh accounts for mobile browser chrome (URL bar) — vh doesn't,
+           which is exactly what causes bottom cut-off on phones. */
+        max-height: 92dvh;
+    }
+}
