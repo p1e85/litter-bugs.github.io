@@ -1036,127 +1036,186 @@ async function loadPastChallenges(filterType) {
     }
 }
 
-// --- PUBLIC PROFILE FUNCTION (Debug & Smart Lookup Version) ---
-export async function showPublicProfile(userId) {
+// --- PUBLIC PROFILE & PIN SHEET ---
+export async function showPublicProfile(userId, pinData = null) {
     const modal = document.getElementById('publicProfileModal');
     if (modal) modal.style.display = 'flex';
 
     // 1. Verify Imports
     if (!allBadges) {
-        console.error("CRITICAL ERROR: 'allBadges' is undefined. Please check that 'config.js' exports 'allBadges'.");
-        if (document.getElementById('profileAchievements')) {
-            document.getElementById('profileAchievements').innerHTML = '<p style="color:red">Config Error: Badges not loaded.</p>';
-        }
+        console.error("CRITICAL ERROR: 'allBadges' is undefined.");
         return;
     }
 
-    const nameEl = document.getElementById('profileUsername');
-    const locEl = document.getElementById('profileLocation');
-    const bioEl = document.getElementById('profileBio');
-    const statsEl = document.getElementById('profileStats');
-    const badgesEl = document.getElementById('profileAchievements');
-    const supportBtn = document.getElementById('profileSupportBtn');
+    const contentEl = document.getElementById('sheetProfileContent');
+    const pinArea = document.getElementById('sheetPinPhotoArea');
+    const footerEl = document.getElementById('sheetFooterActions');
+    
+    if (!contentEl) return;
 
-    // Loading State
-    if (nameEl) nameEl.textContent = "Loading...";
-    if (statsEl) statsEl.innerHTML = "";
-    if (badgesEl) badgesEl.innerHTML = "";
+    // Reset states
+    contentEl.innerHTML = '<div style="padding:60px 20px; text-align:center; color:#888;">Loading profile...</div>';
+    if (pinArea) pinArea.style.display = 'none';
+    if (footerEl) footerEl.innerHTML = '';
+
+    // 2. Handle Pin Data injection
+    if (pinData && pinArea) {
+        const pinImg = document.getElementById('sheetPinImg');
+        const pinTitle = document.getElementById('sheetPinTitle');
+        const pinCategory = document.getElementById('sheetPinCategory');
+        
+        if (pinImg) pinImg.src = pinData.imageURL || pinData.thumbnailURL || '';
+        if (pinTitle) pinTitle.textContent = pinData.title || 'Untitled Pin';
+        if (pinCategory) pinCategory.textContent = pinData.category || 'Other';
+        
+        pinArea.style.display = 'block';
+    }
 
     try {
         const docSnap = await getDoc(doc(db, "publicProfiles", userId));
         
         if (!docSnap.exists()) {
-            if (nameEl) nameEl.textContent = "User not found";
+            contentEl.innerHTML = '<div style="padding:40px; text-align:center; color:#888;">User not found.</div>';
             return;
         }
 
         const data = docSnap.data();
+        const username = data.username || "Anonymous Trooper";
+        const initial = username.charAt(0).toUpperCase();
+        const roleDisplay = data.squadRole ? data.squadRole.charAt(0).toUpperCase() + data.squadRole.slice(1) : '';
+        const miles = ((data.totalDistance || 0) * 0.000621371).toFixed(1);
 
-        // 2. Basic Info
-        if (nameEl) nameEl.textContent = data.username || "Anonymous Trooper";
-        if (locEl) locEl.textContent = data.location || "Unknown Location";
-        if (bioEl) bioEl.textContent = data.bio || "No bio provided.";
+        // Level badge — respects showLevel && level > 1
+        const badgeHTML = (data.showLevel !== false && (data.level ?? 1) > 1)
+            ? `<span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:radial-gradient(circle at 40% 35%,#FFD700,#FF8C00); color:white; font-weight:900; font-size:11px; line-height:1; vertical-align:middle; margin-left:6px; box-shadow:0 1px 4px rgba(0,0,0,0.3);">${data.level}</span>`
+            : '';
 
-        // 3. Stats
-        if (statsEl) {
-            statsEl.innerHTML = `
-                <div class="stat-card">
-                    <span class="stat-value">${data.totalPins || 0}</span>
-                    <span class="stat-label">Items</span>
+        const titleLine = (data.selectedTitle && allTitles[data.selectedTitle])
+            ? `<div style="display:inline-block; background:#4A7C59; color:white; font-size:0.82em; font-weight:600; padding:3px 12px; border-radius:999px; margin-bottom:6px;">${escapeAttr(allTitles[data.selectedTitle].name)}</div>`
+            : '';
+
+        const squadLine = data.squadId 
+            ? `<div style="display:inline-block; background:rgba(255,255,255,0.15); color:white; font-size:0.82em; font-weight:500; padding:3px 12px; border-radius:999px; margin-top:4px;">🛡️ ${escapeAttr(data.squadCallsign)} · ${escapeAttr(roleDisplay)}</div>`
+            : '';
+
+        // Build HTML
+        let html = `
+            <div style="background: linear-gradient(180deg, #1A1A2E 0%, #2A2A4E 100%); padding: 32px 20px 24px; text-align: center; position: relative;">
+                <div style="width: 72px; height: 72px; border-radius: 50%; background: #4A7C59; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 2em; font-weight: 700; color: white; border: 3px solid rgba(255,255,255,0.2);">${escapeAttr(initial)}</div>
+                <div style="font-size: 1.35em; font-weight: 700; color: white; margin-bottom: 6px; display:flex; justify-content:center; align-items:center;">${escapeAttr(username)}${badgeHTML}</div>
+                ${titleLine}
+                ${data.location ? `<div style="font-size: 0.85em; color: rgba(255,255,255,0.7); margin-bottom: 5px;">📍 ${escapeAttr(data.location)}</div>` : ''}
+                ${squadLine}
+            </div>
+            
+            <div style="background: white; padding: 20px 20px 0px;">
+                <div style="display: flex; gap: 0; background: #F7F9F7; border: 1px solid #E0EDE5; border-radius: 10px; overflow: hidden; margin-bottom: 16px;">
+                    <div style="flex: 1; text-align: center; padding: 14px 8px; border-right: 1px solid #E0EDE5;">
+                        <div style="font-size: 1.3em; margin-bottom: 4px;">📍</div>
+                        <div style="font-size: 1.2em; font-weight: 700; color: #4A7C59;">${(data.totalPins || 0).toLocaleString()}</div>
+                        <div style="font-size: 0.72em; color: #888; margin-top: 2px;">Pins</div>
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 14px 8px; border-right: 1px solid #E0EDE5;">
+                        <div style="font-size: 1.3em; margin-bottom: 4px;">🗺️</div>
+                        <div style="font-size: 1.2em; font-weight: 700; color: #4A7C59;">${(data.totalRoutes || 0).toLocaleString()}</div>
+                        <div style="font-size: 0.72em; color: #888; margin-top: 2px;">Routes</div>
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 14px 8px;">
+                        <div style="font-size: 1.3em; margin-bottom: 4px;">🚶</div>
+                        <div style="font-size: 1.2em; font-weight: 700; color: #4A7C59;">${miles}</div>
+                        <div style="font-size: 0.72em; color: #888; margin-top: 2px;">Miles</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <span class="stat-value">${(data.totalDistance || 0).toFixed(1)}</span>
-                    <span class="stat-label">Miles</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-value">${data.totalRoutes || 0}</span>
-                    <span class="stat-label">Routes</span>
+        `;
+
+        // Bio
+        if (data.bio) {
+            html += `
+                <div style="font-size: 0.8em; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; margin-top: 16px;">About</div>
+                <div style="font-size: 0.95em; color: #333; line-height: 1.5; margin-bottom: 16px;">${escapeAttr(data.bio)}</div>
+            `;
+        }
+
+        // Badges
+        const userBadges = data.badges || {}; 
+        const earnedBadges = Object.keys(allBadges).filter(k => userBadges[k]);
+        
+        if (earnedBadges.length > 0) {
+            html += `
+                <div style="font-size: 0.8em; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; margin-top: 16px;">Badges (${earnedBadges.length})</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 8px; margin-bottom: 16px;">
+                    ${earnedBadges.map(k => {
+                        const b = allBadges[k];
+                        if (!b) return '';
+                        const badgeObj = userBadges[k] || {};
+                        const count = badgeObj.count || 1;
+                        const countHTML = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-top:4px; display:inline-block;">x${count}</span>` : '';
+                        return `
+                            <div style="background:#F5F5F5; border-radius:8px; padding:10px 4px 6px; text-align:center;" title="${escapeAttr(b.description || b.name)}">
+                                <span style="font-size: 1.6em; display: block; margin-bottom: 4px;">${b.icon}</span>
+                                <div style="font-size: 0.65em; color: #666; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeAttr(b.name)}</div>
+                                ${countHTML}
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             `;
         }
 
-        // 4. Support Button
-        if (supportBtn) {
-            supportBtn.style.display = data.buyMeACoffeeLink ? "block" : "none";
-            if (data.buyMeACoffeeLink) {
-                const newBtn = supportBtn.cloneNode(true);
-                supportBtn.parentNode.replaceChild(newBtn, supportBtn);
-                newBtn.addEventListener('click', () => window.open(data.buyMeACoffeeLink, '_blank'));
-            }
-        }
+        html += `</div>`; // Close body
+        contentEl.innerHTML = html;
 
-        // 5. Badges (Smart Lookup Fix)
-        if (badgesEl) {
-            const userBadges = data.badges || {}; 
-            const badgeKeys = Object.keys(userBadges);
+        // 3. Build Footer Actions
+        if (footerEl) {
+            let footerHtml = '';
             
-            console.log("User's Badges (Keys):", badgeKeys); // Debug Log
+            if (data.buyMeACoffeeLink) {
+                footerHtml += `<button class="modal-button" style="width:100%; background:#FFDD00; color:#333; border:none; margin-bottom:10px; font-weight:700;" onclick="window.open('${escapeAttr(data.buyMeACoffeeLink)}', '_blank')">☕ Support ${escapeAttr(username)}</button>`;
+            }
 
-            if (badgeKeys.length === 0) {
-                badgesEl.innerHTML = '<p style="color:#888; width:100%; text-align:center;">No badges yet.</p>';
-            } else {
-                let badgesHTML = '';
-                
-                badgeKeys.forEach(key => {
-                    // Debug: Check what we are looking for
-                    // console.log(`Looking up badge key: "${key}"`);
+            if (pinData) {
+                const isAdmin = state.currentUser && state.isAdmin; // Powered by checkAdminPermissions
+                if (isAdmin) {
+                    footerHtml += `<button class="modal-button btn-danger sheet-del-route-btn" style="width:100%; margin-bottom:10px;">⚠️ Admin: Delete Entire Route</button>`;
+                }
+                footerHtml += `<button class="modal-button sheet-report-pin-btn" style="width:100%; background:transparent; border:1px solid #dc3545; color:#dc3545; margin-bottom:10px;">🚩 Report This Pin</button>`;
+            }
+            
+            footerEl.innerHTML = footerHtml;
 
-                    // A. Direct Lookup
-                    let config = allBadges[key]; 
-                    
-                    // B. Smart Fallback: If direct lookup fails, try to find by Name
-                    if (!config) {
-                        // console.warn(`Direct lookup failed for "${key}". Trying to find by name...`);
-                        const allKeys = Object.keys(allBadges);
-                        const match = allKeys.find(k => allBadges[k].name === key || allBadges[k].title === key);
-                        if (match) config = allBadges[match];
-                    }
-                    
-                    // C. Determine Icon & Name
-                    // If we found config, use it. If not, try to read from user data. If all else fails, show Trophy.
-                    const icon = config ? config.icon : (userBadges[key].icon || '🏆');
-                    const name = config ? config.name : (userBadges[key].name || key);
-                    
-                    // Count Logic
-                    const count = userBadges[key].count || 1;
-                    const countBadge = count > 1 ? `<span style="background:#333; color:white; font-size:0.7em; padding:1px 4px; border-radius:4px; margin-top:2px;">x${count}</span>` : '';
+            // Wire up footer buttons
+            if (pinData) {
+                const reportBtn = footerEl.querySelector('.sheet-report-pin-btn');
+                if (reportBtn) {
+                    reportBtn.addEventListener('click', async () => {
+                        const { openReportPinModal } = await import('./reports.js');
+                        openReportPinModal(pinData.title, pinData.imageURL || pinData.thumbnailURL, pinData.routeId);
+                    });
+                }
 
-                    badgesHTML += `
-                        <div style="background:#f9f9f9; padding:10px; border-radius:8px; width:90px; text-align:center; display:flex; flex-direction:column; align-items:center; margin:5px;">
-                            <div style="font-size:2.5em; line-height:1;">${icon}</div>
-                            <div style="font-size:0.75em; font-weight:bold; margin-top:5px; line-height:1.2;">${name}</div>
-                            ${countBadge}
-                        </div>
-                    `;
-                });
-                
-                badgesEl.innerHTML = `<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;">${badgesHTML}</div>`;
+                const delRouteBtn = footerEl.querySelector('.sheet-del-route-btn');
+                if (delRouteBtn) {
+                    delRouteBtn.addEventListener('click', async () => {
+                        if (confirm("⚠️ PERMANENTLY delete this route from the map?")) {
+                            try {
+                                await deleteDoc(doc(db, "publishedRoutes", pinData.routeId));
+                                alert("Route deleted.");
+                                modal.style.display = 'none';
+                                const { fetchAndDisplayCommunityRoutes } = await import('./community.js');
+                                fetchAndDisplayCommunityRoutes();
+                            } catch (err) {
+                                console.error(err);
+                                alert("Failed to delete.");
+                            }
+                        }
+                    });
+                }
             }
         }
 
     } catch (err) {
         console.error("Error loading profile:", err);
-        if (nameEl) nameEl.textContent = "Error loading profile";
+        contentEl.innerHTML = '<div style="padding:40px; text-align:center; color:#888;">Error loading profile data.</div>';
     }
 }
 
