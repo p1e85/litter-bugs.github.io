@@ -1,12 +1,10 @@
-// js/testmodules/profile.js
+// js/modules/profile.js
 //
 // "My Profile" screen for the logged-in user.
 // Spec: display-only with exactly two write actions: selectedTitle and showLevel.
 // XP/level/stats/badges are all read-only (server-owned).
 //
 // Opens from "👤 My Profile" in the main menu.
-// Contains an "✏️ Edit Profile" button that opens the existing profileModal
-// (bio, location, coffee link) — web app's addition to the Android spec.
 
 import { db, doc, getDoc, updateDoc } from './firebase.js';
 import { state, allBadges, allTitles } from './config.js';
@@ -208,18 +206,6 @@ function ensureStyles() {
     .mpp-title-unselected { background: #F0F0F0; color: #333; }
     .mpp-title-none-selected { background: #1A1A2E; color: white; font-weight: 700; }
     .mpp-title-none-unselected { background: #F0F0F0; color: #888; }
-
-    /* ---- Edit Profile button ---- */
-    .mpp-edit-btn {
-        margin-top: 20px; width: 100%;
-        padding: 12px;
-        background: white; color: #4A7C59;
-        border: 2px solid #4A7C59;
-        border-radius: 8px; font-size: 0.95em;
-        font-weight: 600; cursor: pointer;
-        transition: background 0.15s, color 0.15s;
-    }
-    .mpp-edit-btn:hover { background: #4A7C59; color: white; }
     `;
     document.head.appendChild(s);
 }
@@ -311,7 +297,6 @@ function renderMyProfile(container, profile, uid) {
 
     // ---- Build HTML ----
     container.innerHTML = `
-        <!-- HEADER -->
         <div class="mpp-header">
             <button class="mpp-close" id="mppClose">&times;</button>
             <div class="mpp-avatar">${esc(initial)}</div>
@@ -323,10 +308,8 @@ function renderMyProfile(container, profile, uid) {
             ${squadId   ? `<div class="mpp-squad-chip">🛡️ ${esc(squadCS)} · ${esc(roleDisplay)}</div>` : ''}
         </div>
 
-        <!-- BODY -->
         <div class="mpp-body">
 
-            <!-- XP / Level block -->
             <div class="mpp-xp-block">
                 <div class="mpp-level-row">
                     <div class="mpp-level-badge">${level}</div>
@@ -346,7 +329,6 @@ function renderMyProfile(container, profile, uid) {
                 <div class="mpp-bar-txt${isMax ? ' mpp-maxlevel' : ''}">${progressTxt}</div>
             </div>
 
-            <!-- Show-level toggle -->
             <div class="mpp-toggle-row">
                 <div class="mpp-toggle-label">
                     <strong>Show level on community pins</strong>
@@ -360,7 +342,6 @@ function renderMyProfile(container, profile, uid) {
                 </label>
             </div>
 
-            <!-- Stats row -->
             <div class="mpp-stats">
                 <div class="mpp-stat">
                     <div class="mpp-stat-emoji">📍</div>
@@ -379,13 +360,11 @@ function renderMyProfile(container, profile, uid) {
                 </div>
             </div>
 
-            <!-- Bio (hidden when empty) -->
             ${bio ? `
                 <div class="mpp-section-label">About</div>
                 <div class="mpp-bio-text">${esc(bio)}</div>
             ` : ''}
 
-            <!-- Badges (hidden when none earned) -->
             ${earnedBadges.length > 0 ? `
                 <div class="mpp-section-label">Badges (${earnedBadges.length})</div>
                 <div class="mpp-badge-grid">
@@ -399,7 +378,6 @@ function renderMyProfile(container, profile, uid) {
                 </div>
             ` : ''}
 
-            <!-- Title selector (hidden when none unlocked) -->
             ${unlockedTitles.length > 0 ? `
                 <div class="mpp-section-label">Display Title</div>
                 <div id="mppTitleList">
@@ -421,9 +399,6 @@ function renderMyProfile(container, profile, uid) {
                 </div>
             ` : ''}
 
-            <!-- Edit Profile (user's addition to spec) -->
-            <button class="mpp-edit-btn" id="mppEditBtn">✏️ Edit Profile</button>
-
         </div>
     `;
 
@@ -432,16 +407,6 @@ function renderMyProfile(container, profile, uid) {
     // Close button
     document.getElementById('mppClose')?.addEventListener('click', () => {
         document.getElementById('myProfileModal').style.display = 'none';
-    });
-
-    // Edit Profile → opens existing profileModal / loadProfileForEditing
-    document.getElementById('mppEditBtn')?.addEventListener('click', () => {
-        document.getElementById('myProfileModal').style.display = 'none';
-        // Dynamically import to avoid circular deps between profile.js ↔ community.js
-        import('./community.js').then(m => {
-            m.loadProfileForEditing();
-            document.getElementById('profileModal').style.display = 'flex';
-        });
     });
 
     // Show-level toggle — ONLY permitted client write (user preference)
