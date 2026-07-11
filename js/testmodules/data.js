@@ -1,7 +1,7 @@
 import { db, collection, addDoc, getDocs, query, orderBy, doc, getDoc, deleteDoc } from './firebase.js';
 import { state } from './config.js';
 import { convertPinsForFirestore, convertPinsFromFirestore, convertRouteForFirestore, convertRouteFromFirestore } from './utils.js';
-import { createAndAddMarker, updateUserPinsSource } from './map.js';
+import { createAndAddMarker, updateUserPinsSource, centerOnRoute } from './map.js';
 import { storage, ref, uploadBytes, getDownloadURL } from './firebase.js';
 
 /**
@@ -18,14 +18,11 @@ export async function saveSession() {
         sessionName,
         timestamp: new Date(),
         pins: convertPinsForFirestore(state.photoPins),
-        route: convertRouteForFirestore(state.routeCoordinates),
-        // We add these so they show up in your history later!
-        distance: state.currentSession.distance || 0,
-        duration: state.currentSession.duration || 0
+        route: convertRouteForFirestore(state.routeCoordinates)
     };
 
     // --- Handle Cleanup Photo ---
-    let cleanupPhotoInfo = {}; 
+    let cleanupPhotoInfo = {}; // Will hold URL or data
     if (state.cleanupPhoto instanceof File) {
         if (state.currentUser) {
             // Logged-in: Upload to Storage
@@ -33,14 +30,14 @@ export async function saveSession() {
                 const timestamp = Date.now();
                 const storageRef = ref(storage, `cleanupPhotos/${state.currentUser.uid}/${timestamp}-${state.cleanupPhoto.name}`);
                 const snapshot = await uploadBytes(storageRef, state.cleanupPhoto);
-                cleanupPhotoInfo.cleanupPhotoURL = await getDownloadURL(snapshot.ref);
+                cleanupPhotoInfo.cleanupPhotoURL = await getDownloadURL(snapshot.ref); // Get URL
                 console.log("Cleanup photo uploaded:", cleanupPhotoInfo.cleanupPhotoURL);
             } catch (error) {
                 console.error("Error uploading cleanup photo:", error);
                 alert("Could not save the cleanup photo, but session data will be saved.");
             }
         } else {
-            // Guest: Convert to Base64
+            // Guest: Convert to Base64 data URL
             try {
                 cleanupPhotoInfo.cleanupPhotoData = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -48,8 +45,10 @@ export async function saveSession() {
                     reader.onerror = e => reject(e);
                     reader.readAsDataURL(state.cleanupPhoto);
                 });
+                console.log("Cleanup photo saved locally as data URL.");
             } catch (error) {
-                console.error("Error converting cleanup photo:", error);
+                console.error("Error converting cleanup photo to data URL:", error);
+                alert("Could not save the cleanup photo locally, but session data will be saved.");
             }
         }
     }
@@ -57,63 +56,24 @@ export async function saveSession() {
 
 
     // --- Save Session (Guest or Logged-in) ---
-    const sessionDataToSave = { ...sessionDataBase, ...cleanupPhotoInfo };
+    const sessionDataToSave = { ...sessionDataBase, ...cleanupPhotoInfo }; // Combine base data + photo info
 
     if (!state.currentUser) {
         // Guest: Save to Local Storage
         const guestSessions = JSON.parse(localStorage.getItem('guestSessions')) || [];
         guestSessions.push(sessionDataToSave);
         localStorage.setItem('guestSessions', JSON.stringify(guestSessions));
-        
         alert(`Session "${sessionName}" saved locally.`);
         dataModal.style.display = 'none';
-        state.cleanupPhoto = null; 
-        
-        // IMPORTANT: Clear the map after saving
-        if (typeof clearCurrentSession === 'function') clearCurrentSession();
+        state.cleanupPhoto = null; // Clear photo after saving
         return;
-
     } else {
         // Logged-in: Save to Firestore
         try {
             await addDoc(collection(db, "users", state.currentUser.uid, "privateSessions"), sessionDataToSave);
-            
-            // ✅ START CHALLENGE TRACKER
-            try {
-                const rawDistance = state.currentSession.distance || 0;
-                // Convert meters to miles (1609.34 meters = 1 mile)
-                const distanceMiles = rawDistance / 1609.34; 
-                
-                // Count the items (1 Pin = 1 Item)
-                const itemsCollected = state.photoPins.length;
-
-                // Only track if meaningful activity occurred
-                if (distanceMiles > 0.05 || itemsCollected > 0) {
-                    console.log(`Tracking Progress: ${distanceMiles.toFixed(2)} mi, ${itemsCollected} items`);
-                    
-                    // DYNAMIC IMPORT: We load tracking.js here to avoid a circular dependency loop.
-                    // (Since tracking.js imports data.js, we can't import tracking.js at the top of data.js)
-                    const trackingModule = await import('./tracking.js');
-                    
-                    // Send both distance AND items to the engine
-                    await trackingModule.updateUserChallenges(
-                        state.currentUser.uid, 
-                        distanceMiles, 
-                        itemsCollected
-                    );
-                }
-            } catch (err) {
-                console.error("Tracking update failed:", err);
-            }
-            // 🛑 END CHALLENGE TRACKER
-
             alert(`Session "${sessionName}" saved to your account!`);
             dataModal.style.display = 'none';
-            state.cleanupPhoto = null; 
-            
-            // IMPORTANT: Clear the map after saving
-            if (typeof clearCurrentSession === 'function') clearCurrentSession();
-
+            state.cleanupPhoto = null; // Clear photo after saving
         } catch (error) {
             console.error("Error saving session to Firestore:", error);
             alert("Could not save session.");
@@ -188,9 +148,9 @@ function loadSpecificLocalSession(sessionIndex) {
         displaySessionData(convertedData);
         alert(`Session "${sessionData.sessionName}" loaded!`);
         document.getElementById('localSessionsModal').style.display = 'none';
-        document.getElementById('centerOnRouteBtn').classList.remove('disabled');
-
-        document.getElementById('dataModal').style.display = 'flex';
+        
+        // Automatically pan to the loaded route
+        centerOnRoute(); 
     }
 }
 
@@ -257,9 +217,9 @@ async function loadSpecificSession(sessionId) {
             });
             alert(`Session "${sessionData.sessionName}" loaded!`);
             document.getElementById('sessionsModal').style.display = 'none';
-            document.getElementById('centerOnRouteBtn').classList.remove('disabled');
-
-            document.getElementById('dataModal').style.display = 'flex';
+            
+            // Automatically pan to the loaded route
+            centerOnRoute(); 
         }
     } catch (error) {
         console.error("Error loading specific session:", error);
@@ -279,7 +239,6 @@ export function clearCurrentSession() {
     if (state.map && state.map.getSource('user-route')) {
         state.map.getSource('user-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
     }
-    document.getElementById('centerOnRouteBtn').classList.add('disabled');
 }
 
 /**
