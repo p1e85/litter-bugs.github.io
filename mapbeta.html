@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,7 +24,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗑️</text></svg>">
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css' rel='stylesheet' />
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
-    <link rel="stylesheet" href="css/maptest.css">
+    <link rel="stylesheet" href="css/mapbeta.css">
 </head>
 <body>
 
@@ -37,7 +36,6 @@
         <div class="bottom-row">
              <button id="leaderboardBtn" class="top-bar-button">🏆 Leaderboard</button>
              <button id="communityBtn" class="community-button off">🌎 Community View: OFF</button>
-             <button id="changeStyleBtn" class="top-bar-button">🎨 Change Style</button>
         </div>
     </div>
 
@@ -47,8 +45,6 @@
       <button id="findMeBtn" class="control-btn">📍</button>
       <button id="pictureBtn" class="control-btn" disabled>📸</button>
       <input type="file" id="cameraInput" accept="image/*" capture style="display: none;">
-      <!-- Quick pin uses a separate hidden input so it never interferes with
-           the tracking-route photo flow (different handler, different state) -->
       <input type="file" id="quickPinCameraInput" accept="image/*" capture="environment" style="display:none;">
     </div>
 
@@ -83,7 +79,6 @@
                 <hr>
                 <a href="https://www.littertroopers.com" target="_blank" class="modal-button btn-secondary">🌐 Visit Website</a>
                 <a href="https://www.paypal.com/donate/?hosted_button_id=8HAXRDMMHHKQU" target="_blank" class="modal-button btn-support" style="background-color:#FFDD00; color:#333; border-color:#FFDD00;">☕ Support Litter Troopers</a>
-                <!-- Admin-only: hidden by default, shown via checkAdminPermissions() -->
                 <button id="btnAdminPanelFull" class="modal-button" style="display:none; background-color:#1A1A2E; color:white; border-color:#1A1A2E; margin-top:8px; text-align:center; justify-content:center;">🛠️ Admin Panel</button>
             </div>
         </div>
@@ -92,22 +87,185 @@
     <div id="infoModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>About Litter Troopers</h2>
+            <h2>⚙️ Settings</h2>
             <div class="info-modal-body">
-                <h4>The Mission (Why)</h4>
-                <p>Litter Troopers transforms the chore of cleaning up our neighborhoods into a visible and rewarding achievement...</p>
-                <h4>How to Use the App</h4>
-                <ol class="info-list">
-                    <li><strong>Start Tracking:</strong> Open the menu and press 'Start Tracking'...</li>
-                    <li><strong>Pin Litter:</strong> When you find litter, press the 'Pin Picture' camera button...</li>
-                    <li><strong>Manage Data:</strong> Use the 'Data Management' button to save, load, or export...</li>
-                    <li><strong>Publish:</strong> When logged in, 'Publish to Community' shares your completed route...</li>
-                    <li><strong>Community View:</strong> Toggle the 'Community View' button to see all routes...</li>
-                </ol>
+
+                <h4 class="settings-section-label">🗺️ Map</h4>
+                <p class="settings-item-title">Map Style</p>
+                <p class="settings-item-sub">Choose your preferred map appearance</p>
+                <div id="mapStyleOptions"></div>
+
+                <hr class="settings-divider">
+
+                <h4 class="settings-section-label">👤 Account</h4>
+                <div id="settingsAccountSection"></div>
+
+                <hr class="settings-divider">
+
+                <h4 class="settings-section-label">ℹ️ About</h4>
+                <div class="settings-about-card">
+                    <div class="settings-about-row"><span>App</span><strong>Litter Troopers</strong></div>
+                    <div class="settings-about-row"><span>Version</span><strong>2.0</strong></div>
+                    <div class="settings-about-row"><span>Platform</span><strong>Web</strong></div>
+                    <div class="settings-about-row"><span>Built with</span><strong>❤️ in Chicago</strong></div>
+                </div>
+
+                <a href="https://littertroopers.com/tos.html" target="_blank" rel="noopener" class="settings-link-btn">📄 Terms of Use</a>
+                <a href="https://littertroopers.com/Privacy_Policy.html" target="_blank" rel="noopener" class="settings-link-btn">🔒 Privacy Policy</a>
             </div>
-            <p class="tos-link-container">You can review the full <a href="#" id="viewTermsLink">Terms of Use</a> at any time.</p>
         </div>
     </div>
+
+    <style>
+        /* Settings modal (infoModal) — Android/iOS-parity layout */
+        #infoModal .settings-section-label {
+            color: #888;
+            font-size: 0.85em;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+        }
+        #infoModal .settings-item-title {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #333;
+            margin: 0 0 2px 0;
+        }
+        #infoModal .settings-item-sub {
+            font-size: 0.9em;
+            color: #888;
+            margin: 0 0 12px 0;
+        }
+        #infoModal .settings-divider {
+            border: 0;
+            border-top: 1px solid #eee;
+            margin: 18px 0;
+        }
+        .map-style-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 16px 18px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 12px;
+            background: #F5F5F5;
+            color: #333;
+            font-size: 1.05em;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .map-style-option:hover { background: #ECECEC; }
+        .map-style-option.selected {
+            background: #4A7C59;
+            color: white;
+        }
+        .map-style-option.selected:hover { background: #4A7C59; }
+        .map-style-check { font-weight: 700; }
+
+        /* Account section */
+        .settings-account-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #F5F5F5;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .settings-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #4A7C59;
+            color: white;
+            font-weight: 700;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .settings-account-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .settings-account-info strong { font-size: 1.05em; color: #333; }
+        .settings-account-info span {
+            font-size: 0.85em;
+            color: #888;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .settings-btn-solid {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 12px;
+            background: #4A7C59;
+            color: white;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+        }
+        .settings-btn-danger-outline {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: 1px solid #dc3545;
+            border-radius: 12px;
+            background: transparent;
+            color: #dc3545;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* About section */
+        #infoModal .settings-about-card {
+            background: #F5F5F5;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+        }
+        #infoModal .settings-about-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 0.95em;
+        }
+        #infoModal .settings-about-row span { color: #888; }
+
+        /* Terms / Privacy link buttons */
+        .settings-link-btn {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: 1px solid #4A7C59;
+            border-radius: 12px;
+            background: transparent;
+            color: #4A7C59;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+        }
+    </style>
     
     <div id="termsModal" class="modal-overlay">
          <div class="modal-content">
@@ -155,8 +313,6 @@
             <h2>Data Management</h2>
             <button id="saveBtn" class="modal-button">💾 Save Private Session</button>
             <button id="loadBtn" class="modal-button">📂 Load Private Session</button>
-            <button id="centerOnRouteBtn" class="modal-button disabled">🎯 Find Route</button>
-            <button id="managePublicationsBtn" class="modal-button manage">📚 Manage My Publications</button>
             <hr>
             <p>Export your current session as a GeoJSON file.</p>
             <button id="exportBtn" class="modal-button btn-support export">📄 Export as GeoJSON</button>
@@ -359,8 +515,6 @@
             <h2>Community Hub</h2>
             <p class="modal-subtitle">Connect, challenge, and clean together.</p>
 
-            <!-- Pending squad invites strip. Hidden by default; populated &
-                 shown by ui.js whenever the user opens the hub. -->
             <div id="hubInvitesStrip" style="display:none; background:#fff8e1; border:1px solid #ffd54f; border-radius:6px; padding:10px 12px; margin-bottom:14px;">
                 <strong style="color:#b8860b;">🎟️ You have pending squad invites</strong>
                 <div id="hubInvitesList" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;"></div>
@@ -444,21 +598,16 @@
             </ul>
     </div>
 
-    <!-- Action panel: shows context-aware buttons based on user's relationship
-         to this squad (member/non-member/has-request/has-invite/leader). All
-         visibility is set by JS in fetchSquadDetails. -->
     <div id="intelActionPanel" class="intel-section" style="display:none;">
         <h4>Actions</h4>
         <div id="intelActionContent" style="display:flex; flex-direction:column; gap:8px;"></div>
     </div>
 
-    <!-- Leader-only: pending join requests for this squad. -->
     <div id="intelJoinRequestsSection" class="intel-section" style="display:none;">
         <h4>📥 Pending Join Requests <span id="intelJoinRequestCount" style="font-size:0.85em; color:#666;"></span></h4>
         <div id="intelJoinRequestsList"></div>
     </div>
 
-    <!-- Leader-only: outstanding invites this squad has sent. -->
     <div id="intelInvitesSection" class="intel-section" style="display:none;">
         <h4>📤 Outstanding Invites <span id="intelInvitesCount" style="font-size:0.85em; color:#666;"></span></h4>
         <div id="intelInvitesList"></div>
@@ -470,8 +619,6 @@
     <button class="modal-button btn-secondary" onclick="showSquadRegistry()">← Back to Registry</button>
 </div>
 
-<!-- Invite picker modal: typeahead search over publicProfiles. Opens from the
-     leader's "Invite a Trooper" button inside squad intel. -->
 <div id="invitePickerModal" class="modal-overlay" style="display:none;">
     <div class="modal-content" style="max-width:420px;">
         <button class="close-btn" id="invitePickerClose">&times;</button>
@@ -597,9 +744,6 @@
         </div>
     </div>
 
-    <!-- logTrashModal was incorrectly nested inside the old admin challenge modal;
-         hoisted up to top level. The admin challenge UI itself has been moved
-         into the Challenges tab of the unified Admin Panel below. -->
     <div id="logTrashModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
@@ -610,17 +754,11 @@
         </div>
     </div>
 
-    <!-- ============================================================
-         ADMIN PANEL (Phase 1: stats + pending events + pending squads)
-         Only visible to users with role === "admin". Firestore rules
-         enforce this at the data layer too — the UI is a convenience.
-         ============================================================ -->
     <div id="adminPanelModal" class="modal-overlay">
         <div class="modal-content" style="max-width: 720px; width: 95%;">
             <button class="close-btn">&times;</button>
             <h2>🛠️ Admin Panel</h2>
 
-            <!-- Tab buttons -->
             <div class="admin-tab-bar">
                 <button class="admin-tab-btn active" data-tab="stats">📊 Stats</button>
                 <button class="admin-tab-btn" data-tab="pendingEvents">📅 Pending Events</button>
@@ -632,10 +770,8 @@
                 <button class="admin-tab-btn" data-tab="challenges">🎯 Challenges</button>
                 <button class="admin-tab-btn" data-tab="audit">🕓 Audit Log</button>
                 <button class="admin-tab-btn" data-tab="mail">📧 Mail</button>
-                <button class="admin-tab-btn" data-tab="mail">📧 Mail</button>
             </div>
 
-            <!-- Tab bodies -->
             <div class="admin-tab-body" data-tab="stats" style="display:block;">
                 <div id="adminStatsContent"><p>Loading stats…</p></div>
             </div>
@@ -675,14 +811,9 @@
                 <p style="color:#666; font-size:0.9em;">Mailing list signups and beta waitlist from the landing page. Emails are stored in Firestore — copy or export as needed.</p>
                 <div id="adminMailContent"><p>Loading…</p></div>
             </div>
-            <div class="admin-tab-body" data-tab="mail" style="display:none;">
-                <p style="color:#666; font-size:0.9em;">Mailing list and beta waitlist signups from littertroopers.com.</p>
-                <div id="adminMailContent"><p>Loading…</p></div>
-            </div>
         </div>
     </div>
 
-    <!-- REPORT PIN MODAL — opened from the 🚩 button on community pin popups -->
     <div id="reportPinModal" class="modal-overlay">
         <div class="modal-content" style="max-width: 480px;">
             <button class="close-btn" id="reportPinCloseBtn">&times;</button>
@@ -882,10 +1013,6 @@
         .admin-badge-past { background: #888; color: white; }
     </style>
 
-    <!-- QUICK PIN MODAL
-         Opens when the user taps 📸 while NOT tracking a route.
-         Photo is previewed immediately; upload runs in background.
-         Save is enabled once upload resolves. Per Android spec. -->
     <div id="quickPinModal" class="modal-overlay" style="display:none;">
         <div class="modal-content" style="max-width:420px;">
             <button class="close-btn" id="quickPinCancelBtn">&times;</button>
@@ -909,8 +1036,7 @@
             </label>
             <select id="quickPinCategory"
                 style="width:100%; padding:8px; margin-bottom:10px;">
-                <!-- Populated dynamically from pinCategories in tracking.js -->
-            </select>
+                </select>
             <div id="quickPinSubcategoryWrap" style="display:none; margin-bottom:10px;">
                 <label for="quickPinSubcategory"
                     style="display:block; font-weight:600; margin-bottom:4px;">
@@ -924,10 +1050,8 @@
         </div>
     </div>
 
-    <!-- MY PROFILE MODAL — populated by profile.js openMyProfileModal() -->
     <div id="myProfileModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
-            <!-- close button + body rendered by JS -->
             <div id="myProfileContent">
                 <div style="padding:60px 20px; text-align:center; color:#888;">Loading…</div>
             </div>
@@ -978,7 +1102,7 @@
     .lb-squad-score { font-size:1.1em; font-weight:700; color:#4A7C59; flex-shrink:0; }
     </style>
 
-    <script src="js/main.js" type="module"></script>
+<script src="js/main.js?v=2" type="module"></script>
 
 </body>
 </html>
