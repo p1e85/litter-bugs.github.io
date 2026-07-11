@@ -456,3 +456,14 @@ button.close-btn:hover { color: var(--color-text-dark); }
         max-height: 92dvh;
     }
 }
+
+/* Tall-modal fix, layer 2: if a modal exceeds the viewport, scroll the
+   overlay itself. margin:auto = short modals stay centered, tall ones
+   become reachable top-to-bottom. */
+.modal-overlay {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.modal-overlay .modal-content {
+    margin: auto;
+}
