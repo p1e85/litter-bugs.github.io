@@ -36,7 +36,6 @@
         <div class="bottom-row">
              <button id="leaderboardBtn" class="top-bar-button">🏆 Leaderboard</button>
              <button id="communityBtn" class="community-button off">🌎 Community View: OFF</button>
-             <button id="changeStyleBtn" class="top-bar-button">🎨 Change Style</button>
         </div>
     </div>
 
@@ -88,8 +87,17 @@
     <div id="infoModal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn">&times;</button>
-            <h2>About Litter Troopers</h2>
+            <h2>⚙️ Settings</h2>
             <div class="info-modal-body">
+
+                <h4 class="settings-section-label">🗺️ Map</h4>
+                <p class="settings-item-title">Map Style</p>
+                <p class="settings-item-sub">Choose your preferred map appearance</p>
+                <div id="mapStyleOptions"></div>
+
+                <hr class="settings-divider">
+
+                <h4 class="settings-section-label">ℹ️ About</h4>
                 <h4>The Mission (Why)</h4>
                 <p>Litter Troopers transforms the chore of cleaning up our neighborhoods into a visible and rewarding achievement...</p>
                 <h4>How to Use the App</h4>
@@ -104,6 +112,57 @@
             <p class="tos-link-container">You can review the full <a href="#" id="viewTermsLink">Terms of Use</a> at any time.</p>
         </div>
     </div>
+
+    <style>
+        /* Settings modal (infoModal) — Android/iOS-parity layout */
+        #infoModal .settings-section-label {
+            color: #888;
+            font-size: 0.85em;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+        }
+        #infoModal .settings-item-title {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #333;
+            margin: 0 0 2px 0;
+        }
+        #infoModal .settings-item-sub {
+            font-size: 0.9em;
+            color: #888;
+            margin: 0 0 12px 0;
+        }
+        #infoModal .settings-divider {
+            border: 0;
+            border-top: 1px solid #eee;
+            margin: 18px 0;
+        }
+        .map-style-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 16px 18px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 12px;
+            background: #F5F5F5;
+            color: #333;
+            font-size: 1.05em;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .map-style-option:hover { background: #ECECEC; }
+        .map-style-option.selected {
+            background: #4A7C59;
+            color: white;
+        }
+        .map-style-option.selected:hover { background: #4A7C59; }
+        .map-style-check { font-weight: 700; }
+    </style>
     
     <div id="termsModal" class="modal-overlay">
          <div class="modal-content">
@@ -608,7 +667,6 @@
                 <button class="admin-tab-btn" data-tab="challenges">🎯 Challenges</button>
                 <button class="admin-tab-btn" data-tab="audit">🕓 Audit Log</button>
                 <button class="admin-tab-btn" data-tab="mail">📧 Mail</button>
-                <button class="admin-tab-btn" data-tab="mail">📧 Mail</button>
             </div>
 
             <div class="admin-tab-body" data-tab="stats" style="display:block;">
@@ -648,10 +706,6 @@
             </div>
             <div class="admin-tab-body" data-tab="mail" style="display:none;">
                 <p style="color:#666; font-size:0.9em;">Mailing list signups and beta waitlist from the landing page. Emails are stored in Firestore — copy or export as needed.</p>
-                <div id="adminMailContent"><p>Loading…</p></div>
-            </div>
-            <div class="admin-tab-body" data-tab="mail" style="display:none;">
-                <p style="color:#666; font-size:0.9em;">Mailing list and beta waitlist signups from littertroopers.com.</p>
                 <div id="adminMailContent"><p>Loading…</p></div>
             </div>
         </div>
