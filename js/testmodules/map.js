@@ -6,10 +6,21 @@ import { openReportPinModal } from './reports.js';
 import { getLevelBadgeHTML } from './xp.js';
 import { db, doc, getDoc } from './firebase.js';
 
+// localStorage key for the persisted map style preference (index into mapStyles).
+const MAP_STYLE_STORAGE_KEY = 'lt_mapStyleIndex';
+
 /**
  * Initializes the Mapbox map, geocoder, and initial event listeners.
  */
 export function initializeMap() {
+    // Restore persisted style preference (Settings > Map Style). Falls back to 0
+    // (Streets) if nothing saved or the saved index is out of range (e.g. the
+    // mapStyles array shrank in a later version).
+    const savedStyle = parseInt(localStorage.getItem(MAP_STYLE_STORAGE_KEY), 10);
+    if (Number.isInteger(savedStyle) && savedStyle >= 0 && savedStyle < mapStyles.length) {
+        state.currentStyleIndex = savedStyle;
+    }
+
     mapboxgl.accessToken = 'pk.eyJ1IjoicDFjcmVhdGlvbnMiLCJhIjoiY2p6ajZvejJmMDZhaTNkcWpiN294dm12eCJ9.8ckNT6kfuJry7K7GAeIuxw';
     state.map = new mapboxgl.Map({
         container: 'map',
@@ -110,19 +121,27 @@ function initializeMapLayers() {
 }
 
 /**
- * Cycles to the next map style and re-initializes layers and data.
+ * Sets the map to a specific style by index (Settings > Map Style selector).
+ * Persists the choice to localStorage and restores all layers/markers after
+ * the style swap (setStyle wipes every custom source and layer).
+ * No-op if the index is invalid or already active.
+ * @param {number} index - Index into the mapStyles array (config.js).
  */
-export function changeMapStyle() {
-    state.currentStyleIndex = (state.currentStyleIndex + 1) % mapStyles.length;
-    state.map.setStyle(mapStyles[state.currentStyleIndex].url);
-    
+export function setMapStyle(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= mapStyles.length) return;
+    if (index === state.currentStyleIndex) return;
+
+    state.currentStyleIndex = index;
+    localStorage.setItem(MAP_STYLE_STORAGE_KEY, String(index));
+    state.map.setStyle(mapStyles[index].url);
+
     state.map.once('style.load', () => {
-        // --- 1. Restore the standard stuff ---
+        // --- Restore the standard stuff (setStyle wiped it) ---
         initializeMapLayers();
         state.userMarkers.forEach(marker => marker.addTo(state.map));
         state.communityMarkers.forEach(marker => marker.addTo(state.map));
         toggleMarkerVisibility();
-        
+
         if (state.isCommunityViewOn) {
             fetchAndDisplayCommunityRoutes();
         }
@@ -364,5 +383,3 @@ export function centerOnRoute() {
         maxZoom: 16
     });
 }
-
-
