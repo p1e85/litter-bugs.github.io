@@ -1,7 +1,7 @@
 
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc } from './firebase.js'; 
-import { state, allTitles, allBadges } from './config.js';
-import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
+import { state, allTitles, allBadges, mapStyles } from './config.js';
+import { initializeMap, setMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState, handleQuickPinPhoto, saveQuickPin, cancelQuickPin } from './tracking.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
@@ -70,7 +70,6 @@ const elements = {
     saveProfileBtn: document.getElementById('saveProfileBtn'),
     deleteAccountBtn: document.getElementById('deleteAccountBtn'),
     safetyModalOkBtn: document.getElementById('safetyModalOkBtn'),
-    changeStyleBtn: document.getElementById('changeStyleBtn'),
     centerOnRouteBtn: document.getElementById('centerOnRouteBtn'),
     summaryOkBtn: document.getElementById('summaryOkBtn'),
     leaderboardBtn: document.getElementById('leaderboardBtn'),
@@ -229,8 +228,18 @@ export function attachEventListeners() {
     document.getElementById('quickPinModal')?.addEventListener('click', (e) => {
         if (e.target.id === 'quickPinModal') cancelQuickPin();
     });
-    
-    elements.changeStyleBtn.addEventListener('click', changeMapStyle);
+
+    // --- SETTINGS: MAP STYLE SELECTOR ---
+    // The old top-bar 🎨 Change Style button was removed. Style selection now
+    // lives in Settings (infoModal) as full-width option cards, matching
+    // Android/iOS. Event delegation on the container; cards are re-rendered
+    // on every selection so the green highlight + ✓ move immediately.
+    document.getElementById('mapStyleOptions')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.map-style-option');
+        if (!btn) return;
+        setMapStyle(parseInt(btn.dataset.styleIndex, 10));
+        renderMapStyleOptions();
+    });
     
     // --- MAIN MENU NAVIGATION ---
     elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
@@ -260,8 +269,12 @@ export function attachEventListeners() {
     // 3. Community Map View
     elements.communityBtn.addEventListener('click', toggleCommunityView);
     
-    // 4. Info / Settings
-    elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
+    // 4. Info / Settings — renders the map-style cards fresh on every open so
+    // the highlighted option always reflects state.currentStyleIndex.
+    elements.infoBtn.addEventListener('click', () => {
+        renderMapStyleOptions();
+        elements.infoModal.style.display = 'flex';
+    });
     elements.viewTermsLink.addEventListener('click', (e) => {
         e.preventDefault();
         elements.infoModal.style.display = 'none';
@@ -647,6 +660,25 @@ function addAllModalCloseListeners() {
             event.target.style.display = 'none';
         }
     });
+}
+
+// --- SETTINGS: MAP STYLE CARDS -----------------------------------------------
+// Renders the full-width style option cards inside #mapStyleOptions (Settings
+// modal). The active style gets the green card + ✓, everything else is a gray
+// card — matching the Android/iOS Settings screen. Data source is the
+// mapStyles array in config.js, so adding a style there automatically shows
+// it here.
+function renderMapStyleOptions() {
+    const container = document.getElementById('mapStyleOptions');
+    if (!container) return;
+    container.innerHTML = mapStyles.map((style, i) => {
+        const selected = i === state.currentStyleIndex;
+        return `
+            <button type="button" class="map-style-option${selected ? ' selected' : ''}" data-style-index="${i}">
+                <span>${style.name}</span>
+                ${selected ? '<span class="map-style-check">✓</span>' : ''}
+            </button>`;
+    }).join('');
 }
 
 export function updateLoggedInStatusUI(isLoggedIn, username = '') {
