@@ -281,9 +281,7 @@ export function attachEventListeners() {
     });
 
     elements.dataBtn.addEventListener('click', () => {
-        const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
         elements.menuModal.style.display = 'none';
-        elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
         elements.dataModal.style.display = 'flex';
     });
 
