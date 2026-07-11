@@ -1,6 +1,7 @@
+
 import { db, collection, query, orderBy, limit, getDocs, doc, getDoc, deleteDoc } from './firebase.js'; 
-import { state, allTitles, allBadges } from './config.js';
-import { initializeMap, changeMapStyle, centerOnRoute } from './map.js';
+import { state, allTitles, allBadges, mapStyles } from './config.js';
+import { initializeMap, setMapStyle, centerOnRoute } from './map.js';
 import { initializeAuthListener, handleSignUp, handleLogIn, handleLogOut, handleAccountDeletion, handlePasswordReset } from './auth.js';
 import { findMe, toggleTracking, startTracking, handlePhoto, shareCleanupResults, resetFindMeState, handleQuickPinPhoto, saveQuickPin, cancelQuickPin } from './tracking.js';
 import { saveSession, loadSession, exportGeoJSON } from './data.js';
@@ -69,7 +70,6 @@ const elements = {
     saveProfileBtn: document.getElementById('saveProfileBtn'),
     deleteAccountBtn: document.getElementById('deleteAccountBtn'),
     safetyModalOkBtn: document.getElementById('safetyModalOkBtn'),
-    changeStyleBtn: document.getElementById('changeStyleBtn'),
     centerOnRouteBtn: document.getElementById('centerOnRouteBtn'),
     summaryOkBtn: document.getElementById('summaryOkBtn'),
     leaderboardBtn: document.getElementById('leaderboardBtn'),
@@ -100,7 +100,6 @@ const elements = {
     meetupTitleInput: document.getElementById('meetupTitleInput'),
     meetupDescriptionInput: document.getElementById('meetupDescriptionInput'),
     meetupDateInput: document.getElementById('meetupDateInput'),
-    viewTermsLink: document.getElementById('viewTermsLink'),
     
     // Lists & Containers
     leaderboardTabs: document.querySelectorAll('.leaderboard-tab'),
@@ -159,6 +158,14 @@ export function initializeUI() {
 export function attachEventListeners() {
     
     // --- AUTHENTICATION ---
+    if (elements.loginBtn) {
+        elements.loginBtn.addEventListener('click', () => {
+            const email = prompt("Enter email:");
+            const password = prompt("Enter password:");
+            if (email && password) loginUser(email, password);
+        });
+    }
+
     if (elements.logoutBtn) {
         elements.logoutBtn.addEventListener('click', handleLogOut);
     }
@@ -220,8 +227,18 @@ export function attachEventListeners() {
     document.getElementById('quickPinModal')?.addEventListener('click', (e) => {
         if (e.target.id === 'quickPinModal') cancelQuickPin();
     });
-    
-    elements.changeStyleBtn.addEventListener('click', changeMapStyle);
+
+    // --- SETTINGS: MAP STYLE SELECTOR ---
+    // The old top-bar 🎨 Change Style button was removed. Style selection now
+    // lives in Settings (infoModal) as full-width option cards, matching
+    // Android/iOS. Event delegation on the container; cards are re-rendered
+    // on every selection so the green highlight + ✓ move immediately.
+    document.getElementById('mapStyleOptions')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.map-style-option');
+        if (!btn) return;
+        setMapStyle(parseInt(btn.dataset.styleIndex, 10));
+        renderMapStyleOptions();
+    });
     
     // --- MAIN MENU NAVIGATION ---
     elements.menuBtn.addEventListener('click', () => elements.menuModal.style.display = 'flex');
@@ -251,12 +268,31 @@ export function attachEventListeners() {
     // 3. Community Map View
     elements.communityBtn.addEventListener('click', toggleCommunityView);
     
-    // 4. Info / Settings
-    elements.infoBtn.addEventListener('click', () => elements.infoModal.style.display = 'flex');
-    elements.viewTermsLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        elements.infoModal.style.display = 'none';
-        elements.termsModal.style.display = 'flex';
+    // 4. Info / Settings — renders the map-style cards and account section
+    // fresh on every open so both always reflect current state.
+    // NOTE: the old #viewTermsLink footer was removed from the Settings modal;
+    // Terms/Privacy are now plain <a> link buttons in the HTML (no JS needed).
+    elements.infoBtn.addEventListener('click', () => {
+        renderMapStyleOptions();
+        renderSettingsAccountSection();
+        elements.infoModal.style.display = 'flex';
+    });
+
+    // Settings > Account buttons (rendered dynamically, so delegate)
+    document.getElementById('settingsAccountSection')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        if (btn.id === 'settingsEditProfileBtn') {
+            elements.infoModal.style.display = 'none';
+            loadProfileForEditing();
+            elements.profileModal.style.display = 'flex';
+        } else if (btn.id === 'settingsSignOutBtn') {
+            elements.infoModal.style.display = 'none';
+            handleLogOut();
+        } else if (btn.id === 'settingsLoginBtn') {
+            elements.infoModal.style.display = 'none';
+            elements.authModal.style.display = 'flex';
+        }
     });
 
     // --- DATA & SAVING ---
@@ -272,9 +308,7 @@ export function attachEventListeners() {
     });
 
     elements.dataBtn.addEventListener('click', () => {
-        const hasRoute = state.routeCoordinates.length > 0 || state.photoPins.length > 0;
         elements.menuModal.style.display = 'none';
-        elements.centerOnRouteBtn.classList.toggle('disabled', !hasRoute);
         elements.dataModal.style.display = 'flex';
     });
 
@@ -286,15 +320,6 @@ export function attachEventListeners() {
     });
     
     elements.exportBtn.addEventListener('click', exportGeoJSON);
-    
-    elements.centerOnRouteBtn.addEventListener('click', () => {
-        if (elements.centerOnRouteBtn.classList.contains('disabled')) {
-            alert("Please load a route first to use this feature.");
-        } else {
-            centerOnRoute();
-            elements.dataModal.style.display = 'none';
-        }
-    });
 
     elements.publishBtn.addEventListener('click', publishRoute);
     
@@ -404,10 +429,10 @@ export function attachEventListeners() {
         elements.eventsModal.style.display = 'flex';
         fetchAndDisplayAllEvents();
     });
-    elements.hubFeedBtn.addEventListener('click', async () => {
+    elements.hubFeedBtn.addEventListener('click', () => {
         elements.hubModal.style.display = 'none';
         elements.feedModal.style.display = 'flex';
-        await loadActivityFeed();
+        loadActivityFeed();
     });
 
     // --- CHALLENGE MENU NAVIGATION ---
@@ -468,15 +493,13 @@ export function attachEventListeners() {
     }
 
     // 4. Past Challenges
-    if (elements.btnPastChallenges) {
-        elements.btnPastChallenges.addEventListener('click', () => {
-            elements.challengeMenuModal.style.display = 'none';
-            elements.pastChallengesModal.style.display = 'flex';
-            elements.tabCompleted.classList.add('active');
-            elements.tabUncompleted.classList.remove('active');
-            loadPastChallenges('completed'); 
-        });
-    }
+    elements.btnPastChallenges.addEventListener('click', () => {
+        elements.challengeMenuModal.style.display = 'none';
+        elements.pastChallengesModal.style.display = 'flex';
+        elements.tabCompleted.classList.add('active');
+        elements.tabUncompleted.classList.remove('active');
+        loadPastChallenges('completed'); 
+    });
 
     // Back from History -> Hub
     if (elements.btnBackToMenu) {
@@ -487,21 +510,17 @@ export function attachEventListeners() {
     }
 
     // 5. History Tabs
-    if (elements.tabCompleted) {
-        elements.tabCompleted.addEventListener('click', () => {
-            elements.tabCompleted.classList.add('active');
-            elements.tabUncompleted.classList.remove('active');
-            loadPastChallenges('completed');
-        });
-    }
+    elements.tabCompleted.addEventListener('click', () => {
+        elements.tabCompleted.classList.add('active');
+        elements.tabUncompleted.classList.remove('active');
+        loadPastChallenges('completed');
+    });
 
-    if (elements.tabUncompleted) {
-        elements.tabUncompleted.addEventListener('click', () => {
-            elements.tabUncompleted.classList.add('active');
-            elements.tabCompleted.classList.remove('active');
-            loadPastChallenges('uncompleted');
-        });
-    }
+    elements.tabUncompleted.addEventListener('click', () => {
+        elements.tabUncompleted.classList.add('active');
+        elements.tabCompleted.classList.remove('active');
+        loadPastChallenges('uncompleted');
+    });
 
     // 6. Admin Panel
     // NOTE: The old "Admin: Create Challenge" button (btnAdminPanel) and its modal
@@ -628,6 +647,13 @@ if (btnFinalizeSquad) {
     });
 }
     
+//    document.getElementById('hubSquadsBtn').addEventListener('click', () => {
+//    openModal('squadsModal');
+//   fetchLocalSquads(); // Refresh list every time it opens
+//});
+
+document.getElementById('btnFinalizeSquad').addEventListener('click', initializeSquad);
+    
     // Generic Close Listeners
     addAllModalCloseListeners();
 
@@ -648,6 +674,71 @@ function addAllModalCloseListeners() {
             event.target.style.display = 'none';
         }
     });
+}
+
+// --- SETTINGS: MAP STYLE CARDS -----------------------------------------------
+// Renders the full-width style option cards inside #mapStyleOptions (Settings
+// modal). The active style gets the green card + ✓, everything else is a gray
+// card — matching the Android/iOS Settings screen. Data source is the
+// mapStyles array in config.js, so adding a style there automatically shows
+// it here.
+function renderMapStyleOptions() {
+    const container = document.getElementById('mapStyleOptions');
+    if (!container) return;
+    container.innerHTML = mapStyles.map((style, i) => {
+        const selected = i === state.currentStyleIndex;
+        return `
+            <button type="button" class="map-style-option${selected ? ' selected' : ''}" data-style-index="${i}">
+                <span>${style.name}</span>
+                ${selected ? '<span class="map-style-check">✓</span>' : ''}
+            </button>`;
+    }).join('');
+}
+
+// --- SETTINGS: ACCOUNT SECTION ------------------------------------------------
+// Renders the user card (avatar / username / email) + Edit Profile + Sign Out
+// inside #settingsAccountSection, matching the Android Settings screen. Guests
+// get a Log In / Sign Up button instead. Renders instantly with the email,
+// then swaps in the username after one publicProfiles read.
+function buildSettingsAccountHTML(initial, username, email) {
+    return `
+        <div class="settings-account-card">
+            <div class="settings-avatar">${escapeAttr(initial)}</div>
+            <div class="settings-account-info">
+                <strong>${escapeAttr(username)}</strong>
+                <span>${escapeAttr(email)}</span>
+            </div>
+        </div>
+        <button type="button" id="settingsEditProfileBtn" class="settings-btn-solid">✏️ Edit Profile</button>
+        <button type="button" id="settingsSignOutBtn" class="settings-btn-danger-outline">🚪 Sign Out</button>`;
+}
+
+async function renderSettingsAccountSection() {
+    const container = document.getElementById('settingsAccountSection');
+    if (!container) return;
+
+    if (!state.currentUser) {
+        container.innerHTML = `
+            <button type="button" id="settingsLoginBtn" class="settings-btn-solid">Log In / Sign Up</button>`;
+        return;
+    }
+
+    const email = state.currentUser.email || '';
+    const fallbackInitial = (email.charAt(0) || 'T').toUpperCase();
+    container.innerHTML = buildSettingsAccountHTML(fallbackInitial, '…', email);
+
+    try {
+        const snap = await getDoc(doc(db, 'publicProfiles', state.currentUser.uid));
+        const username = (snap.exists() && snap.data().username) ? snap.data().username : 'Trooper';
+        // User may have closed Settings or logged out while the read was in
+        // flight — only overwrite if we're still showing a logged-in card.
+        if (state.currentUser && document.getElementById('settingsEditProfileBtn')) {
+            container.innerHTML = buildSettingsAccountHTML(username.charAt(0).toUpperCase(), username, email);
+        }
+    } catch (err) {
+        // Non-critical: card already shows the email; leave the fallback.
+        console.warn('Settings account card: username fetch failed', err);
+    }
 }
 
 export function updateLoggedInStatusUI(isLoggedIn, username = '') {
@@ -806,7 +897,7 @@ async function loadActivityFeed() {
                     <p class="feed-caption">${data.sessionName || 'Just finished a cleanup!'}</p>
                     <div class="feed-actions">
                          <button class="${likeBtnClass}">
-                            👍 <span class="like-count">${likeCount}</span>
+                           👍 <span class="like-count">${likeCount}</span>
                          </button>
                     </div>
                 </div>
@@ -1222,12 +1313,12 @@ function _leaderboardShowTab(tabKey) {
     const squadsEl  = document.getElementById('squadsLeaderboardContainer');
 
     if (tabKey === 'myStats') {
-        if (listEl)   listEl.style.display    = 'none';
+        if (listEl)   listEl.style.display   = 'none';
         if (squadsEl) squadsEl.style.display  = 'none';
         if (statsEl)  statsEl.style.display   = 'block';
         fetchAndDisplayMyStats();
     } else if (tabKey === 'squads') {
-        if (listEl)   listEl.style.display    = 'none';
+        if (listEl)   listEl.style.display   = 'none';
         if (statsEl)  statsEl.style.display  = 'none';
         if (squadsEl) squadsEl.style.display  = 'block';
         fetchSquadsLeaderboard();
