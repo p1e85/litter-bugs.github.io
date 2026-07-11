@@ -100,7 +100,6 @@ const elements = {
     meetupTitleInput: document.getElementById('meetupTitleInput'),
     meetupDescriptionInput: document.getElementById('meetupDescriptionInput'),
     meetupDateInput: document.getElementById('meetupDateInput'),
-    viewTermsLink: document.getElementById('viewTermsLink'),
     
     // Lists & Containers
     leaderboardTabs: document.querySelectorAll('.leaderboard-tab'),
@@ -269,16 +268,31 @@ export function attachEventListeners() {
     // 3. Community Map View
     elements.communityBtn.addEventListener('click', toggleCommunityView);
     
-    // 4. Info / Settings — renders the map-style cards fresh on every open so
-    // the highlighted option always reflects state.currentStyleIndex.
+    // 4. Info / Settings — renders the map-style cards and account section
+    // fresh on every open so both always reflect current state.
+    // NOTE: the old #viewTermsLink footer was removed from the Settings modal;
+    // Terms/Privacy are now plain <a> link buttons in the HTML (no JS needed).
     elements.infoBtn.addEventListener('click', () => {
         renderMapStyleOptions();
+        renderSettingsAccountSection();
         elements.infoModal.style.display = 'flex';
     });
-    elements.viewTermsLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        elements.infoModal.style.display = 'none';
-        elements.termsModal.style.display = 'flex';
+
+    // Settings > Account buttons (rendered dynamically, so delegate)
+    document.getElementById('settingsAccountSection')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        if (btn.id === 'settingsEditProfileBtn') {
+            elements.infoModal.style.display = 'none';
+            loadProfileForEditing();
+            elements.profileModal.style.display = 'flex';
+        } else if (btn.id === 'settingsSignOutBtn') {
+            elements.infoModal.style.display = 'none';
+            handleLogOut();
+        } else if (btn.id === 'settingsLoginBtn') {
+            elements.infoModal.style.display = 'none';
+            elements.authModal.style.display = 'flex';
+        }
     });
 
     // --- DATA & SAVING ---
@@ -679,6 +693,52 @@ function renderMapStyleOptions() {
                 ${selected ? '<span class="map-style-check">✓</span>' : ''}
             </button>`;
     }).join('');
+}
+
+// --- SETTINGS: ACCOUNT SECTION ------------------------------------------------
+// Renders the user card (avatar / username / email) + Edit Profile + Sign Out
+// inside #settingsAccountSection, matching the Android Settings screen. Guests
+// get a Log In / Sign Up button instead. Renders instantly with the email,
+// then swaps in the username after one publicProfiles read.
+function buildSettingsAccountHTML(initial, username, email) {
+    return `
+        <div class="settings-account-card">
+            <div class="settings-avatar">${escapeAttr(initial)}</div>
+            <div class="settings-account-info">
+                <strong>${escapeAttr(username)}</strong>
+                <span>${escapeAttr(email)}</span>
+            </div>
+        </div>
+        <button type="button" id="settingsEditProfileBtn" class="settings-btn-solid">✏️ Edit Profile</button>
+        <button type="button" id="settingsSignOutBtn" class="settings-btn-danger-outline">🚪 Sign Out</button>`;
+}
+
+async function renderSettingsAccountSection() {
+    const container = document.getElementById('settingsAccountSection');
+    if (!container) return;
+
+    if (!state.currentUser) {
+        container.innerHTML = `
+            <button type="button" id="settingsLoginBtn" class="settings-btn-solid">Log In / Sign Up</button>`;
+        return;
+    }
+
+    const email = state.currentUser.email || '';
+    const fallbackInitial = (email.charAt(0) || 'T').toUpperCase();
+    container.innerHTML = buildSettingsAccountHTML(fallbackInitial, '…', email);
+
+    try {
+        const snap = await getDoc(doc(db, 'publicProfiles', state.currentUser.uid));
+        const username = (snap.exists() && snap.data().username) ? snap.data().username : 'Trooper';
+        // User may have closed Settings or logged out while the read was in
+        // flight — only overwrite if we're still showing a logged-in card.
+        if (state.currentUser && document.getElementById('settingsEditProfileBtn')) {
+            container.innerHTML = buildSettingsAccountHTML(username.charAt(0).toUpperCase(), username, email);
+        }
+    } catch (err) {
+        // Non-critical: card already shows the email; leave the fallback.
+        console.warn('Settings account card: username fetch failed', err);
+    }
 }
 
 export function updateLoggedInStatusUI(isLoggedIn, username = '') {
