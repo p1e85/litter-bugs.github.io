@@ -826,6 +826,34 @@ export async function fetchAndDisplayAllEvents() {
             card.style.borderLeft = borderStyle;
             card.style.opacity = cardOpacity;
 
+
+            // --- NEW RSVP LOGIC STARTS HERE ---
+            const attendees = data.attendees || [];
+            const waitlist = data.waitlist || [];
+            const maxAttendees = data.maxAttendees || 25;
+            const currentUid = state.currentUser ? state.currentUser.uid : null;
+            
+            const isAttending = currentUid && attendees.includes(currentUid);
+            const isWaiting = currentUid && waitlist.includes(currentUid);
+            const isFull = attendees.length >= maxAttendees;
+
+            let rsvpBtnHtml = '';
+            if (!isPast) {
+                if (isAttending) {
+                    rsvpBtnHtml = `<button class="modal-button rsvp-action-btn" data-meetup-id="${eventId}" style="margin-top:10px; font-size:0.8em; padding:5px 10px; background:transparent; border:1px solid #D9534F; color:#D9534F;">❌ Cancel RSVP</button>`;
+                } else if (isWaiting) {
+                    rsvpBtnHtml = `<button class="modal-button rsvp-action-btn" data-meetup-id="${eventId}" style="margin-top:10px; font-size:0.8em; padding:5px 10px; background:transparent; border:1px solid #D9534F; color:#D9534F;">Leave Waitlist</button>`;
+                } else if (isFull) {
+                    rsvpBtnHtml = `<button class="modal-button rsvp-action-btn" data-meetup-id="${eventId}" style="margin-top:10px; font-size:0.8em; padding:5px 10px; background:#FFF8E1; color:#B8860B; border:1px solid #B8860B;">Join Waitlist</button>`;
+                } else {
+                    rsvpBtnHtml = `<button class="modal-button rsvp-action-btn btn-primary" data-meetup-id="${eventId}" style="margin-top:10px; font-size:0.8em; padding:5px 10px;">👋 I'll be there</button>`;
+                }
+            }
+
+            const attendeeStatusHtml = `<div style="font-size:0.85em; color:#4A7C59; margin-top:8px; font-weight:600;">👥 ${attendees.length} / ${maxAttendees} going ${waitlist.length > 0 ? `<span style="color:#B8860B;">(${waitlist.length} waiting)</span>` : ''}</div>`;
+            // --- NEW RSVP LOGIC ENDS HERE ---
+
+
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
@@ -851,12 +879,24 @@ export async function fetchAndDisplayAllEvents() {
                     <small>Organizer: ${data.organizerName || 'Anonymous'}</small>
                 </div>
 
-                ${!isPast ? `
-                <button class="modal-button btn-secondary" style="margin-top:10px; font-size:0.8em; padding:5px 10px;" 
-                    onclick="alert('RSVP feature coming soon!')">
-                    👋 I'll be there
-                </button>` : ''}
+                ${attendeeStatusHtml}
+                ${rsvpBtnHtml}
             `;
+
+
+            // --- NEW RSVP CLICK LISTENER STARTS HERE ---
+            const rsvpBtn = card.querySelector('.rsvp-action-btn');
+            if (rsvpBtn) {
+                rsvpBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const btnMeetupId = e.target.getAttribute('data-meetup-id');
+                    e.target.disabled = true;
+                    e.target.textContent = "Processing...";
+                    await toggleRSVP(btnMeetupId);
+                });
+            }
+            // --- NEW RSVP CLICK LISTENER ENDS HERE ---
+
 
             // ATTACH DELETE LISTENER
             if (canDelete) {
@@ -2226,4 +2266,66 @@ function escapeIntelHtml(s) {
     return String(s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+export async function toggleRSVP(meetupId) {
+    if (!state.currentUser) {
+        alert("Please log in to RSVP.");
+        return;
+    }
+
+    const uid = state.currentUser.uid;
+    const meetupRef = doc(db, "meetups", meetupId);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const meetupDoc = await transaction.get(meetupRef);
+            if (!meetupDoc.exists()) throw new Error("Meetup does not exist.");
+
+            const data = meetupDoc.data();
+            let attendees = data.attendees || [];
+            let waitlist = data.waitlist || [];
+            const maxAttendees = data.maxAttendees || 25;
+            let status = data.status || "upcoming";
+
+            const isAttending = attendees.includes(uid);
+            const isWaiting = waitlist.includes(uid);
+
+            if (isAttending || isWaiting) {
+                // --- UN-RSVP LOGIC ---
+                if (isAttending) {
+                    attendees = attendees.filter(id => id !== uid);
+                    // Promote the first waitlisted Trooper if a spot opens
+                    if (waitlist.length > 0) {
+                        const promotedUid = waitlist.shift();
+                        attendees.push(promotedUid);
+                    } else {
+                        status = "upcoming"; // Spot officially open
+                    }
+                } else if (isWaiting) {
+                    waitlist = waitlist.filter(id => id !== uid);
+                }
+            } else {
+                // --- RSVP LOGIC ---
+                if (attendees.length < maxAttendees) {
+                    attendees.push(uid);
+                    if (attendees.length >= maxAttendees) {
+                        status = "full";
+                    }
+                } else {
+                    waitlist.push(uid);
+                }
+            }
+
+            // Write the arrays back to Firestore
+            transaction.update(meetupRef, { attendees, waitlist, status });
+        });
+
+        // Silently refresh the events list so the button states update
+        fetchAndDisplayAllEvents();
+
+    } catch (error) {
+        console.error("RSVP Transaction failed: ", error);
+        alert("Could not update RSVP status. Please try again.");
+    }
 }
