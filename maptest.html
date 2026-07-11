@@ -338,19 +338,21 @@
         </div>
     </div>
 
-    <div id="publicProfileModal" class="modal-overlay">
-        <div class="modal-content profile-modal">
-            <button class="close-btn">&times;</button>
-            <h2 id="profileUsername"></h2>
-            <p id="profileLocation" class="profile-location"></p>
-            <p id="profileBio" class="profile-bio"></p>
-            <hr>
-            <h4>Lifetime Stats</h4>
-            <div id="profileStats" class="profile-stats-grid"></div>
-            <hr>
-            <h4>Achievements</h4>
-            <div id="profileAchievements" class="badge-container"></div>
-            <button id="profileSupportBtn" class="modal-button btn-support">☕ Support Them</button>
+<div id="publicProfileModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content profile-sheet">
+            <button class="close-btn mpp-close-sheet">&times;</button>
+            
+            <div id="sheetPinPhotoArea" class="sheet-pin-area" style="display:none;">
+                <img id="sheetPinImg" src="" alt="Pin">
+                <div class="sheet-pin-details">
+                    <h3 id="sheetPinTitle"></h3>
+                    <span id="sheetPinCategory" class="mpp-title-pill" style="background:#1A1A2E;"></span>
+                </div>
+            </div>
+
+            <div id="sheetProfileContent"></div>
+            
+            <div id="sheetFooterActions" class="sheet-footer"></div>
         </div>
     </div>
 
