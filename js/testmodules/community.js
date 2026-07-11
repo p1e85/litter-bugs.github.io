@@ -147,54 +147,14 @@ export async function fetchAndDisplayCommunityRoutes() {
       });
     });
 
-    // --- GOD MODE CLICK LISTENER ---
+
+// --- GOD MODE CLICK LISTENER ---
     state.map.on('click', 'unclustered-point', async (e) => {
-      const coordinates = e.features[0].geometry.coordinates.slice();
       const properties = e.features[0].properties;
 
-      // Check Admin Status on Click
-      let isAdmin = false;
-      if (state.currentUser) {
-          try {
-              const pSnap = await getDoc(doc(db, "publicProfiles", state.currentUser.uid));
-              if (pSnap.exists() && pSnap.data().role === 'admin') isAdmin = true;
-          } catch (err) { console.error(err); }
-      }
-
-      const isOwner = state.currentUser && (state.currentUser.uid == properties.userId);
-      const canDelete = isOwner || isAdmin;
-
-      const popupHTML = `
-        <div style="text-align:center;">
-            <img src="${properties.thumbnailURL || properties.imageURL}" alt="${properties.title}" style="width:100%; border-radius: 4px;"/>
-            <p style="margin: 5px 0 0;"><strong>${properties.title}</strong></p>
-            <p style="margin: 5px 0 0; font-style: italic; color: #555;">Category: ${properties.category || 'Other'}</p>
-            <small>By: <a href="#" class="profile-link" data-userid="${properties.userId}">${properties.username || 'A user'}</a></small>
-            ${canDelete ? `<br><button class="delete-route-btn" style="background:#d32f2f; color:white; border:none; padding:5px 10px; border-radius:4px; margin-top:8px; cursor:pointer; font-size:0.8em;">⚠️ Delete Route</button>` : ''}
-        </div>
-      `;
-      
-      const popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupHTML).addTo(state.map);
-      
-      // Profile Link Listener
-      const profileLink = popup.getElement().querySelector('.profile-link');
-      if (profileLink) {
-          profileLink.addEventListener('click', (ev) => {
-            ev.preventDefault();
-            showPublicProfile(properties.userId);
-          });
-      }
-
-      // Delete Button Listener
-      const delBtn = popup.getElement().querySelector('.delete-route-btn');
-      if (delBtn) {
-          delBtn.addEventListener('click', async () => {
-              if (confirm("⚠️ PERMANENTLY delete this route from the map?")) {
-                  await deletePublishedRoute(properties.routeId);
-                  popup.remove();
-              }
-          });
-      }
+      // Pass the entire pin data object to the profile viewer,
+      // which will trigger it to render the Pin layout at the top.
+      showPublicProfile(properties.userId, properties);
     });
 
     const clickableLayers = ['clusters', 'unclustered-point'];
