@@ -853,69 +853,63 @@
 
         /* Modal sizing: on mobile go (almost) full-screen so the user gets all
            the space available. On desktop cap the width. */
+/* Admin Panel styles — scoped so they don't leak into the rest of the app */
+
+        /* Modal sizing: Fixed height stops the jumping. Overflow hidden prevents 
+           the tabs from scrolling out of view. */
         #adminPanelModal .modal-content {
             max-width: 720px;
             width: 95%;
-            max-height: 92vh;
+            height: 90vh; /* Locks the height */
+            max-height: 90vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden !important; /* Kills the global modal scroll */
+            padding-bottom: 0;
         }
+
+        #adminPanelModal .modal-content h2 {
+            flex-shrink: 0;
+            margin-top: 0;
+        }
+
         @media (max-width: 600px) {
             #adminPanelModal .modal-content {
                 width: 100%;
                 max-width: 100%;
-                max-height: 100vh;
                 height: 100vh;
+                max-height: 100vh;
                 border-radius: 0;
-                padding: 12px;
+                padding: 16px 16px 0 16px;
             }
         }
 
-        /* Tab bar: scrolls horizontally on narrow screens instead of wrapping.
-           Wrapping the 8 tabs onto 2-3 lines ate too much vertical space. */
+        /* Tab bar: Frozen in place, scrolls horizontally if too many tabs */
         .admin-tab-bar {
             display: flex;
             gap: 4px;
             border-bottom: 2px solid #eee;
-            margin-bottom: 16px;
+            margin-bottom: 10px;
             overflow-x: auto;
             overflow-y: hidden;
             flex-wrap: nowrap;
             scrollbar-width: thin;
             -webkit-overflow-scrolling: touch;
+            flex-shrink: 0; /* Prevents tabs from getting squashed */
         }
         .admin-tab-bar::-webkit-scrollbar { height: 4px; }
         .admin-tab-bar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
 
-        .admin-tab-btn {
-            background: none;
-            border: none;
-            padding: 10px 16px;
-            cursor: pointer;
-            font-size: 1em;
-            color: #666;
-            border-bottom: 3px solid transparent;
-            margin-bottom: -2px;
-            transition: all 0.15s ease;
-            flex-shrink: 0; /* don't squash tabs in the scroll bar */
-            white-space: nowrap;
-        }
-        .admin-tab-btn:hover { color: #4A7C59; }
-        .admin-tab-btn.active {
-            color: #4A7C59;
-            font-weight: 600;
-            border-bottom-color: #4A7C59;
-        }
-        @media (max-width: 600px) {
-            .admin-tab-btn { padding: 8px 10px; font-size: 0.9em; }
-        }
-
         /* Tab body fills remaining height & scrolls vertically */
         .admin-tab-body {
-            flex: 1;
+            flex: 1 1 auto;
             overflow-y: auto;
             min-height: 0;
+            padding-bottom: 24px;
+            padding-right: 8px; /* Prevents text from hiding under the scrollbar */
         }
+
+        /* --- Keep your existing .admin-tab-btn, .admin-stats-grid, etc below this line --- */
 
         /* Stats grid: 5 across on wide, wraps automatically. On mobile we want
            2 columns minimum so the cards aren't enormous. */
