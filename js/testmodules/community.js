@@ -22,13 +22,46 @@ function getDistanceInMiles(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
+// --- Community recency window (Phase 1, community-view redesign) ---
+// config/communityView.windowDays is the shared, admin-controlled window for
+// the individual community pin layer, synced across Android / iOS / web.
+// Clamp [7, 90], fallback 45 if missing/unreadable. Plain getDoc on public
+// config — guest-safe, no auth assumed.
+const COMMUNITY_WINDOW_DEFAULT = 45;
+const COMMUNITY_WINDOW_MIN = 7;
+const COMMUNITY_WINDOW_MAX = 90;
+
+async function fetchCommunityWindowDays() {
+  try {
+    const snap = await getDoc(doc(db, "config", "communityView"));
+    if (!snap.exists()) return COMMUNITY_WINDOW_DEFAULT;
+    const n = Number(snap.data().windowDays);
+    if (!Number.isFinite(n)) return COMMUNITY_WINDOW_DEFAULT;
+    return Math.min(Math.max(Math.round(n), COMMUNITY_WINDOW_MIN), COMMUNITY_WINDOW_MAX);
+  } catch (e) {
+    console.warn("communityView config read failed; using default window:", e);
+    return COMMUNITY_WINDOW_DEFAULT;
+  }
+}
+
 // --- Community View (Updated with God Mode) ---
 export async function fetchAndDisplayCommunityRoutes() {
   try {
-    clearCommunityRoutes();
-    const q = query(collection(db, "publishedRoutes"), orderBy("timestamp", "desc"));
+clearCommunityRoutes();
+
+    // Recency-bounded fetch: only routes published within the shared window,
+    // newest first, capped at 500. Filtering + ordering on the same field
+    // (timestamp) uses the automatic single-field index — no composite index.
+    const windowDays = await fetchCommunityWindowDays();
+    const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+    const q = query(
+      collection(db, "publishedRoutes"),
+      where("timestamp", ">", cutoff),
+      orderBy("timestamp", "desc"),
+      limit(500)
+    );
     const querySnapshot = await getDocs(q);
-    const allPinFeatures = [];
+    //const allPinFeatures = [];
 
     querySnapshot.forEach(doc => {
       const routeData = doc.data();
