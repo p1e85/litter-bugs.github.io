@@ -44,6 +44,15 @@ async function fetchCommunityWindowDays() {
   }
 }
 
+// Writes the global community recency window. Affects every user on every
+// platform. merge so it self-seeds and never clobbers sibling config fields.
+// Clamped [7,90] on write too — defense in depth so no reader sees out-of-range.
+export async function setCommunityWindowDays(days) {
+  const clamped = Math.min(Math.max(Math.round(Number(days)), COMMUNITY_WINDOW_MIN), COMMUNITY_WINDOW_MAX);
+  await setDoc(doc(db, "config", "communityView"), { windowDays: clamped }, { merge: true });
+  return clamped;
+}
+
 // --- Community View (Updated with God Mode) ---
 export async function fetchAndDisplayCommunityRoutes() {
   try {
