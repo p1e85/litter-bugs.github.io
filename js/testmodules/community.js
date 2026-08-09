@@ -54,8 +54,184 @@ export async function setCommunityWindowDays(days) {
   return clamped;
 }
 
-fetchAndDisplayCommunityRoutes
+// --- Community View (Phase 4: geohash viewport fetch + smooth refresh) ---
+//
+// Reads are bounded by the visible viewport via geohash ranges — no longer the
+// whole collection. Recency (windowDays) is enforced CLIENT-SIDE so every query
+// stays single-field on `geohash` (automatic index, no composite index needed).
+// Pins update via source.setData() so panning doesn't tear down/rebuild layers.
+export async function fetchAndDisplayCommunityRoutes() {
+  try {
+    if (!state.map || !state.map.isStyleLoaded()) return;
 
+    const windowDays = await fetchCommunityWindowDays();
+    const now = Date.now();
+
+    // Viewport → center + radius (metres) reaching the far corner, so the
+    // geohash circle covers the visible box.
+    const b = state.map.getBounds();
+    const center = [b.getCenter().lat, b.getCenter().lng]; // geofire wants [lat, lng]
+    const ne = b.getNorthEast();
+    const radiusM = Math.max(distanceBetween([center[0], center[1]], [ne.lat, ne.lng]) * 1000, 1);
+
+    // Up to ~9 geohash range pairs covering the circle — one query each.
+    const bounds = geohashQueryBounds(center, radiusM);
+    const snaps = await Promise.all(
+      bounds.map(([start, end]) =>
+        getDocs(query(
+          collection(db, "publishedRoutes"),
+          orderBy("geohash"),
+          startAt(start),
+          endAt(end)
+        )).catch(err => {
+          console.warn('Community geohash query failed for a bound:', err);
+          return { forEach: () => {} }; // shape-compatible empty result
+        })
+      )
+    );
+
+    // Merge + dedupe by doc id, then build pin features (recency + coord filtered).
+    const seen = new Set();
+    const allPinFeatures = [];
+    const mapBounds = state.map.getBounds();
+
+    snaps.forEach(snap => {
+      snap.forEach(doc => {
+        if (seen.has(doc.id)) return;
+        seen.add(doc.id);
+
+        const routeData = doc.data();
+        const routeId = doc.id;
+
+        // Route age (days) from the single publish timestamp — shared by all its
+        // pins. Missing → age 0 (full opacity). Recency drop happens here.
+        const _ts = routeData.timestamp;
+        const _tsMs = _ts && typeof _ts.toMillis === 'function'
+          ? _ts.toMillis()
+          : (_ts && _ts.seconds ? _ts.seconds * 1000 : (_ts instanceof Date ? _ts.getTime() : null));
+        const routeAgeDays = _tsMs != null ? (now - _tsMs) / 86400000 : 0;
+        if (routeAgeDays >= windowDays) return; // outside the window — skip
+
+        const mapboxPins = convertPinsFromFirestore(routeData.pins);
+        if (!mapboxPins) return;
+
+        mapboxPins.forEach(pin => {
+          // Validate coords (a bad pair poisons the whole GeoJSON source).
+          if (!pin || !pin.coords) {
+            console.warn('Skipping community pin with missing coords', { routeId, pin });
+            return;
+          }
+          const c = pin.coords;
+          const lngLat = Array.isArray(c)
+            ? (c.length === 2 && Number.isFinite(c[0]) && Number.isFinite(c[1]) ? c : null)
+            : (Number.isFinite(c.lng) && Number.isFinite(c.lat) ? [c.lng, c.lat] : null);
+          if (!lngLat) {
+            console.warn('Skipping community pin with invalid coords', { routeId, pin });
+            return;
+          }
+          // Geohash false-positive trim: keep only pins actually in the viewport box.
+          if (!mapBounds.contains(lngLat)) return;
+
+          allPinFeatures.push({
+            'type': 'Feature',
+            'properties': {
+              title: pin.title,
+              category: pin.category,
+              imageURL: pin.imageURL,
+              thumbnailURL: pin.thumbnailURL,
+              username: routeData.username,
+              userId: routeData.userId,
+              routeId: routeId,       // Saved for God Mode Deletion
+              ageDays: routeAgeDays   // Phase 3 — per-pin age fade
+            },
+            'geometry': { 'type': 'Point', 'coordinates': lngLat }
+          });
+        });
+      });
+    });
+
+    // Ensure the source + layers exist (once), then just swap the data.
+    ensureCommunityLayers(windowDays);
+    const src = state.map.getSource('community-pins');
+    if (src) src.setData({ 'type': 'FeatureCollection', 'features': allPinFeatures });
+
+  } catch (error) {
+    console.error("Error fetching community routes:", error);
+  }
+}
+
+// One-time setup of the community-pins source, cluster/point layers, and click
+// handlers. Idempotent: safe to call on every fetch — it no-ops once built.
+// windowDays drives the age-fade interpolate stops.
+function ensureCommunityLayers(windowDays) {
+  if (!state.map || state.map.getSource('community-pins')) return;
+
+  state.map.addSource('community-pins', {
+    type: 'geojson',
+    data: { 'type': 'FeatureCollection', 'features': [] },
+    cluster: true,
+    clusterMaxZoom: 14,
+    clusterRadius: 50
+  });
+
+  state.map.addLayer({
+    id: 'clusters',
+    type: 'circle',
+    source: 'community-pins',
+    filter: ['has', 'point_count'],
+    paint: { 'circle-color': '#4A7C59', 'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40] }
+  });
+
+  state.map.addLayer({
+    id: 'cluster-count',
+    type: 'symbol',
+    source: 'community-pins',
+    filter: ['has', 'point_count'],
+    layout: { 'text-field': '{point_count_abbreviated}', 'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'], 'text-size': 12 },
+    paint: { 'text-color': '#ffffff' }
+  });
+
+  // Phase 3 — age fade. Full opacity ≤7d, linear ramp to 0 by day N.
+  // max(windowDays, 8) guards the N=7 case (interpolate stops must ascend).
+  const fadeExpr = [
+    'interpolate', ['linear'], ['get', 'ageDays'],
+    7, 1.0,
+    Math.max(windowDays, 8), 0.0
+  ];
+  state.map.addLayer({
+    id: 'unclustered-point',
+    type: 'circle',
+    source: 'community-pins',
+    filter: ['!', ['has', 'point_count']],
+    paint: {
+      'circle-color': '#4A7C59',
+      'circle-radius': 8,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#ffffff',
+      'circle-opacity': fadeExpr,
+      'circle-stroke-opacity': fadeExpr
+    }
+  });
+
+  state.map.on('click', 'clusters', (e) => {
+    const features = state.map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+    const clusterId = features[0].properties.cluster_id;
+    state.map.getSource('community-pins').getClusterExpansionZoom(clusterId, (err, zoom) => {
+      if (err) return;
+      state.map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+    });
+  });
+
+  state.map.on('click', 'unclustered-point', async (e) => {
+    const properties = e.features[0].properties;
+    showPublicProfile(properties.userId, properties);
+  });
+
+  ['clusters', 'unclustered-point'].forEach(layer => {
+    state.map.on('mouseenter', layer, () => { state.map.getCanvas().style.cursor = 'pointer'; });
+    state.map.on('mouseleave', layer, () => { state.map.getCanvas().style.cursor = ''; });
+  });
+}
 export function toggleCommunityView() {
     state.isCommunityViewOn = !state.isCommunityViewOn;
     const communityBtn = document.getElementById('communityBtn');
