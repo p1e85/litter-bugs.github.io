@@ -31,7 +31,7 @@ const COMMUNITY_WINDOW_DEFAULT = 45;
 const COMMUNITY_WINDOW_MIN = 7;
 const COMMUNITY_WINDOW_MAX = 90;
 
-async function fetchCommunityWindowDays() {
+export async function fetchCommunityWindowDays() {
   try {
     const snap = await getDoc(doc(db, "config", "communityView"));
     if (!snap.exists()) return COMMUNITY_WINDOW_DEFAULT;
