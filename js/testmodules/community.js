@@ -6,6 +6,7 @@ import { convertRouteForFirestore, convertPinsForFirestore, convertRouteFromFire
 import { clearCurrentSession } from './data.js';
 import { showPublicProfile } from './ui.js';
 import { checkXpDelta, getLevelBadgeHTML, renderProfileXpSection } from './xp.js';
+import { geohashQueryBounds, distanceBetween } from 'https://cdn.jsdelivr.net/npm/geofire-common@6.0.0/dist/geofire-common/index.esm.js';
 
 // utils.calculateRouteDistance returns METERS; convert to miles when needed.
 const METERS_TO_MILES = 0.000621371;
