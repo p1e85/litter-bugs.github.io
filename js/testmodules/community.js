@@ -73,9 +73,19 @@ clearCommunityRoutes();
     //const allPinFeatures = [];
 
     querySnapshot.forEach(doc => {
-      const routeData = doc.data();
+const routeData = doc.data();
       const routeId = doc.id;
       const mapboxCoords = convertRouteFromFirestore(routeData.route);
+
+      // Phase 3 — age of this route in days, from its single publish timestamp.
+      // One value shared by all the route's pins (a doc has one timestamp).
+      // Firestore Timestamp → millis; missing/unparseable falls back to age 0
+      // (full opacity) rather than vanishing.
+      const _ts = routeData.timestamp;
+      const _tsMs = _ts && typeof _ts.toMillis === 'function'
+        ? _ts.toMillis()
+        : (_ts && _ts.seconds ? _ts.seconds * 1000 : (_ts instanceof Date ? _ts.getTime() : null));
+      const routeAgeDays = _tsMs != null ? (Date.now() - _tsMs) / 86400000 : 0;
 
       // Filter to only well-formed [lng, lat] pairs. A single bad coord pair
       // (e.g. [undefined, undefined] from a malformed Android upload) makes
@@ -128,7 +138,7 @@ clearCommunityRoutes();
             console.warn('Skipping community pin with invalid coords', { routeId, pin });
             return;
           }
-          allPinFeatures.push({
+allPinFeatures.push({
             'type': 'Feature',
             'properties': {
               title: pin.title,
@@ -137,7 +147,8 @@ clearCommunityRoutes();
               thumbnailURL: pin.thumbnailURL,
               username: routeData.username,
               userId: routeData.userId,
-              routeId: routeId // Saved for God Mode Deletion
+              routeId: routeId, // Saved for God Mode Deletion
+              ageDays: routeAgeDays // Phase 3 — per-pin age fade (all pins in a route share the route's age)
             },
             'geometry': { 'type': 'Point', 'coordinates': lngLat }
           });
@@ -172,12 +183,30 @@ clearCommunityRoutes();
       paint: { 'text-color': '#ffffff' }
     });
 
-    state.map.addLayer({
+state.map.addLayer({
       id: 'unclustered-point',
       type: 'circle',
       source: 'community-pins',
       filter: ['!', ['has', 'point_count']],
-      paint: { 'circle-color': '#4A7C59', 'circle-radius': 8, 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' }
+      paint: {
+        'circle-color': '#4A7C59',
+        'circle-radius': 8,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+        // Phase 3 — age fade (§3 contract): full opacity for the first 7 days,
+        // then linear ramp to 0 by day N (windowDays). Fill + stroke both fade
+        // so the whole dot dims together.
+        'circle-opacity': [
+          'interpolate', ['linear'], ['get', 'ageDays'],
+          7, 1.0,
+          windowDays, 0.0
+        ],
+        'circle-stroke-opacity': [
+          'interpolate', ['linear'], ['get', 'ageDays'],
+          7, 1.0,
+          windowDays, 0.0
+        ]
+      }
     });
 
     state.map.on('click', 'clusters', (e) => {
