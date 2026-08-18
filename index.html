@@ -292,15 +292,15 @@
                 <span class="platform-badge badge-testing">🤖 Android Beta</span>
                 <span class="platform-icon">📱</span>
                 <div class="platform-title">Android Native App</div>
-                <p class="platform-desc">A full native Android app is currently in internal testing. Built from the ground up with Mapbox, Firebase, and a complete offline-first experience. Sign up below to get early access.</p>
+                <p class="platform-desc">A full native Android app is currently in open testing. Built from the ground up with Mapbox, Firebase, and a complete offline-first experience. Sign up below to get early access.</p>
                 <a href="#android-beta" class="platform-cta cta-green">Join the Waitlist →</a>
             </div>
-            <div class="platform-card soon">
-                <span class="platform-badge badge-soon">🍎 Coming Soon</span>
+            <div class="platform-card active">
+                <span class="platform-badge badge-testing">🍎 iOS BETA LIVE</span>
                 <span class="platform-icon">📲</span>
-                <div class="platform-title">iOS Native App</div>
-                <p class="platform-desc">iPhone users: the web app already works great on iOS Safari and can be added to your home screen today. A dedicated native iOS app is on the roadmap — sign up to be notified when it launches.</p>
-                <span class="platform-cta cta-outline">Notify Me (see below)</span>
+                <div class="platform-title">iOS Native Beta</div>
+                <p class="platform-desc">iPhone users, the wait is over! The native iOS app is officially live on TestFlight with full parity to the Android app. Join the waitlist to get your exclusive TestFlight invite link.</p>
+                <a href="#ios-beta" class="platform-cta cta-green">Join the Waitlist →</a>
             </div>
         </div>
     </div>
@@ -312,7 +312,7 @@
         <div class="section-eyebrow">For Investors & Partners</div>
         <h2 class="section-title">We're building the future of community cleanups.</h2>
         <p class="section-sub">
-            Litter Troopers is a passion-built product with a working app, real users, and a clear roadmap — including a Cleanup Bounty marketplace, AI-powered litter identification, business partnerships, and full iOS & Android launches. We're actively seeking investors and strategic partners who believe environmental impact can be fun, social, and scalable.
+            Litter Troopers is a passion-built product with a working app, real users, and a clear roadmap — including a Cleanup Bounty marketplace, business partnerships, and full iOS & Android launches. We're actively seeking investors and strategic partners who believe environmental impact can be fun, social, and scalable.
         </p>
         <a href="mailto:p1creationsco@gmail.com?subject=Litter Troopers Investment Inquiry" class="btn-white">Get in Touch →</a>
     </div>
@@ -324,16 +324,35 @@
         <div class="section-eyebrow">Android Early Access</div>
         <h2 class="section-title">Be the first Trooper on Android.</h2>
         <p class="section-sub" style="margin: 0 auto 0;">
-            The native Android app is in internal testing and moving fast. Sign up with your Gmail address to get added to the Play Store beta — you'll get access before the public launch and help shape the final product.
+            The native Android app is in internal testing and moving fast. Sign up with your email address to get added to the Play Store beta — you'll get access before the public launch and help shape the final product.
         </p>
         <form id="betaSignupForm" class="beta-form">
             <input type="email" id="betaEmailInput" class="beta-input"
-                   placeholder="your@gmail.com" required>
+                   placeholder="your@email.com" required>
             <button type="submit" id="betaSubmitBtn" class="btn-green-full">
                 Join the Android Waitlist
             </button>
         </form>
         <p id="betaSignupMessage" class="form-msg"></p>
+    </div>
+</section>
+
+<!-- ── iOS BETA ──────────────────────────────────────────────── -->
+<section style="background: var(--white); border-top: 1px solid var(--border);" id="ios-beta">
+    <div class="section-inner text-center">
+        <div class="section-eyebrow">iOS Early Access</div>
+        <h2 class="section-title">Get your TestFlight Invite.</h2>
+        <p class="section-sub" style="margin: 0 auto 0;">
+            The native iOS app is officially in open testing. Sign up below with your email address to receive a direct TestFlight invite and help us clear the board on iPhone.
+        </p>
+        <form id="iosBetaSignupForm" class="beta-form">
+            <input type="email" id="iosBetaEmailInput" class="beta-input"
+                   placeholder="your@email.com" required>
+            <button type="submit" id="iosBetaSubmitBtn" class="btn-green-full">
+                Join the iOS Waitlist
+            </button>
+        </form>
+        <p id="iosBetaSignupMessage" class="form-msg"></p>
     </div>
 </section>
 
